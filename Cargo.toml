@@ -1,0 +1,5 @@
+[workspace]
+members = [
+	"syrette",
+	"syrette_macros"
+]

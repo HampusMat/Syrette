@@ -1,0 +1,9 @@
+[package]
+name = "syrette"
+version = "0.1.0"
+license = "LGPL-2.1"
+authors = ["HampusM <hampus@hampusmat.com>"]
+description = "The convenient dependency injection library"
+edition = "2021"
+
+[dependencies]
