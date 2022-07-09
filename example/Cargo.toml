@@ -1,0 +1,11 @@
+[package]
+name = "example"
+version = "0.1.0"
+license = "LGPL-2.1"
+authors = ["HampusM <hampus@hampusmat.com>"]
+edition = "2021"
+
+[dependencies]
+syrette = { path = "../syrette" }
+error-stack = "0.1.1"
+
