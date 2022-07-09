@@ -141,6 +141,30 @@ fn get_dependency_types(item_impl: &ItemImpl) -> Vec<Type>
     );
 }
 
+/// Makes a struct injectable. Therefore usable with `DIContainer`.
+///
+/// # Arguments
+///
+/// * A interface trait the struct implements.
+///
+/// # Examples
+/// ```
+/// trait IConfigReader
+/// {
+///     fn read_config() -> Config;
+/// }
+///
+/// struct ConfigReader {}
+///
+/// #[injectable(IConfigReader)]
+/// impl IConfigReader for ConfigReader
+/// {
+///     fn read_config() -> Config
+///     {
+///         // Stuff here
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
@@ -205,6 +229,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
     .into()
 }
 
+#[doc(hidden)]
 #[proc_macro]
 pub fn castable_to(input: TokenStream) -> TokenStream
 {

@@ -11,6 +11,7 @@ use crate::injectable::Injectable;
 use crate::libs::intertrait::cast_box::CastBox;
 use crate::provider::{IInjectableTypeProvider, InjectableTypeProvider};
 
+/// Binding builder for `InterfaceTrait` in a [`DIContainer`].
 pub struct BindingBuilder<'a, InterfaceTrait>
 where
     InterfaceTrait: 'static + ?Sized,
@@ -31,6 +32,8 @@ where
         }
     }
 
+    /// Creates a binding of `InterfaceTrait` to type `Implementation` inside of the
+    /// associated [`DIContainer`].
     pub fn to<Implementation>(&mut self)
     where
         Implementation: Injectable,
@@ -57,6 +60,14 @@ impl Display for DIContainerError
 
 impl Context for DIContainerError {}
 
+/// Dependency injection container.
+///
+/// # Examples
+/// ```
+/// di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>();
+///
+/// let database_service = di_container.get::<dyn IDatabaseService>()?;
+/// ```
 pub struct DIContainer
 {
     _bindings: HashMap<TypeId, Rc<dyn IInjectableTypeProvider>>,
@@ -64,6 +75,7 @@ pub struct DIContainer
 
 impl<'a> DIContainer
 {
+    /// Returns a new `DIContainer`.
     pub fn new() -> Self
     {
         Self {
@@ -71,6 +83,7 @@ impl<'a> DIContainer
         }
     }
 
+    /// Returns a new [`BindingBuilder`] for the given interface trait.
     pub fn bind<InterfaceTrait>(&'a mut self) -> BindingBuilder<InterfaceTrait>
     where
         InterfaceTrait: 'static + ?Sized,
@@ -78,6 +91,7 @@ impl<'a> DIContainer
         BindingBuilder::<InterfaceTrait>::new(self)
     }
 
+    /// Returns the value bound with `InterfaceTrait`.
     pub fn get<InterfaceTrait>(
         &self,
     ) -> error_stack::Result<Box<InterfaceTrait>, DIContainerError>
