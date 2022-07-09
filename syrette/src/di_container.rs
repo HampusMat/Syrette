@@ -7,48 +7,9 @@ use std::rc::Rc;
 
 use error_stack::{Context, Report, ResultExt};
 
-use crate::injectable::{Injectable, ResolveError};
+use crate::injectable::Injectable;
 use crate::libs::intertrait::cast_box::CastBox;
-
-trait IInjectableTypeProvider
-{
-    fn provide(
-        &self,
-        di_container: &DIContainer,
-    ) -> error_stack::Result<Box<dyn Injectable>, ResolveError>;
-}
-
-struct InjectableTypeProvider<InjectableType>
-where
-    InjectableType: Injectable,
-{
-    _phantom_data: PhantomData<InjectableType>,
-}
-
-impl<InjectableType> InjectableTypeProvider<InjectableType>
-where
-    InjectableType: Injectable,
-{
-    fn new() -> Self
-    {
-        Self {
-            _phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<InjectableType> IInjectableTypeProvider for InjectableTypeProvider<InjectableType>
-where
-    InjectableType: Injectable,
-{
-    fn provide(
-        &self,
-        di_container: &DIContainer,
-    ) -> error_stack::Result<Box<dyn Injectable>, ResolveError>
-    {
-        Ok(InjectableType::resolve(di_container)?)
-    }
-}
+use crate::provider::{IInjectableTypeProvider, InjectableTypeProvider};
 
 pub struct BindingBuilder<'a, InterfaceTrait>
 where
