@@ -7,3 +7,8 @@ description = "The convenient dependency injection library"
 edition = "2021"
 
 [dependencies]
+syrette_macros = { path = "../syrette_macros" }
+linkme = "0.3.0"
+once_cell = "1.4"
+error-stack = "0.1.1"
+

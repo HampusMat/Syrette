@@ -1,5 +1,6 @@
 [workspace]
 members = [
 	"syrette",
-	"syrette_macros"
+	"syrette_macros",
+	"example",
 ]
