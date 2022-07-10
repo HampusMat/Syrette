@@ -1,6 +1,7 @@
-use error_stack::Context;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+
+use error_stack::Context;
 
 #[derive(Debug)]
 pub struct DIContainerError;

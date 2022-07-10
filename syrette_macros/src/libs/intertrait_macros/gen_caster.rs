@@ -14,12 +14,11 @@
 use std::str::from_utf8_unchecked;
 
 use proc_macro2::TokenStream;
-use uuid::adapter::Simple;
-use uuid::Uuid;
-
 use quote::format_ident;
 use quote::quote;
 use quote::ToTokens;
+use uuid::adapter::Simple;
+use uuid::Uuid;
 
 pub fn generate_caster(
     ty: &impl ToTokens,

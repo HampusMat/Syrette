@@ -1,3 +1,4 @@
 max_width = 90
 brace_style = "AlwaysNextLine"
+group_imports = "StdExternalCrate"
 
