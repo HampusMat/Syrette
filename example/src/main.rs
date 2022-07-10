@@ -1,4 +1,5 @@
-use syrette::{injectable, DIContainer, DIContainerError};
+use syrette::errors::di_container::DIContainerError;
+use syrette::{injectable, DIContainer};
 
 trait IDog
 {

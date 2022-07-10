@@ -2,7 +2,8 @@ use std::marker::PhantomData;
 
 extern crate error_stack;
 
-use crate::injectable::{Injectable, ResolveError};
+use crate::errors::injectable::ResolveError;
+use crate::interfaces::injectable::Injectable;
 use crate::DIContainer;
 
 pub trait IInjectableTypeProvider

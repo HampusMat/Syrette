@@ -205,16 +205,16 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
     quote! {
         #item_impl
 
-        impl syrette::injectable::Injectable for #self_type_path {
+        impl syrette::interfaces::injectable::Injectable for #self_type_path {
             fn resolve(
                 di_container: &syrette::DIContainer
-            ) -> error_stack::Result<Box<Self>, syrette::injectable::ResolveError>
+            ) -> error_stack::Result<Box<Self>, syrette::errors::injectable::ResolveError>
             {
                 use error_stack::ResultExt;
 
                 return Ok(Box::new(Self::new(
                     #(di_container.get::<#dependency_types>()
-                        .change_context(syrette::injectable::ResolveError)
+                        .change_context(syrette::errors::injectable::ResolveError)
                         .attach_printable(format!(
                             "Unable to resolve a dependency of {}",
                             std::any::type_name::<#self_type_path>()

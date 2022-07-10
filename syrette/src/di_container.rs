@@ -1,13 +1,12 @@
 use std::any::{type_name, TypeId};
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use error_stack::{Context, Report, ResultExt};
+use error_stack::{Report, ResultExt};
 
-use crate::injectable::Injectable;
+use crate::errors::di_container::DIContainerError;
+use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast_box::CastBox;
 use crate::provider::{IInjectableTypeProvider, InjectableTypeProvider};
 
@@ -46,19 +45,6 @@ where
         );
     }
 }
-
-#[derive(Debug)]
-pub struct DIContainerError;
-
-impl Display for DIContainerError
-{
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
-    {
-        fmt.write_str("A DI container error has occurred")
-    }
-}
-
-impl Context for DIContainerError {}
 
 /// Dependency injection container.
 ///

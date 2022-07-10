@@ -4,7 +4,8 @@
 //!
 //! # Examples
 //! ```
-//! use syrette::{injectable, DIContainer, DIContainerError};
+//! use syrette::errors::di_container::DIContainerError;
+//! use syrette::{injectable, DIContainer};
 //!
 //! trait IDog
 //! {
@@ -115,7 +116,8 @@
 //! ```
 
 pub mod di_container;
-pub mod injectable;
+pub mod errors;
+pub mod interfaces;
 
 pub use di_container::*;
 pub use syrette_macros::*;
