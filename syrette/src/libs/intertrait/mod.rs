@@ -27,6 +27,7 @@ mod hasher;
 use hasher::BuildFastHasher;
 
 pub mod cast_box;
+pub mod cast_rc;
 
 pub type BoxedCaster = Box<dyn Any + Send + Sync>;
 

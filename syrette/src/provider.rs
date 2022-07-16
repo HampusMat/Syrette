@@ -1,17 +1,25 @@
 use std::marker::PhantomData;
+use std::rc::Rc;
 
-extern crate error_stack;
-
+use crate::castable_factory::AnyFactory;
 use crate::errors::injectable::ResolveError;
 use crate::interfaces::injectable::Injectable;
 use crate::DIContainer;
 
-pub trait IInjectableTypeProvider
+extern crate error_stack;
+
+pub enum Providable
+{
+    Injectable(Box<dyn Injectable>),
+    Factory(Rc<dyn AnyFactory>),
+}
+
+pub trait IProvider
 {
     fn provide(
         &self,
         di_container: &DIContainer,
-    ) -> error_stack::Result<Box<dyn Injectable>, ResolveError>;
+    ) -> error_stack::Result<Providable, ResolveError>;
 }
 
 pub struct InjectableTypeProvider<InjectableType>
@@ -33,15 +41,41 @@ where
     }
 }
 
-impl<InjectableType> IInjectableTypeProvider for InjectableTypeProvider<InjectableType>
+impl<InjectableType> IProvider for InjectableTypeProvider<InjectableType>
 where
     InjectableType: Injectable,
 {
     fn provide(
         &self,
         di_container: &DIContainer,
-    ) -> error_stack::Result<Box<dyn Injectable>, ResolveError>
+    ) -> error_stack::Result<Providable, ResolveError>
     {
-        Ok(InjectableType::resolve(di_container)?)
+        Ok(Providable::Injectable(InjectableType::resolve(
+            di_container,
+        )?))
+    }
+}
+
+pub struct FactoryProvider
+{
+    _factory: Rc<dyn AnyFactory>,
+}
+
+impl FactoryProvider
+{
+    pub fn new(factory: Rc<dyn AnyFactory>) -> Self
+    {
+        Self { _factory: factory }
+    }
+}
+
+impl IProvider for FactoryProvider
+{
+    fn provide(
+        &self,
+        _di_container: &DIContainer,
+    ) -> error_stack::Result<Providable, ResolveError>
+    {
+        Ok(Providable::Factory(self._factory.clone()))
     }
 }

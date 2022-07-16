@@ -1,4 +1,8 @@
+use std::rc::Rc;
+
 use syrette::errors::di_container::DIContainerError;
+use syrette::factory;
+use syrette::interfaces::factory::IFactory;
 use syrette::{injectable, DIContainer};
 
 trait IDog
@@ -54,6 +58,32 @@ trait ICow
     fn moo(&self);
 }
 
+struct Cow
+{
+    _moo_cnt: i32,
+}
+
+impl Cow
+{
+    fn new(moo_cnt: i32) -> Self
+    {
+        Self { _moo_cnt: moo_cnt }
+    }
+}
+
+impl ICow for Cow
+{
+    fn moo(&self)
+    {
+        for _ in 0..self._moo_cnt {
+            println!("Moo");
+        }
+    }
+}
+
+#[factory]
+type CowFactory = dyn IFactory<(i32,), dyn ICow>;
+
 trait IHuman
 {
     fn make_pets_make_sounds(&self);
@@ -63,16 +93,18 @@ struct Human
 {
     _dog: Box<dyn IDog>,
     _cat: Box<dyn ICat>,
+    _cow_factory: Rc<CowFactory>,
 }
 
 #[injectable(IHuman)]
 impl Human
 {
-    fn new(dog: Box<dyn IDog>, cat: Box<dyn ICat>) -> Self
+    fn new(dog: Box<dyn IDog>, cat: Box<dyn ICat>, cow_factory: Rc<CowFactory>) -> Self
     {
         Self {
             _dog: dog,
             _cat: cat,
+            _cow_factory: cow_factory,
         }
     }
 }
@@ -88,6 +120,10 @@ impl IHuman for Human
         println!("Hi kitty!");
 
         self._cat.meow();
+
+        let cow: Box<dyn ICow> = (self._cow_factory)(3);
+
+        cow.moo();
     }
 }
 
@@ -100,6 +136,11 @@ fn main() -> error_stack::Result<(), DIContainerError>
     di_container.bind::<dyn IDog>().to::<Dog>();
     di_container.bind::<dyn ICat>().to::<Cat>();
     di_container.bind::<dyn IHuman>().to::<Human>();
+
+    di_container.bind::<CowFactory>().to_factory(&|moo_cnt| {
+        let cow: Box<dyn ICow> = Box::new(Cow::new(moo_cnt));
+        cow
+    });
 
     let dog = di_container.get::<dyn IDog>()?;
 
