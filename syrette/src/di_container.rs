@@ -12,6 +12,7 @@ use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast_box::CastBox;
 use crate::libs::intertrait::cast_rc::CastRc;
 use crate::provider::{FactoryProvider, IProvider, InjectableTypeProvider, Providable};
+use crate::ptr::{FactoryPtr, InterfacePtr};
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
 pub struct BindingBuilder<'a, Interface>
@@ -52,7 +53,7 @@ where
     /// associated [`DIContainer`].
     pub fn to_factory<Args, Return>(
         &mut self,
-        factory_func: &'static dyn Fn<Args, Output = Box<Return>>,
+        factory_func: &'static dyn Fn<Args, Output = InterfacePtr<Return>>,
     ) where
         Args: 'static,
         Return: 'static + ?Sized,
@@ -64,7 +65,7 @@ where
 
         self._di_container._bindings.insert(
             interface_typeid,
-            Rc::new(FactoryProvider::new(Rc::new(factory_impl))),
+            Rc::new(FactoryProvider::new(FactoryPtr::new(factory_impl))),
         );
     }
 }
@@ -101,7 +102,9 @@ impl<'a> DIContainer
     }
 
     /// Returns a new instance of the type bound with `Interface`.
-    pub fn get<Interface>(&self) -> error_stack::Result<Box<Interface>, DIContainerError>
+    pub fn get<Interface>(
+        &self,
+    ) -> error_stack::Result<InterfacePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -144,7 +147,7 @@ impl<'a> DIContainer
     /// Returns the factory bound with factory type `Interface`.
     pub fn get_factory<Interface>(
         &self,
-    ) -> error_stack::Result<Rc<Interface>, DIContainerError>
+    ) -> error_stack::Result<FactoryPtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {

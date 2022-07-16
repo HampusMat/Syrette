@@ -121,6 +121,7 @@ pub mod castable_factory;
 pub mod di_container;
 pub mod errors;
 pub mod interfaces;
+pub mod ptr;
 
 pub use di_container::*;
 pub use syrette_macros::*;

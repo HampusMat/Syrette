@@ -1,9 +1,7 @@
-use std::rc::Rc;
-
 use syrette::errors::di_container::DIContainerError;
-use syrette::factory;
 use syrette::interfaces::factory::IFactory;
-use syrette::{injectable, DIContainer};
+use syrette::ptr::{FactoryPtr, InterfacePtr};
+use syrette::{factory, injectable, DIContainer};
 
 trait IDog
 {
@@ -91,15 +89,19 @@ trait IHuman
 
 struct Human
 {
-    _dog: Box<dyn IDog>,
-    _cat: Box<dyn ICat>,
-    _cow_factory: Rc<CowFactory>,
+    _dog: InterfacePtr<dyn IDog>,
+    _cat: InterfacePtr<dyn ICat>,
+    _cow_factory: FactoryPtr<CowFactory>,
 }
 
 #[injectable(IHuman)]
 impl Human
 {
-    fn new(dog: Box<dyn IDog>, cat: Box<dyn ICat>, cow_factory: Rc<CowFactory>) -> Self
+    fn new(
+        dog: InterfacePtr<dyn IDog>,
+        cat: InterfacePtr<dyn ICat>,
+        cow_factory: FactoryPtr<CowFactory>,
+    ) -> Self
     {
         Self {
             _dog: dog,

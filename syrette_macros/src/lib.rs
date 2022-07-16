@@ -29,7 +29,7 @@ const IMPL_NEW_METHOD_SELF_PARAM_ERR_MESSAGE: &str =
 
 const IMPL_NEW_METHOD_PARAM_TYPES_ERR_MESSAGE: &str = concat!(
     "All parameters of the new method of the attached to trait implementation ",
-    "must be either std::boxed::Box or std::rc:Rc (for factories)"
+    "must be either syrette::ptr::InterfacePtr or syrrete::ptr::FactoryPtr (for factories)"
 );
 
 const INVALID_ALIASED_FACTORY_TRAIT_ERR_MESSAGE: &str =
@@ -118,18 +118,17 @@ fn get_dependency_types(item_impl: &ItemImpl) -> Vec<Type>
         |mut acc, arg_type_path| {
             let arg_type_path_string = path_to_string(&arg_type_path.path);
 
-            if arg_type_path_string != "Box"
-                && arg_type_path_string != "std::boxed::Box"
-                && arg_type_path_string != "boxed::Box"
-                && arg_type_path_string != "Rc"
-                && arg_type_path_string != "std::rc::Rc"
-                && arg_type_path_string != "rc::Rc"
+            if arg_type_path_string != "InterfacePtr"
+                && arg_type_path_string != "ptr::InterfacePtr"
+                && arg_type_path_string != "syrrete::ptr::InterfacePtr"
+                && arg_type_path_string != "FactoryPtr"
+                && arg_type_path_string != "ptr::FactoryPtr"
+                && arg_type_path_string != "syrrete::ptr::FactoryPtr"
             {
                 panic!("{}", IMPL_NEW_METHOD_PARAM_TYPES_ERR_MESSAGE);
             }
 
             // Assume the type path has a last segment.
-            // The Box check wouldn't pass if it didn't
             let last_path_segment = arg_type_path.path.segments.last().unwrap();
 
             match &last_path_segment.arguments {
@@ -138,7 +137,8 @@ fn get_dependency_types(item_impl: &ItemImpl) -> Vec<Type>
 
                     let opt_first_generic_arg = generic_args.first();
 
-                    // Assume a first generic argument exists because Box requires one
+                    // Assume a first generic argument exists because InterfacePtr and
+                    // FactoryPtr requires one
                     let first_generic_arg = opt_first_generic_arg.as_ref().unwrap();
 
                     match first_generic_arg {
@@ -266,11 +266,13 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
         impl syrette::interfaces::injectable::Injectable for #self_type_path {
             fn resolve(
                 di_container: &syrette::DIContainer
-            ) -> error_stack::Result<Box<Self>, syrette::errors::injectable::ResolveError>
+            ) -> error_stack::Result<
+                syrette::ptr::InterfacePtr<Self>,
+                syrette::errors::injectable::ResolveError>
             {
                 use error_stack::ResultExt;
 
-                return Ok(Box::new(Self::new(
+                return Ok(syrette::ptr::InterfacePtr::new(Self::new(
                     #(#get_dependencies
                         .change_context(syrette::errors::injectable::ResolveError)
                         .attach_printable(

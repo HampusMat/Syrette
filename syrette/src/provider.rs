@@ -1,17 +1,17 @@
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use crate::castable_factory::AnyFactory;
 use crate::errors::injectable::ResolveError;
 use crate::interfaces::injectable::Injectable;
+use crate::ptr::{FactoryPtr, InterfacePtr};
 use crate::DIContainer;
 
 extern crate error_stack;
 
 pub enum Providable
 {
-    Injectable(Box<dyn Injectable>),
-    Factory(Rc<dyn AnyFactory>),
+    Injectable(InterfacePtr<dyn Injectable>),
+    Factory(FactoryPtr<dyn AnyFactory>),
 }
 
 pub trait IProvider
@@ -58,12 +58,12 @@ where
 
 pub struct FactoryProvider
 {
-    _factory: Rc<dyn AnyFactory>,
+    _factory: FactoryPtr<dyn AnyFactory>,
 }
 
 impl FactoryProvider
 {
-    pub fn new(factory: Rc<dyn AnyFactory>) -> Self
+    pub fn new(factory: FactoryPtr<dyn AnyFactory>) -> Self
     {
         Self { _factory: factory }
     }

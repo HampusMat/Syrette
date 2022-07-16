@@ -1,38 +1,42 @@
 use crate::interfaces::factory::IFactory;
 use crate::libs::intertrait::CastFrom;
+use crate::ptr::InterfacePtr;
 
 pub trait AnyFactory: CastFrom {}
 
-pub struct CastableFactory<Args, Return>
+pub struct CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
-    _func: &'static dyn Fn<Args, Output = Box<Return>>,
+    _func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
 }
 
-impl<Args, Return> CastableFactory<Args, Return>
+impl<Args, ReturnInterface> CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
-    pub fn new(func: &'static dyn Fn<Args, Output = Box<Return>>) -> Self
+    pub fn new(
+        func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
+    ) -> Self
     {
         Self { _func: func }
     }
 }
 
-impl<Args, Return> IFactory<Args, Return> for CastableFactory<Args, Return>
+impl<Args, ReturnInterface> IFactory<Args, ReturnInterface>
+    for CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
 }
 
-impl<Args, Return> Fn<Args> for CastableFactory<Args, Return>
+impl<Args, ReturnInterface> Fn<Args> for CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call(&self, args: Args) -> Self::Output
     {
@@ -40,10 +44,10 @@ where
     }
 }
 
-impl<Args, Return> FnMut<Args> for CastableFactory<Args, Return>
+impl<Args, ReturnInterface> FnMut<Args> for CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output
     {
@@ -51,12 +55,12 @@ where
     }
 }
 
-impl<Args, Return> FnOnce<Args> for CastableFactory<Args, Return>
+impl<Args, ReturnInterface> FnOnce<Args> for CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
-    type Output = Box<Return>;
+    type Output = InterfacePtr<ReturnInterface>;
 
     extern "rust-call" fn call_once(self, args: Args) -> Self::Output
     {
@@ -64,9 +68,9 @@ where
     }
 }
 
-impl<Args, Return> AnyFactory for CastableFactory<Args, Return>
+impl<Args, ReturnInterface> AnyFactory for CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
 }

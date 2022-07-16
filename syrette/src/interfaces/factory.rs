@@ -1,7 +1,9 @@
 use crate::libs::intertrait::CastFrom;
+use crate::ptr::InterfacePtr;
 
-pub trait IFactory<Args, Return>: Fn<Args, Output = Box<Return>> + CastFrom
+pub trait IFactory<Args, ReturnInterface>:
+    Fn<Args, Output = InterfacePtr<ReturnInterface>> + CastFrom
 where
-    Return: 'static + ?Sized,
+    ReturnInterface: 'static + ?Sized,
 {
 }
