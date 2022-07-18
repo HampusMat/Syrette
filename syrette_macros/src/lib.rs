@@ -148,8 +148,13 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 ///
 /// # Examples
 /// ```
-/// declare_interface!(IClientService -> ClientService);
+/// declare_interface!(ClientService -> IClientService);
+///
 /// ```
+///
+/// With `ClientService` in this case being the concrete
+/// implementation and `IClientService` being the interface trait.
+///
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
 {
