@@ -20,8 +20,6 @@ use once_cell::sync::Lazy;
 
 extern crate linkme;
 
-pub use syrette_macros::castable_to;
-
 mod hasher;
 
 use hasher::BuildFastHasher;

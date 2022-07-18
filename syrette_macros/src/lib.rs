@@ -2,15 +2,17 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse, parse_macro_input};
 
+mod declare_interface_args;
 mod factory_type_alias;
 mod injectable_impl;
 mod injectable_macro_args;
 mod libs;
 
+use declare_interface_args::DeclareInterfaceArgs;
 use factory_type_alias::FactoryTypeAlias;
 use injectable_impl::InjectableImpl;
 use injectable_macro_args::InjectableMacroArgs;
-use libs::intertrait_macros::{args::Cast, gen_caster::generate_caster};
+use libs::intertrait_macros::gen_caster::generate_caster;
 
 /// Makes a struct injectable. Thereby usable with `DIContainer`.
 ///
@@ -65,7 +67,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
     quote! {
         #expanded_injectable_impl
 
-        syrette::castable_to!(#self_type => #interface_type_path);
+        syrette::declare_interface!(#self_type -> #interface_type_path);
     }
     .into()
 }
@@ -125,28 +127,36 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
     quote! {
         #type_alias
 
-        syrette::castable_to!(
+        syrette::declare_interface!(
             syrette::castable_factory::CastableFactory<
                 #arg_types,
                 #return_type
-            > => #factory_interface
+            > -> #factory_interface
         );
 
-        syrette::castable_to!(
+        syrette::declare_interface!(
             syrette::castable_factory::CastableFactory<
                 #arg_types,
                 #return_type
-            > => syrette::castable_factory::AnyFactory
+            > -> syrette::castable_factory::AnyFactory
         );
     }
     .into()
 }
 
-#[doc(hidden)]
+/// Declares the interface trait of a implementation.
+///
+/// # Examples
+/// ```
+/// declare_interface!(IClientService -> ClientService);
+/// ```
 #[proc_macro]
-pub fn castable_to(input: TokenStream) -> TokenStream
+pub fn declare_interface(input: TokenStream) -> TokenStream
 {
-    let Cast { ty, target } = parse_macro_input!(input);
+    let DeclareInterfaceArgs {
+        implementation,
+        interface,
+    } = parse_macro_input!(input);
 
-    generate_caster(&ty, &target).into()
+    generate_caster(&implementation, &interface).into()
 }
