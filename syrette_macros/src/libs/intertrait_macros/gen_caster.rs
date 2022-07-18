@@ -20,33 +20,19 @@ use quote::ToTokens;
 use uuid::adapter::Simple;
 use uuid::Uuid;
 
-pub fn generate_caster(
-    ty: &impl ToTokens,
-    trait_: &impl ToTokens,
-    sync: bool,
-) -> TokenStream
+pub fn generate_caster(ty: &impl ToTokens, trait_: &impl ToTokens) -> TokenStream
 {
     let mut fn_buf = [0u8; FN_BUF_LEN];
+
     let fn_ident = format_ident!("{}", new_fn_name(&mut fn_buf));
-    let new_caster = if sync {
-        quote! {
-            syrette::libs::intertrait::Caster::<dyn #trait_>::new_sync(
-                |from| from.downcast_ref::<#ty>().unwrap(),
-                |from| from.downcast_mut::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap()
-            )
-        }
-    } else {
-        quote! {
-            syrette::libs::intertrait::Caster::<dyn #trait_>::new(
-                |from| from.downcast_ref::<#ty>().unwrap(),
-                |from| from.downcast_mut::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
-            )
-        }
+
+    let new_caster = quote! {
+        syrette::libs::intertrait::Caster::<dyn #trait_>::new(
+            |from| from.downcast_ref::<#ty>().unwrap(),
+            |from| from.downcast_mut::<#ty>().unwrap(),
+            |from| from.downcast::<#ty>().unwrap(),
+            |from| from.downcast::<#ty>().unwrap(),
+        )
     };
 
     quote! {

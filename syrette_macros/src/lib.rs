@@ -10,10 +10,7 @@ mod libs;
 use factory_type_alias::FactoryTypeAlias;
 use injectable_impl::InjectableImpl;
 use injectable_macro_args::InjectableMacroArgs;
-use libs::intertrait_macros::{
-    args::{Casts, Flag, Targets},
-    gen_caster::generate_caster,
-};
+use libs::intertrait_macros::{args::Cast, gen_caster::generate_caster};
 
 /// Makes a struct injectable. Thereby usable with `DIContainer`.
 ///
@@ -149,14 +146,7 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 #[proc_macro]
 pub fn castable_to(input: TokenStream) -> TokenStream
 {
-    let Casts {
-        ty,
-        targets: Targets { flags, paths },
-    } = parse_macro_input!(input);
+    let Cast { ty, target } = parse_macro_input!(input);
 
-    paths
-        .iter()
-        .map(|t| generate_caster(&ty, t, flags.contains(&Flag::Sync)))
-        .collect::<proc_macro2::TokenStream>()
-        .into()
+    generate_caster(&ty, &target).into()
 }
