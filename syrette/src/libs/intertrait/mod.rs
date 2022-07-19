@@ -16,9 +16,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use linkme::distributed_slice;
 use once_cell::sync::Lazy;
-
-extern crate linkme;
 
 mod hasher;
 
@@ -29,7 +28,7 @@ pub mod cast_rc;
 
 pub type BoxedCaster = Box<dyn Any + Send + Sync>;
 
-#[linkme::distributed_slice]
+#[distributed_slice]
 pub static CASTERS: [fn() -> (TypeId, BoxedCaster)] = [..];
 
 static CASTER_MAP: Lazy<HashMap<(TypeId, TypeId), BoxedCaster, BuildFastHasher>> =
@@ -45,14 +44,6 @@ static CASTER_MAP: Lazy<HashMap<(TypeId, TypeId), BoxedCaster, BuildFastHasher>>
 
 pub struct Caster<T: ?Sized + 'static>
 {
-    /// Casts an immutable reference to a trait object for `Any` to a reference
-    /// to a trait object for trait `T`.
-    pub cast_ref: fn(from: &dyn Any) -> &T,
-
-    /// Casts a mutable reference to a trait object for `Any` to a mutable reference
-    /// to a trait object for trait `T`.
-    pub cast_mut: fn(from: &mut dyn Any) -> &mut T,
-
     /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait object
     /// for trait `T`.
     pub cast_box: fn(from: Box<dyn Any>) -> Box<T>,
@@ -65,33 +56,11 @@ pub struct Caster<T: ?Sized + 'static>
 impl<T: ?Sized + 'static> Caster<T>
 {
     pub fn new(
-        cast_ref: fn(from: &dyn Any) -> &T,
-        cast_mut: fn(from: &mut dyn Any) -> &mut T,
         cast_box: fn(from: Box<dyn Any>) -> Box<T>,
         cast_rc: fn(from: Rc<dyn Any>) -> Rc<T>,
     ) -> Caster<T>
     {
-        Caster::<T> {
-            cast_ref,
-            cast_mut,
-            cast_box,
-            cast_rc,
-        }
-    }
-
-    pub fn new_sync(
-        cast_ref: fn(from: &dyn Any) -> &T,
-        cast_mut: fn(from: &mut dyn Any) -> &mut T,
-        cast_box: fn(from: Box<dyn Any>) -> Box<T>,
-        cast_rc: fn(from: Rc<dyn Any>) -> Rc<T>,
-    ) -> Caster<T>
-    {
-        Caster::<T> {
-            cast_ref,
-            cast_mut,
-            cast_box,
-            cast_rc,
-        }
+        Caster::<T> { cast_box, cast_rc }
     }
 }
 
@@ -116,12 +85,6 @@ fn caster<T: ?Sized + 'static>(type_id: TypeId) -> Option<&'static Caster<T>>
 /// ```
 pub trait CastFrom: Any + 'static
 {
-    /// Returns a immutable reference to `Any`, which is backed by the type implementing this trait.
-    fn ref_any(&self) -> &dyn Any;
-
-    /// Returns a mutable reference to `Any`, which is backed by the type implementing this trait.
-    fn mut_any(&mut self) -> &mut dyn Any;
-
     /// Returns a `Box` of `Any`, which is backed by the type implementing this trait.
     fn box_any(self: Box<Self>) -> Box<dyn Any>;
 
@@ -136,16 +99,6 @@ pub trait CastFromSync: CastFrom + Sync + Send + 'static
 
 impl<T: Sized + Any + 'static> CastFrom for T
 {
-    fn ref_any(&self) -> &dyn Any
-    {
-        self
-    }
-
-    fn mut_any(&mut self) -> &mut dyn Any
-    {
-        self
-    }
-
     fn box_any(self: Box<Self>) -> Box<dyn Any>
     {
         self
@@ -159,30 +112,12 @@ impl<T: Sized + Any + 'static> CastFrom for T
 
 impl CastFrom for dyn Any + 'static
 {
-    fn ref_any(&self) -> &dyn Any
-    {
-        self
-    }
-
-    fn mut_any(&mut self) -> &mut dyn Any
-    {
-        self
-    }
-
     fn box_any(self: Box<Self>) -> Box<dyn Any>
     {
         self
     }
 
     fn rc_any(self: Rc<Self>) -> Rc<dyn Any>
-    {
-        self
-    }
-}
-
-impl<T: Sized + Sync + Send + 'static> CastFromSync for T
-{
-    fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>
     {
         self
     }
@@ -190,30 +125,12 @@ impl<T: Sized + Sync + Send + 'static> CastFromSync for T
 
 impl CastFrom for dyn Any + Sync + Send + 'static
 {
-    fn ref_any(&self) -> &dyn Any
-    {
-        self
-    }
-
-    fn mut_any(&mut self) -> &mut dyn Any
-    {
-        self
-    }
-
     fn box_any(self: Box<Self>) -> Box<dyn Any>
     {
         self
     }
 
     fn rc_any(self: Rc<Self>) -> Rc<dyn Any>
-    {
-        self
-    }
-}
-
-impl CastFromSync for dyn Any + Sync + Send + 'static
-{
-    fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>
     {
         self
     }

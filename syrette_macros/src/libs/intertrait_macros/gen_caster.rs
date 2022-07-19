@@ -28,8 +28,6 @@ pub fn generate_caster(ty: &impl ToTokens, trait_: &impl ToTokens) -> TokenStrea
 
     let new_caster = quote! {
         syrette::libs::intertrait::Caster::<dyn #trait_>::new(
-            |from| from.downcast_ref::<#ty>().unwrap(),
-            |from| from.downcast_mut::<#ty>().unwrap(),
             |from| from.downcast::<#ty>().unwrap(),
             |from| from.downcast::<#ty>().unwrap(),
         )
