@@ -20,43 +20,10 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// Makes a struct injectable. Thereby usable with `DIContainer`.
 ///
 /// # Arguments
-///
 /// * A interface trait the struct implements.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
-///
-/// # Examples
-/// ```
-/// trait IConfigReader
-/// {
-///     fn read_config(&self) -> Config;
-/// }
-///
-/// struct ConfigReader
-/// {
-///     _file_reader: InterfacePtr<IFileReader>,
-/// }
-///
-/// impl ConfigReader
-/// {
-///     fn new(file_reader: InterfacePtr<IFileReader>) -> Self
-///     {
-///         Self {
-///             _file_reader: file_reader
-///         }
-///     }
-/// }
-///
-/// #[injectable(IConfigReader)]
-/// impl IConfigReader for ConfigReader
-/// {
-///     fn read_config(&self) -> Config
-///     {
-///         // Stuff here
-///     }
-/// }
-/// ```
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
@@ -82,47 +49,6 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///
 /// # Panics
 /// If the attributed item is not a type alias.
-///
-/// # Examples
-/// ```
-/// trait IUser
-/// {
-///     fn name(&self) -> String;
-///     fn age(&self) -> i32;
-/// }
-///
-/// struct User
-/// {
-///     _name: String,
-///     _age: i32,
-/// }
-///
-/// impl User
-/// {
-///     fn new(name: String, age: i32) -> Self
-///     {
-///         Self {
-///             _name: name,
-///             _age: age,
-///         }
-///     }
-/// }
-///
-/// impl IUser for User
-/// {
-///     fn name(&self) -> String
-///     {
-///         self._name
-///     }
-///
-///     fn age(&self) -> i32
-///     {
-///         self._age
-///     }
-/// }
-///
-/// type UserFactory = dyn IFactory<(String, i32), dyn IUser>;
-/// ```
 #[proc_macro_attribute]
 pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
@@ -155,14 +81,8 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 
 /// Declares the interface trait of a implementation.
 ///
-/// # Examples
-/// ```
-/// declare_interface!(ClientService -> IClientService);
-///
-/// ```
-///
-/// With `ClientService` in this case being the concrete
-/// implementation and `IClientService` being the interface trait.
+/// # Arguments
+/// {Implementation} -> {Interface}
 ///
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
