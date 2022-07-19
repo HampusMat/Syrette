@@ -1,3 +1,6 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+
 use syrette::errors::di_container::DIContainerError;
 use syrette::interfaces::factory::IFactory;
 use syrette::ptr::{FactoryPtr, InterfacePtr};
@@ -58,14 +61,14 @@ trait ICow
 
 struct Cow
 {
-    _moo_cnt: i32,
+    moo_cnt: i32,
 }
 
 impl Cow
 {
     fn new(moo_cnt: i32) -> Self
     {
-        Self { _moo_cnt: moo_cnt }
+        Self { moo_cnt }
     }
 }
 
@@ -73,7 +76,7 @@ impl ICow for Cow
 {
     fn moo(&self)
     {
-        for _ in 0..self._moo_cnt {
+        for _ in 0..self.moo_cnt {
             println!("Moo");
         }
     }
@@ -89,9 +92,9 @@ trait IHuman
 
 struct Human
 {
-    _dog: InterfacePtr<dyn IDog>,
-    _cat: InterfacePtr<dyn ICat>,
-    _cow_factory: FactoryPtr<CowFactory>,
+    dog: InterfacePtr<dyn IDog>,
+    cat: InterfacePtr<dyn ICat>,
+    cow_factory: FactoryPtr<CowFactory>,
 }
 
 #[injectable(IHuman)]
@@ -104,9 +107,9 @@ impl Human
     ) -> Self
     {
         Self {
-            _dog: dog,
-            _cat: cat,
-            _cow_factory: cow_factory,
+            dog,
+            cat,
+            cow_factory,
         }
     }
 }
@@ -117,13 +120,13 @@ impl IHuman for Human
     {
         println!("Hi doggy!");
 
-        self._dog.woof();
+        self.dog.woof();
 
         println!("Hi kitty!");
 
-        self._cat.meow();
+        self.cat.meow();
 
-        let cow: Box<dyn ICow> = (self._cow_factory)(3);
+        let cow: Box<dyn ICow> = (self.cow_factory)(3);
 
         cow.moo();
     }

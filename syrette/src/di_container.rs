@@ -19,8 +19,8 @@ pub struct BindingBuilder<'a, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    _di_container: &'a mut DIContainer,
-    _phantom_data: PhantomData<Interface>,
+    di_container: &'a mut DIContainer,
+    interface_phantom: PhantomData<Interface>,
 }
 
 impl<'a, Interface> BindingBuilder<'a, Interface>
@@ -30,8 +30,8 @@ where
     fn new(di_container: &'a mut DIContainer) -> Self
     {
         Self {
-            _di_container: di_container,
-            _phantom_data: PhantomData,
+            di_container,
+            interface_phantom: PhantomData,
         }
     }
 
@@ -43,7 +43,7 @@ where
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        self._di_container._bindings.insert(
+        self.di_container.bindings.insert(
             interface_typeid,
             Rc::new(InjectableTypeProvider::<Implementation>::new()),
         );
@@ -63,7 +63,7 @@ where
 
         let factory_impl = CastableFactory::new(factory_func);
 
-        self._di_container._bindings.insert(
+        self.di_container.bindings.insert(
             interface_typeid,
             Rc::new(FactoryProvider::new(FactoryPtr::new(factory_impl))),
         );
@@ -80,16 +80,17 @@ where
 /// ```
 pub struct DIContainer
 {
-    _bindings: HashMap<TypeId, Rc<dyn IProvider>>,
+    bindings: HashMap<TypeId, Rc<dyn IProvider>>,
 }
 
 impl<'a> DIContainer
 {
     /// Returns a new `DIContainer`.
+    #[must_use]
     pub fn new() -> Self
     {
         Self {
-            _bindings: HashMap::new(),
+            bindings: HashMap::new(),
         }
     }
 
@@ -102,6 +103,13 @@ impl<'a> DIContainer
     }
 
     /// Returns a new instance of the type bound with `Interface`.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    /// - The binding for `Interface` is not injectable
     pub fn get<Interface>(
         &self,
     ) -> error_stack::Result<InterfacePtr<Interface>, DIContainerError>
@@ -112,7 +120,7 @@ impl<'a> DIContainer
 
         let interface_name = type_name::<Interface>();
 
-        let binding = self._bindings.get(&interface_typeid).ok_or_else(|| {
+        let binding = self.bindings.get(&interface_typeid).ok_or_else(|| {
             Report::new(DIContainerError)
                 .attach_printable(format!("No binding exists for {}", interface_name))
         })?;
@@ -145,6 +153,13 @@ impl<'a> DIContainer
     }
 
     /// Returns the factory bound with factory type `Interface`.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    /// - The binding for `Interface` is not a factory
     pub fn get_factory<Interface>(
         &self,
     ) -> error_stack::Result<FactoryPtr<Interface>, DIContainerError>
@@ -155,7 +170,7 @@ impl<'a> DIContainer
 
         let interface_name = type_name::<Interface>();
 
-        let binding = self._bindings.get(&interface_typeid).ok_or_else(|| {
+        let binding = self.bindings.get(&interface_typeid).ok_or_else(|| {
             Report::new(DIContainerError)
                 .attach_printable(format!("No binding exists for {}", interface_name))
         })?;

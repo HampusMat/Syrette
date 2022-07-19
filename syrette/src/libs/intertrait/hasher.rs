@@ -1,13 +1,15 @@
+#![allow(clippy::module_name_repetitions)]
+
 /**
  * Originally from Intertrait by CodeChain
  *
- * https://github.com/CodeChain-io/intertrait
- * https://crates.io/crates/intertrait/0.2.2
+ * <https://github.com/CodeChain-io/intertrait>
+ * <https://crates.io/crates/intertrait/0.2.2>
  *
  * Licensed under either of
  *
- * Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
+ * Apache License, Version 2.0 (LICENSE-APACHE or <http://www.apache.org/licenses/LICENSE-2.0>)
+ * MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 
  * at your option.
 */
@@ -34,11 +36,13 @@ impl Hasher for FastHasher
         let mut bytes = bytes;
         while bytes.len() > size_of::<u64>() {
             let (u64_bytes, remaining) = bytes.split_at(size_of::<u64>());
+
             self.0 ^= u64::from_ne_bytes(u64_bytes.try_into().unwrap());
-            bytes = remaining
+
+            bytes = remaining;
         }
         self.0 ^= bytes
             .iter()
-            .fold(0u64, |result, b| (result << 8) | *b as u64);
+            .fold(0u64, |result, b| (result << 8) | u64::from(*b));
     }
 }

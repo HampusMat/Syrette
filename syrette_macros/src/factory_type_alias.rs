@@ -11,6 +11,7 @@ pub struct FactoryTypeAlias
 
 impl Parse for FactoryTypeAlias
 {
+    #[allow(clippy::match_wildcard_for_single_variants)]
     fn parse(input: ParseStream) -> syn::Result<Self>
     {
         let type_alias = match input.parse::<ItemType>() {

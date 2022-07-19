@@ -131,6 +131,7 @@ impl InjectableImpl
             .find(|method_item| method_item.sig.ident == method_name)
     }
 
+    #[allow(clippy::match_wildcard_for_single_variants)]
     fn get_has_fn_args_self(fn_args: &Punctuated<FnArg, Comma>) -> bool
     {
         fn_args.iter().any(|arg| match arg {
@@ -170,7 +171,7 @@ impl InjectableImpl
 
                 match opt_colon_two {
                     Some(colon_two) => {
-                        acc.push_str(colon_two.to_token_stream().to_string().as_str())
+                        acc.push_str(colon_two.to_token_stream().to_string().as_str());
                     }
                     None => {}
                 }

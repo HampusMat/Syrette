@@ -1,3 +1,4 @@
+#![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
 
 use crate::castable_factory::AnyFactory;
@@ -26,7 +27,7 @@ pub struct InjectableTypeProvider<InjectableType>
 where
     InjectableType: Injectable,
 {
-    _phantom_data: PhantomData<InjectableType>,
+    injectable_phantom: PhantomData<InjectableType>,
 }
 
 impl<InjectableType> InjectableTypeProvider<InjectableType>
@@ -36,7 +37,7 @@ where
     pub fn new() -> Self
     {
         Self {
-            _phantom_data: PhantomData,
+            injectable_phantom: PhantomData,
         }
     }
 }
@@ -58,14 +59,14 @@ where
 
 pub struct FactoryProvider
 {
-    _factory: FactoryPtr<dyn AnyFactory>,
+    factory: FactoryPtr<dyn AnyFactory>,
 }
 
 impl FactoryProvider
 {
     pub fn new(factory: FactoryPtr<dyn AnyFactory>) -> Self
     {
-        Self { _factory: factory }
+        Self { factory }
     }
 }
 
@@ -76,6 +77,6 @@ impl IProvider for FactoryProvider
         _di_container: &DIContainer,
     ) -> error_stack::Result<Providable, ResolveError>
     {
-        Ok(Providable::Factory(self._factory.clone()))
+        Ok(Providable::Factory(self.factory.clone()))
     }
 }

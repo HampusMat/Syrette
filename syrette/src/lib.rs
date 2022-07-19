@@ -1,4 +1,6 @@
 #![feature(unboxed_closures, fn_traits)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
 
 //! Syrette
 //!

@@ -1,3 +1,6 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse, parse_macro_input};
@@ -19,6 +22,9 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// # Arguments
 ///
 /// * A interface trait the struct implements.
+///
+/// # Panics
+/// If the attributed item is not a impl.
 ///
 /// # Examples
 /// ```
@@ -73,6 +79,9 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 }
 
 /// Makes a type alias usable as a factory interface.
+///
+/// # Panics
+/// If the attributed item is not a type alias.
 ///
 /// # Examples
 /// ```

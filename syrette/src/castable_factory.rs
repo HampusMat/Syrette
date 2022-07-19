@@ -9,7 +9,7 @@ where
     Args: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    _func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
+    func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
 }
 
 impl<Args, ReturnInterface> CastableFactory<Args, ReturnInterface>
@@ -21,7 +21,7 @@ where
         func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
     ) -> Self
     {
-        Self { _func: func }
+        Self { func }
     }
 }
 
@@ -40,7 +40,7 @@ where
 {
     extern "rust-call" fn call(&self, args: Args) -> Self::Output
     {
-        self._func.call(args)
+        self.func.call(args)
     }
 }
 
