@@ -15,19 +15,19 @@ use crate::provider::{FactoryProvider, IProvider, InjectableTypeProvider, Provid
 use crate::ptr::{FactoryPtr, InterfacePtr};
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
-pub struct BindingBuilder<'a, Interface>
+pub struct BindingBuilder<'di_container_lt, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'a mut DIContainer,
+    di_container: &'di_container_lt mut DIContainer,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'a, Interface> BindingBuilder<'a, Interface>
+impl<'di_container_lt, Interface> BindingBuilder<'di_container_lt, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'a mut DIContainer) -> Self
+    fn new(di_container: &'di_container_lt mut DIContainer) -> Self
     {
         Self {
             di_container,
@@ -120,7 +120,7 @@ pub struct DIContainer
     bindings: HashMap<TypeId, Rc<dyn IProvider>>,
 }
 
-impl<'a> DIContainer
+impl DIContainer
 {
     /// Returns a new `DIContainer`.
     #[must_use]
@@ -132,7 +132,7 @@ impl<'a> DIContainer
     }
 
     /// Returns a new [`BindingBuilder`] for the given interface.
-    pub fn bind<Interface>(&'a mut self) -> BindingBuilder<Interface>
+    pub fn bind<Interface>(&mut self) -> BindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,
     {
@@ -245,5 +245,260 @@ impl Default for DIContainer
     fn default() -> Self
     {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use mockall::mock;
+
+    use super::*;
+    use crate::errors::injectable::ResolveError;
+
+    #[test]
+    fn can_bind_to()
+    {
+        trait IUserManager
+        {
+            fn add_user(&self, user_id: i128);
+
+            fn remove_user(&self, user_id: i128);
+        }
+
+        struct UserManager {}
+
+        impl IUserManager for UserManager
+        {
+            fn add_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+
+            fn remove_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+        }
+
+        impl Injectable for UserManager
+        {
+            fn resolve(
+                _di_container: &DIContainer,
+            ) -> error_stack::Result<
+                InterfacePtr<Self>,
+                crate::errors::injectable::ResolveError,
+            >
+            where
+                Self: Sized,
+            {
+                Ok(InterfacePtr::new(Self {}))
+            }
+        }
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        assert_eq!(di_container.bindings.len(), 0);
+
+        di_container.bind::<dyn IUserManager>().to::<UserManager>();
+
+        assert_eq!(di_container.bindings.len(), 1);
+    }
+
+    #[test]
+    fn can_bind_to_factory()
+    {
+        trait IUserManager
+        {
+            fn add_user(&self, user_id: i128);
+
+            fn remove_user(&self, user_id: i128);
+        }
+
+        struct UserManager {}
+
+        impl UserManager
+        {
+            fn new() -> Self
+            {
+                Self {}
+            }
+        }
+
+        impl IUserManager for UserManager
+        {
+            fn add_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+
+            fn remove_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+        }
+
+        type IUserManagerFactory = dyn IFactory<(), dyn IUserManager>;
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        assert_eq!(di_container.bindings.len(), 0);
+
+        di_container.bind::<IUserManagerFactory>().to_factory(&|| {
+            let user_manager: InterfacePtr<dyn IUserManager> =
+                InterfacePtr::new(UserManager::new());
+
+            user_manager
+        });
+
+        assert_eq!(di_container.bindings.len(), 1);
+    }
+
+    #[test]
+    fn can_get() -> error_stack::Result<(), DIContainerError>
+    {
+        trait IUserManager
+        {
+            fn add_user(&self, user_id: i128);
+
+            fn remove_user(&self, user_id: i128);
+        }
+
+        struct UserManager {}
+
+        use crate as syrette;
+        use crate::injectable;
+
+        #[injectable(IUserManager)]
+        impl UserManager
+        {
+            fn new() -> Self
+            {
+                Self {}
+            }
+        }
+
+        impl IUserManager for UserManager
+        {
+            fn add_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+
+            fn remove_user(&self, _user_id: i128)
+            {
+                // ...
+            }
+        }
+
+        mock! {
+            Provider {}
+
+            impl IProvider for Provider
+            {
+                fn provide(
+                    &self,
+                    di_container: &DIContainer,
+                ) -> error_stack::Result<Providable, ResolveError>;
+            }
+        }
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        let mut mock_provider = MockProvider::new();
+
+        mock_provider.expect_provide().returning(|_| {
+            Ok(Providable::Injectable(
+                InterfacePtr::new(UserManager::new()),
+            ))
+        });
+
+        di_container
+            .bindings
+            .insert(TypeId::of::<dyn IUserManager>(), Rc::new(mock_provider));
+
+        di_container.get::<dyn IUserManager>()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_get_factory() -> error_stack::Result<(), DIContainerError>
+    {
+        trait IUserManager
+        {
+            fn add_user(&mut self, user_id: i128);
+
+            fn remove_user(&mut self, user_id: i128);
+        }
+
+        struct UserManager
+        {
+            users: Vec<i128>,
+        }
+
+        impl UserManager
+        {
+            fn new(users: Vec<i128>) -> Self
+            {
+                Self { users }
+            }
+        }
+
+        impl IUserManager for UserManager
+        {
+            fn add_user(&mut self, user_id: i128)
+            {
+                self.users.push(user_id);
+            }
+
+            fn remove_user(&mut self, user_id: i128)
+            {
+                let user_index =
+                    self.users.iter().position(|user| *user == user_id).unwrap();
+
+                self.users.remove(user_index);
+            }
+        }
+
+        use crate as syrette;
+
+        #[crate::factory]
+        type IUserManagerFactory = dyn IFactory<(Vec<i128>,), dyn IUserManager>;
+
+        mock! {
+            Provider {}
+
+            impl IProvider for Provider
+            {
+                fn provide(
+                    &self,
+                    di_container: &DIContainer,
+                ) -> error_stack::Result<Providable, ResolveError>;
+            }
+        }
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        let mut mock_provider = MockProvider::new();
+
+        mock_provider.expect_provide().returning(|_| {
+            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
+                &|users| {
+                    let user_manager: InterfacePtr<dyn IUserManager> =
+                        InterfacePtr::new(UserManager::new(users));
+
+                    user_manager
+                },
+            ))))
+        });
+
+        di_container
+            .bindings
+            .insert(TypeId::of::<IUserManagerFactory>(), Rc::new(mock_provider));
+
+        di_container.get_factory::<IUserManagerFactory>()?;
+
+        Ok(())
     }
 }
