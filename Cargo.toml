@@ -9,7 +9,7 @@ keywords = ["DI", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 
 [dependencies]
-syrette_macros = "0.1.0"
+syrette_macros = { path = "./macros", version = "0.1.0" }
 linkme = "0.3.0"
 once_cell = "1.4"
 error-stack = "0.1.1"
