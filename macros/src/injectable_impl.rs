@@ -52,11 +52,11 @@ impl InjectableImpl
             impl syrette::interfaces::injectable::Injectable for #self_type {
                 fn resolve(
                     #di_container_var: &syrette::DIContainer
-                ) -> error_stack::Result<
+                ) -> syrette::libs::error_stack::Result<
                     syrette::ptr::InterfacePtr<Self>,
                     syrette::errors::injectable::ResolveError>
                 {
-                    use error_stack::ResultExt;
+                    use syrette::libs::error_stack::ResultExt;
 
                     return Ok(syrette::ptr::InterfacePtr::new(Self::new(
                         #(#get_dependencies
