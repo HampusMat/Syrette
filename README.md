@@ -95,7 +95,7 @@ fn main()
 
 	warrior.fight();
 
-	println!("Warrio has fighted");
+	println!("Warrior has fighted");
 }
 ```
 
