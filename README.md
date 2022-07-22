@@ -18,7 +18,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 - Enforces the use of interface traits
 
 ## Optional features
-- Binding factories (Rust nightly required)
+- `factory`. Binding factories (Rust nightly required)
 
 To use these features, you must [enable it in Cargo](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features).
 
