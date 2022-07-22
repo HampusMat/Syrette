@@ -1,8 +1,6 @@
+use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::factory::IFactory;
-use crate::libs::intertrait::CastFrom;
 use crate::ptr::InterfacePtr;
-
-pub trait AnyFactory: CastFrom {}
 
 pub struct CastableFactory<Args, ReturnInterface>
 where

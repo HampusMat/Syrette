@@ -13,10 +13,14 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 ## Features
 - A [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) container
 - Autowiring dependencies
-- Binding factories
 - API inspired from the one of [InversifyJS](https://github.com/inversify/InversifyJS)
 - Helpful error messages
 - Enforces the use of interface traits
+
+## Optional features
+- Binding factories (Rust nightly required)
+
+To use these features, you must [enable it in Cargo](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features).
 
 ## Motivation
 Other DI libraries for Rust are either unmaintained ([di](https://crates.io/crates/di) for example),
@@ -24,9 +28,6 @@ overcomplicated and or bloated ([anthill-di](https://crates.io/crates/anthill-di
 or has a weird API ([teloc](https://crates.io/crates/teloc) for example).
 
 The goal of Syrette is to be a simple, useful, convenient and familiar DI library.
-
-## Notice
-Rust nightly is currently required.
 
 ## Example usage
 ```rust

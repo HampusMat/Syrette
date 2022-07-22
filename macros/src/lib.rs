@@ -12,7 +12,6 @@ mod injectable_macro_args;
 mod libs;
 
 use declare_interface_args::DeclareInterfaceArgs;
-use factory_type_alias::FactoryTypeAlias;
 use injectable_impl::InjectableImpl;
 use injectable_macro_args::InjectableMacroArgs;
 use libs::intertrait_macros::gen_caster::generate_caster;
@@ -52,7 +51,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 #[proc_macro_attribute]
 pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
-    let FactoryTypeAlias {
+    let factory_type_alias::FactoryTypeAlias {
         type_alias,
         factory_interface,
         arg_types,
@@ -73,7 +72,7 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
             syrette::castable_factory::CastableFactory<
                 #arg_types,
                 #return_type
-            > -> syrette::castable_factory::AnyFactory
+            > -> syrette::interfaces::any_factory::AnyFactory
         );
     }
     .into()

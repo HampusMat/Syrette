@@ -1,8 +1,8 @@
 #![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
 
-use crate::castable_factory::AnyFactory;
 use crate::errors::injectable::ResolveError;
+use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{FactoryPtr, InterfacePtr};
 use crate::DIContainer;
@@ -12,6 +12,7 @@ extern crate error_stack;
 pub enum Providable
 {
     Injectable(InterfacePtr<dyn Injectable>),
+    #[allow(dead_code)]
     Factory(FactoryPtr<dyn AnyFactory>),
 }
 
@@ -57,11 +58,13 @@ where
     }
 }
 
+#[cfg(feature = "factory")]
 pub struct FactoryProvider
 {
     factory: FactoryPtr<dyn AnyFactory>,
 }
 
+#[cfg(feature = "factory")]
 impl FactoryProvider
 {
     pub fn new(factory: FactoryPtr<dyn AnyFactory>) -> Self
@@ -70,6 +73,7 @@ impl FactoryProvider
     }
 }
 
+#[cfg(feature = "factory")]
 impl IProvider for FactoryProvider
 {
     fn provide(

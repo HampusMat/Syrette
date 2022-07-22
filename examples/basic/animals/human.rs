@@ -1,8 +1,7 @@
 use syrette::injectable;
-use syrette::ptr::{FactoryPtr, InterfacePtr};
+use syrette::ptr::InterfacePtr;
 
 use crate::interfaces::cat::ICat;
-use crate::interfaces::cow::{CowFactory, ICow};
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;
 
@@ -10,23 +9,14 @@ pub struct Human
 {
     dog: InterfacePtr<dyn IDog>,
     cat: InterfacePtr<dyn ICat>,
-    cow_factory: FactoryPtr<CowFactory>,
 }
 
 #[injectable(IHuman)]
 impl Human
 {
-    pub fn new(
-        dog: InterfacePtr<dyn IDog>,
-        cat: InterfacePtr<dyn ICat>,
-        cow_factory: FactoryPtr<CowFactory>,
-    ) -> Self
+    pub fn new(dog: InterfacePtr<dyn IDog>, cat: InterfacePtr<dyn ICat>) -> Self
     {
-        Self {
-            dog,
-            cat,
-            cow_factory,
-        }
+        Self { dog, cat }
     }
 }
 
@@ -41,9 +31,5 @@ impl IHuman for Human
         println!("Hi kitty!");
 
         self.cat.meow();
-
-        let cow: Box<dyn ICow> = (self.cow_factory)(3);
-
-        cow.moo();
     }
 }

@@ -5,14 +5,13 @@ use std::rc::Rc;
 
 use error_stack::{Report, ResultExt};
 
+#[cfg(feature = "factory")]
 use crate::castable_factory::CastableFactory;
 use crate::errors::di_container::DIContainerError;
-use crate::interfaces::factory::IFactory;
 use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast_box::CastBox;
-use crate::libs::intertrait::cast_rc::CastRc;
-use crate::provider::{FactoryProvider, IProvider, InjectableTypeProvider, Providable};
-use crate::ptr::{FactoryPtr, InterfacePtr};
+use crate::provider::{IProvider, InjectableTypeProvider, Providable};
+use crate::ptr::InterfacePtr;
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
 pub struct BindingBuilder<'di_container_lt, Interface>
@@ -51,13 +50,14 @@ where
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
     /// associated [`DIContainer`].
+    #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &mut self,
         factory_func: &'static dyn Fn<Args, Output = InterfacePtr<Return>>,
     ) where
         Args: 'static,
         Return: 'static + ?Sized,
-        Interface: IFactory<Args, Return>,
+        Interface: crate::interfaces::factory::IFactory<Args, Return>,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
@@ -65,7 +65,9 @@ where
 
         self.di_container.bindings.insert(
             interface_typeid,
-            Rc::new(FactoryProvider::new(FactoryPtr::new(factory_impl))),
+            Rc::new(crate::provider::FactoryProvider::new(
+                crate::ptr::FactoryPtr::new(factory_impl),
+            )),
         );
     }
 }
@@ -197,9 +199,10 @@ impl DIContainer
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
     /// - The binding for `Interface` is not a factory
+    #[cfg(feature = "factory")]
     pub fn get_factory<Interface>(
         &self,
-    ) -> error_stack::Result<FactoryPtr<Interface>, DIContainerError>
+    ) -> error_stack::Result<crate::ptr::FactoryPtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -222,6 +225,8 @@ impl DIContainer
 
         match binding_providable {
             Providable::Factory(binding_factory) => {
+                use crate::libs::intertrait::cast_rc::CastRc;
+
                 let factory_box_result = binding_factory.cast::<Interface>();
 
                 match factory_box_result {
@@ -306,6 +311,7 @@ mod tests
     }
 
     #[test]
+    #[cfg(feature = "factory")]
     fn can_bind_to_factory()
     {
         trait IUserManager
@@ -423,6 +429,7 @@ mod tests
     }
 
     #[test]
+    #[cfg(feature = "factory")]
     fn can_get_factory() -> error_stack::Result<(), DIContainerError>
     {
         trait IUserManager

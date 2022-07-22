@@ -8,6 +8,13 @@ repository = "https://git.hampusmat.com/syrette"
 keywords = ["DI", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 
+[features]
+factory = []
+
+[[example]]
+name = "factory"
+required-features = ["factory"]
+
 [dependencies]
 syrette_macros = { path = "./macros", version = "0.1.0" }
 linkme = "0.3.0"
