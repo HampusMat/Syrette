@@ -15,16 +15,16 @@ use crate::libs::intertrait::{caster, CastFrom};
 
 pub trait CastBox
 {
-    /// Casts a box to this trait into that of type `T`. If fails, returns the receiver.
-    fn cast<T: ?Sized + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>>;
+    /// Casts a box to this trait into that of `Trait`. If fails, returns the receiver.
+    fn cast<Trait: ?Sized + 'static>(self: Box<Self>) -> Result<Box<Trait>, Box<Self>>;
 }
 
 /// A blanket implementation of `CastBox` for traits extending `CastFrom`.
-impl<S: ?Sized + CastFrom> CastBox for S
+impl<CastableFrom: ?Sized + CastFrom> CastBox for CastableFrom
 {
-    fn cast<T: ?Sized + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>>
+    fn cast<Trait: ?Sized + 'static>(self: Box<Self>) -> Result<Box<Trait>, Box<Self>>
     {
-        match caster::<T>((*self).type_id()) {
+        match caster::<Trait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_box)(self.box_any())),
             None => Err(self),
         }

@@ -11,8 +11,9 @@
 
  * at your option.
 */
-use std::str::from_utf8_unchecked;
+use std::str::from_utf8;
 
+use proc_macro2::Ident;
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
@@ -20,14 +21,16 @@ use quote::ToTokens;
 use uuid::adapter::Simple;
 use uuid::Uuid;
 
-pub fn generate_caster(ty: &impl ToTokens, trait_: &impl ToTokens) -> TokenStream
-{
-    let mut fn_buf = [0u8; FN_BUF_LEN];
+const CASTER_FN_NAME_PREFIX: &[u8] = b"__";
 
-    let fn_ident = format_ident!("{}", new_fn_name(&mut fn_buf));
+const FN_BUF_LEN: usize = CASTER_FN_NAME_PREFIX.len() + Simple::LENGTH;
+
+pub fn generate_caster(ty: &impl ToTokens, dst_trait: &impl ToTokens) -> TokenStream
+{
+    let fn_ident = create_caster_fn_ident();
 
     let new_caster = quote! {
-        syrette::libs::intertrait::Caster::<dyn #trait_>::new(
+        syrette::libs::intertrait::Caster::<dyn #dst_trait>::new(
             |from| from.downcast::<#ty>().unwrap(),
             |from| from.downcast::<#ty>().unwrap(),
         )
@@ -42,14 +45,18 @@ pub fn generate_caster(ty: &impl ToTokens, trait_: &impl ToTokens) -> TokenStrea
     }
 }
 
-const FN_PREFIX: &[u8] = b"__";
-const FN_BUF_LEN: usize = FN_PREFIX.len() + Simple::LENGTH;
-
-fn new_fn_name(buf: &mut [u8]) -> &str
+fn create_caster_fn_ident() -> Ident
 {
-    buf[..FN_PREFIX.len()].copy_from_slice(FN_PREFIX);
+    let buf = &mut [0u8; FN_BUF_LEN];
+
+    buf[..CASTER_FN_NAME_PREFIX.len()].copy_from_slice(CASTER_FN_NAME_PREFIX);
+
     Uuid::new_v4()
         .to_simple()
-        .encode_lower(&mut buf[FN_PREFIX.len()..]);
-    unsafe { from_utf8_unchecked(&buf[..FN_BUF_LEN]) }
+        .encode_lower(&mut buf[CASTER_FN_NAME_PREFIX.len()..]);
+
+    let fn_name =
+        from_utf8(&buf[..FN_BUF_LEN]).expect("Created caster function name is not UTF-8");
+
+    format_ident!("{}", fn_name)
 }

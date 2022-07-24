@@ -17,16 +17,16 @@ use crate::libs::intertrait::{caster, CastFrom};
 
 pub trait CastRc
 {
-    /// Casts an `Rc` for this trait into that for type `T`.
-    fn cast<T: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<T>, Rc<Self>>;
+    /// Casts an `Rc` for this trait into that for `Trait`.
+    fn cast<Trait: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Trait>, Rc<Self>>;
 }
 
 /// A blanket implementation of `CastRc` for traits extending `CastFrom`.
-impl<S: ?Sized + CastFrom> CastRc for S
+impl<CastableFrom: ?Sized + CastFrom> CastRc for CastableFrom
 {
-    fn cast<T: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<T>, Rc<Self>>
+    fn cast<Trait: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Trait>, Rc<Self>>
     {
-        match caster::<T>((*self).type_id()) {
+        match caster::<Trait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_rc)(self.rc_any())),
             None => Err(self),
         }
