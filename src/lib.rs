@@ -22,3 +22,20 @@ pub mod libs;
 
 // Private
 mod provider;
+
+/// Shortcut for creating a DI container binding for a injectable without a declared interface.
+///
+/// This will declare a interface for the implementation.
+///
+/// Useful for when the implementation or the interface is generic.
+///
+/// # Arguments
+/// {interface} => {implementation}, {DI container variable name}
+#[macro_export]
+macro_rules! di_container_bind {
+    ($interface: path => $implementation: ty, $di_container: ident) => {
+        $di_container.bind::<dyn $interface>().to::<$implementation>();
+
+        syrette::declare_interface!($implementation -> $interface);
+    };
+}

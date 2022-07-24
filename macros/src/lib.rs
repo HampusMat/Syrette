@@ -19,27 +19,40 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// Makes a struct injectable. Thereby usable with `DIContainer`.
 ///
 /// # Arguments
-/// * A interface trait the struct implements.
+/// * (Optional) A interface trait the struct implements.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
+///
+/// # Important
+/// If the interface trait argument is excluded, you should either manually
+/// declare the interface with the `declare_interface` macro or use
+/// the `di_container_bind` macro to create a DI container binding.
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
-    let InjectableMacroArgs {
-        interface: interface_type_path,
-    } = parse_macro_input!(args_stream);
+    let should_declare_interface = !args_stream.is_empty();
 
     let injectable_impl: InjectableImpl = parse(impl_stream).unwrap();
 
     let expanded_injectable_impl = injectable_impl.expand();
 
-    let self_type = &injectable_impl.self_type;
+    let maybe_decl_interface = if should_declare_interface {
+        let InjectableMacroArgs { interface } = parse_macro_input!(args_stream);
+
+        let self_type = &injectable_impl.self_type;
+
+        quote! {
+            syrette::declare_interface!(#self_type -> #interface);
+        }
+    } else {
+        quote! {}
+    };
 
     quote! {
         #expanded_injectable_impl
 
-        syrette::declare_interface!(#self_type -> #interface_type_path);
+        #maybe_decl_interface
     }
     .into()
 }

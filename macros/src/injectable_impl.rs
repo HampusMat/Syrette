@@ -1,5 +1,6 @@
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
+use syn::Generics;
 use syn::{
     parse_str, punctuated::Punctuated, token::Comma, ExprMethodCall, FnArg,
     GenericArgument, Ident, ImplItem, ImplItemMethod, ItemImpl, Path, PathArguments,
@@ -12,6 +13,7 @@ pub struct InjectableImpl
 {
     pub dependency_types: Vec<Type>,
     pub self_type: Type,
+    pub generics: Generics,
     pub original_impl: ItemImpl,
 }
 
@@ -25,6 +27,7 @@ impl Parse for InjectableImpl
                     Ok(dependency_types) => Ok(Self {
                         dependency_types,
                         self_type: impl_parsed_input.self_ty.as_ref().clone(),
+                        generics: impl_parsed_input.generics.clone(),
                         original_impl: impl_parsed_input,
                     }),
                     Err(error_msg) => Err(input.error(error_msg)),
@@ -39,17 +42,21 @@ impl InjectableImpl
 {
     pub fn expand(&self) -> proc_macro2::TokenStream
     {
-        let original_impl = &self.original_impl;
-        let self_type = &self.self_type;
+        let Self {
+            dependency_types,
+            self_type,
+            generics,
+            original_impl,
+        } = self;
 
         let di_container_var: Ident = parse_str(DI_CONTAINER_VAR_NAME).unwrap();
 
-        let get_dependencies = Self::_create_get_dependencies(&self.dependency_types);
+        let get_dependencies = Self::_create_get_dependencies(dependency_types);
 
         quote! {
             #original_impl
 
-            impl syrette::interfaces::injectable::Injectable for #self_type {
+            impl #generics syrette::interfaces::injectable::Injectable for #self_type {
                 fn resolve(
                     #di_container_var: &syrette::DIContainer
                 ) -> syrette::libs::error_stack::Result<
