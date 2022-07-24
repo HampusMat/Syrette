@@ -8,6 +8,9 @@ repository = "https://git.hampusmat.com/syrette"
 keywords = ["DI", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 factory = []
 
