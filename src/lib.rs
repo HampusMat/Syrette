@@ -11,11 +11,12 @@ pub mod errors;
 pub mod interfaces;
 pub mod ptr;
 
-#[cfg(feature = "factory")]
-pub mod castable_factory;
-
 pub use di_container::*;
 pub use syrette_macros::*;
+
+#[cfg(feature = "factory")]
+#[doc(hidden)]
+pub mod castable_factory;
 
 #[doc(hidden)]
 pub mod libs;
