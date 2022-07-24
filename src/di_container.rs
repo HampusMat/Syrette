@@ -1,8 +1,8 @@
 use std::any::{type_name, TypeId};
-use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use ahash::AHashMap;
 use error_stack::{Report, ResultExt};
 
 #[cfg(feature = "factory")]
@@ -119,7 +119,7 @@ where
 /// ```
 pub struct DIContainer
 {
-    bindings: HashMap<TypeId, Rc<dyn IProvider>>,
+    bindings: AHashMap<TypeId, Rc<dyn IProvider>>,
 }
 
 impl DIContainer
@@ -129,7 +129,7 @@ impl DIContainer
     pub fn new() -> Self
     {
         Self {
-            bindings: HashMap::new(),
+            bindings: AHashMap::new(),
         }
     }
 
@@ -260,6 +260,7 @@ mod tests
 
     use super::*;
     use crate::errors::injectable::ResolveError;
+    use crate::ptr::InterfacePtr;
 
     #[test]
     fn can_bind_to()
@@ -344,7 +345,8 @@ mod tests
             }
         }
 
-        type IUserManagerFactory = dyn IFactory<(), dyn IUserManager>;
+        type IUserManagerFactory =
+            dyn crate::interfaces::factory::IFactory<(), dyn IUserManager>;
 
         let mut di_container: DIContainer = DIContainer::new();
 
@@ -471,7 +473,8 @@ mod tests
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory = dyn IFactory<(Vec<i128>,), dyn IUserManager>;
+        type IUserManagerFactory =
+            dyn crate::interfaces::factory::IFactory<(Vec<i128>,), dyn IUserManager>;
 
         mock! {
             Provider {}
