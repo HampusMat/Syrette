@@ -15,3 +15,16 @@ impl Display for DIContainerError
 }
 
 impl Context for DIContainerError {}
+
+#[derive(Debug)]
+pub struct BindingBuilderError;
+
+impl Display for BindingBuilderError
+{
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
+    {
+        fmt.write_str("A binding builder error has occurred")
+    }
+}
+
+impl Context for BindingBuilderError {}

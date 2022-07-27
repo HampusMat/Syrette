@@ -4,14 +4,15 @@ use std::marker::PhantomData;
 use crate::errors::injectable::ResolveError;
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::injectable::Injectable;
-use crate::ptr::{FactoryPtr, TransientPtr};
+use crate::ptr::{FactoryPtr, SingletonPtr, TransientPtr};
 use crate::DIContainer;
 
 extern crate error_stack;
 
 pub enum Providable
 {
-    Injectable(TransientPtr<dyn Injectable>),
+    Transient(TransientPtr<dyn Injectable>),
+    Singleton(SingletonPtr<dyn Injectable>),
     #[allow(dead_code)]
     Factory(FactoryPtr<dyn AnyFactory>),
 }
@@ -24,14 +25,14 @@ pub trait IProvider
     ) -> error_stack::Result<Providable, ResolveError>;
 }
 
-pub struct InjectableTypeProvider<InjectableType>
+pub struct TransientTypeProvider<InjectableType>
 where
     InjectableType: Injectable,
 {
     injectable_phantom: PhantomData<InjectableType>,
 }
 
-impl<InjectableType> InjectableTypeProvider<InjectableType>
+impl<InjectableType> TransientTypeProvider<InjectableType>
 where
     InjectableType: Injectable,
 {
@@ -43,7 +44,7 @@ where
     }
 }
 
-impl<InjectableType> IProvider for InjectableTypeProvider<InjectableType>
+impl<InjectableType> IProvider for TransientTypeProvider<InjectableType>
 where
     InjectableType: Injectable,
 {
@@ -52,9 +53,39 @@ where
         di_container: &DIContainer,
     ) -> error_stack::Result<Providable, ResolveError>
     {
-        Ok(Providable::Injectable(InjectableType::resolve(
+        Ok(Providable::Transient(InjectableType::resolve(
             di_container,
         )?))
+    }
+}
+
+pub struct SingletonProvider<InjectableType>
+where
+    InjectableType: Injectable,
+{
+    singleton: SingletonPtr<InjectableType>,
+}
+
+impl<InjectableType> SingletonProvider<InjectableType>
+where
+    InjectableType: Injectable,
+{
+    pub fn new(singleton: SingletonPtr<InjectableType>) -> Self
+    {
+        Self { singleton }
+    }
+}
+
+impl<InjectableType> IProvider for SingletonProvider<InjectableType>
+where
+    InjectableType: Injectable,
+{
+    fn provide(
+        &self,
+        _di_container: &DIContainer,
+    ) -> error_stack::Result<Providable, ResolveError>
+    {
+        Ok(Providable::Singleton(self.singleton.clone()))
     }
 }
 
