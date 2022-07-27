@@ -11,7 +11,7 @@ use crate::errors::di_container::DIContainerError;
 use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast::CastBox;
 use crate::provider::{IProvider, InjectableTypeProvider, Providable};
-use crate::ptr::InterfacePtr;
+use crate::ptr::TransientPtr;
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
 pub struct BindingBuilder<'di_container_lt, Interface>
@@ -53,7 +53,7 @@ where
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &mut self,
-        factory_func: &'static dyn Fn<Args, Output = InterfacePtr<Return>>,
+        factory_func: &'static dyn Fn<Args, Output = TransientPtr<Return>>,
     ) where
         Args: 'static,
         Return: 'static + ?Sized,
@@ -151,7 +151,7 @@ impl DIContainer
     /// - The binding for `Interface` is not injectable
     pub fn get<Interface>(
         &self,
-    ) -> error_stack::Result<InterfacePtr<Interface>, DIContainerError>
+    ) -> error_stack::Result<TransientPtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -260,7 +260,7 @@ mod tests
 
     use super::*;
     use crate::errors::injectable::ResolveError;
-    use crate::ptr::InterfacePtr;
+    use crate::ptr::TransientPtr;
 
     #[test]
     fn can_bind_to()
@@ -292,13 +292,13 @@ mod tests
             fn resolve(
                 _di_container: &DIContainer,
             ) -> error_stack::Result<
-                InterfacePtr<Self>,
+                TransientPtr<Self>,
                 crate::errors::injectable::ResolveError,
             >
             where
                 Self: Sized,
             {
-                Ok(InterfacePtr::new(Self {}))
+                Ok(TransientPtr::new(Self {}))
             }
         }
 
@@ -353,8 +353,8 @@ mod tests
         assert_eq!(di_container.bindings.len(), 0);
 
         di_container.bind::<IUserManagerFactory>().to_factory(&|| {
-            let user_manager: InterfacePtr<dyn IUserManager> =
-                InterfacePtr::new(UserManager::new());
+            let user_manager: TransientPtr<dyn IUserManager> =
+                TransientPtr::new(UserManager::new());
 
             user_manager
         });
@@ -417,7 +417,7 @@ mod tests
 
         mock_provider.expect_provide().returning(|_| {
             Ok(Providable::Injectable(
-                InterfacePtr::new(UserManager::new()),
+                TransientPtr::new(UserManager::new()),
             ))
         });
 
@@ -495,8 +495,8 @@ mod tests
         mock_provider.expect_provide().returning(|_| {
             Ok(Providable::Factory(crate::ptr::FactoryPtr::new(
                 CastableFactory::new(&|users| {
-                    let user_manager: InterfacePtr<dyn IUserManager> =
-                        InterfacePtr::new(UserManager::new(users));
+                    let user_manager: TransientPtr<dyn IUserManager> =
+                        TransientPtr::new(UserManager::new(users));
 
                     user_manager
                 }),

@@ -1,5 +1,5 @@
 use syrette::injectable;
-use syrette::ptr::InterfacePtr;
+use syrette::ptr::TransientPtr;
 
 use crate::interfaces::cat::ICat;
 use crate::interfaces::dog::IDog;
@@ -7,14 +7,14 @@ use crate::interfaces::human::IHuman;
 
 pub struct Human
 {
-    dog: InterfacePtr<dyn IDog>,
-    cat: InterfacePtr<dyn ICat>,
+    dog: TransientPtr<dyn IDog>,
+    cat: TransientPtr<dyn ICat>,
 }
 
 #[injectable(IHuman)]
 impl Human
 {
-    pub fn new(dog: InterfacePtr<dyn IDog>, cat: InterfacePtr<dyn ICat>) -> Self
+    pub fn new(dog: TransientPtr<dyn IDog>, cat: TransientPtr<dyn ICat>) -> Self
     {
         Self { dog, cat }
     }

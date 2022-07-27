@@ -1,4 +1,4 @@
-use syrette::ptr::InterfacePtr;
+use syrette::ptr::TransientPtr;
 use syrette::DIContainer;
 
 // Interfaces
@@ -14,8 +14,8 @@ pub fn bootstrap() -> DIContainer
     di_container
         .bind::<IUserFactory>()
         .to_factory(&|name, date_of_birth, password| {
-            let user: InterfacePtr<dyn IUser> =
-                InterfacePtr::new(User::new(name, date_of_birth, password));
+            let user: TransientPtr<dyn IUser> =
+                TransientPtr::new(User::new(name, date_of_birth, password));
 
             user
         });

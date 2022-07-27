@@ -33,7 +33,7 @@ The goal of Syrette is to be a simple, useful, convenient and familiar DI librar
 ## Example usage
 ```rust
 use syrette::{injectable, DIContainer};
-use syrette::ptr::InterfacePtr;
+use syrette::ptr::TransientPtr;
 
 trait IWeapon
 {
@@ -65,13 +65,13 @@ trait IWarrior
 }
 
 struct Warrior {
-	weapon: InterfacePtr<dyn IWeapon>,
+	weapon: TransientPtr<dyn IWeapon>,
 }
 
 #[injectable(IWarrior)]
 impl Warrior
 {
-	fn new(weapon: InterfacePtr<dyn IWeapon>) -> Self
+	fn new(weapon: TransientPtr<dyn IWeapon>) -> Self
 	{
 		Self { weapon }
 	}

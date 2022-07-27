@@ -10,10 +10,10 @@ use bootstrap::bootstrap;
 use interfaces::user::IUser;
 use interfaces::user::IUserFactory;
 use syrette::ptr::FactoryPtr;
-use syrette::ptr::InterfacePtr;
+use syrette::ptr::TransientPtr;
 
 fn add_users(
-    users: &mut Vec<InterfacePtr<dyn IUser>>,
+    users: &mut Vec<TransientPtr<dyn IUser>>,
     user_factory: &FactoryPtr<IUserFactory>,
 )
 {
@@ -30,7 +30,7 @@ fn main()
 
     let user_factory = di_container.get_factory::<IUserFactory>().unwrap();
 
-    let mut users = Vec::<InterfacePtr<dyn IUser>>::new();
+    let mut users = Vec::<TransientPtr<dyn IUser>>::new();
 
     add_users(&mut users, &user_factory);
 

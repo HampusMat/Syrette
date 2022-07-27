@@ -1,13 +1,13 @@
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::factory::IFactory;
-use crate::ptr::InterfacePtr;
+use crate::ptr::TransientPtr;
 
 pub struct CastableFactory<Args, ReturnInterface>
 where
     Args: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
+    func: &'static dyn Fn<Args, Output = TransientPtr<ReturnInterface>>,
 }
 
 impl<Args, ReturnInterface> CastableFactory<Args, ReturnInterface>
@@ -16,7 +16,7 @@ where
     ReturnInterface: 'static + ?Sized,
 {
     pub fn new(
-        func: &'static dyn Fn<Args, Output = InterfacePtr<ReturnInterface>>,
+        func: &'static dyn Fn<Args, Output = TransientPtr<ReturnInterface>>,
     ) -> Self
     {
         Self { func }
@@ -58,7 +58,7 @@ where
     Args: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    type Output = InterfacePtr<ReturnInterface>;
+    type Output = TransientPtr<ReturnInterface>;
 
     extern "rust-call" fn call_once(self, args: Args) -> Self::Output
     {

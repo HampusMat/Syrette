@@ -1,9 +1,9 @@
 #![allow(clippy::module_name_repetitions)]
 use crate::libs::intertrait::CastFrom;
-use crate::ptr::InterfacePtr;
+use crate::ptr::TransientPtr;
 
 pub trait IFactory<Args, ReturnInterface>:
-    Fn<Args, Output = InterfacePtr<ReturnInterface>> + CastFrom
+    Fn<Args, Output = TransientPtr<ReturnInterface>> + CastFrom
 where
     ReturnInterface: 'static + ?Sized,
 {

@@ -4,14 +4,14 @@ use std::marker::PhantomData;
 use crate::errors::injectable::ResolveError;
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::injectable::Injectable;
-use crate::ptr::{FactoryPtr, InterfacePtr};
+use crate::ptr::{FactoryPtr, TransientPtr};
 use crate::DIContainer;
 
 extern crate error_stack;
 
 pub enum Providable
 {
-    Injectable(InterfacePtr<dyn Injectable>),
+    Injectable(TransientPtr<dyn Injectable>),
     #[allow(dead_code)]
     Factory(FactoryPtr<dyn AnyFactory>),
 }

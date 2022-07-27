@@ -60,12 +60,12 @@ impl InjectableImpl
                 fn resolve(
                     #di_container_var: &syrette::DIContainer
                 ) -> syrette::libs::error_stack::Result<
-                    syrette::ptr::InterfacePtr<Self>,
+                    syrette::ptr::TransientPtr<Self>,
                     syrette::errors::injectable::ResolveError>
                 {
                     use syrette::libs::error_stack::ResultExt;
 
-                    return Ok(syrette::ptr::InterfacePtr::new(Self::new(
+                    return Ok(syrette::ptr::TransientPtr::new(Self::new(
                         #(#get_dependencies
                             .change_context(syrette::errors::injectable::ResolveError)
                             .attach_printable(
@@ -191,9 +191,9 @@ impl InjectableImpl
     {
         let arg_type_path_string = Self::_path_to_string(&type_path.path);
 
-        arg_type_path_string == "InterfacePtr"
-            || arg_type_path_string == "ptr::InterfacePtr"
-            || arg_type_path_string == "syrrete::ptr::InterfacePtr"
+        arg_type_path_string == "TransientPtr"
+            || arg_type_path_string == "ptr::TransientPtr"
+            || arg_type_path_string == "syrrete::ptr::TransientPtr"
             || arg_type_path_string == "FactoryPtr"
             || arg_type_path_string == "ptr::FactoryPtr"
             || arg_type_path_string == "syrrete::ptr::FactoryPtr"
@@ -233,7 +233,7 @@ impl InjectableImpl
 
                         let opt_first_generic_arg = generic_args.first();
 
-                        // Assume a first generic argument exists because InterfacePtr and
+                        // Assume a first generic argument exists because TransientPtr and
                         // FactoryPtr requires one
                         let first_generic_arg = opt_first_generic_arg.as_ref().unwrap();
 
