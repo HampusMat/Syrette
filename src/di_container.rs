@@ -9,7 +9,7 @@ use error_stack::{Report, ResultExt};
 use crate::castable_factory::CastableFactory;
 use crate::errors::di_container::DIContainerError;
 use crate::interfaces::injectable::Injectable;
-use crate::libs::intertrait::cast_box::CastBox;
+use crate::libs::intertrait::cast::CastBox;
 use crate::provider::{IProvider, InjectableTypeProvider, Providable};
 use crate::ptr::InterfacePtr;
 
@@ -225,7 +225,7 @@ impl DIContainer
 
         match binding_providable {
             Providable::Factory(binding_factory) => {
-                use crate::libs::intertrait::cast_rc::CastRc;
+                use crate::libs::intertrait::cast::CastRc;
 
                 let factory_box_result = binding_factory.cast::<Interface>();
 
@@ -493,14 +493,14 @@ mod tests
         let mut mock_provider = MockProvider::new();
 
         mock_provider.expect_provide().returning(|_| {
-            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
-                &|users| {
+            Ok(Providable::Factory(crate::ptr::FactoryPtr::new(
+                CastableFactory::new(&|users| {
                     let user_manager: InterfacePtr<dyn IUserManager> =
                         InterfacePtr::new(UserManager::new(users));
 
                     user_manager
-                },
-            ))))
+                }),
+            )))
         });
 
         di_container
