@@ -16,7 +16,7 @@ fn main()
 
     let di_container = bootstrap();
 
-    let dog = di_container.get::<dyn IDog>().unwrap();
+    let dog = di_container.get_singleton::<dyn IDog>().unwrap();
 
     dog.woof();
 

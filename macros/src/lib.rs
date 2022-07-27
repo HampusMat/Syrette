@@ -6,6 +6,7 @@ use quote::quote;
 use syn::{parse, parse_macro_input};
 
 mod declare_interface_args;
+mod dependency_type;
 mod factory_type_alias;
 mod injectable_impl;
 mod injectable_macro_args;

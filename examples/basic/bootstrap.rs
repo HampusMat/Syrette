@@ -14,7 +14,10 @@ pub fn bootstrap() -> DIContainer
 {
     let mut di_container: DIContainer = DIContainer::new();
 
-    di_container.bind::<dyn IDog>().to::<Dog>();
+    di_container
+        .bind::<dyn IDog>()
+        .to_singleton::<Dog>()
+        .unwrap();
     di_container.bind::<dyn ICat>().to::<Cat>();
     di_container.bind::<dyn IHuman>().to::<Human>();
 
