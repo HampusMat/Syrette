@@ -9,6 +9,8 @@
 //! MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 //!
 //! at your option.
+pub mod error;
+
 mod arc;
 mod r#box;
 mod rc;

@@ -9,24 +9,36 @@
 //! MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 //!
 //! at your option.
+use std::any::type_name;
 use std::sync::Arc;
 
+use error_stack::report;
+
+use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::{caster, CastFromSync};
 
 pub trait CastArc
 {
-    /// Casts an `Arc` for this trait into that for type `T`.
-    fn cast<T: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<T>, Arc<Self>>;
+    /// Casts an `Arc` for this trait into that for type `OtherTrait`.
+    fn cast<OtherTrait: ?Sized + 'static>(
+        self: Arc<Self>,
+    ) -> error_stack::Result<Arc<OtherTrait>, CastError>;
 }
 
 /// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and `Send`.
-impl<S: ?Sized + CastFromSync> CastArc for S
+impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
 {
-    fn cast<T: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<T>, Arc<Self>>
+    fn cast<OtherTrait: ?Sized + 'static>(
+        self: Arc<Self>,
+    ) -> error_stack::Result<Arc<OtherTrait>, CastError>
     {
-        match caster::<T>((*self).type_id()) {
+        match caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_arc)(self.arc_any())),
-            None => Err(self),
+            None => Err(report!(CastError).attach_printable(format!(
+                "From {} to {}",
+                type_name::<CastFromSelf>(),
+                type_name::<OtherTrait>()
+            ))),
         }
     }
 }

@@ -9,22 +9,36 @@
 //! MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 //!
 //! at your option.
+
+use std::any::type_name;
+
+use error_stack::report;
+
+use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::{caster, CastFrom};
 
 pub trait CastBox
 {
-    /// Casts a box to this trait into that of type `T`. If fails, returns the receiver.
-    fn cast<T: ?Sized + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>>;
+    /// Casts a box to this trait into that of type `OtherTrait`.
+    fn cast<OtherTrait: ?Sized + 'static>(
+        self: Box<Self>,
+    ) -> error_stack::Result<Box<OtherTrait>, CastError>;
 }
 
 /// A blanket implementation of `CastBox` for traits extending `CastFrom`.
-impl<S: ?Sized + CastFrom> CastBox for S
+impl<CastFromSelf: ?Sized + CastFrom> CastBox for CastFromSelf
 {
-    fn cast<T: ?Sized + 'static>(self: Box<Self>) -> Result<Box<T>, Box<Self>>
+    fn cast<OtherTrait: ?Sized + 'static>(
+        self: Box<Self>,
+    ) -> error_stack::Result<Box<OtherTrait>, CastError>
     {
-        match caster::<T>((*self).type_id()) {
+        match caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_box)(self.box_any())),
-            None => Err(self),
+            None => Err(report!(CastError).attach_printable(format!(
+                "From {} to {}",
+                type_name::<CastFromSelf>(),
+                type_name::<OtherTrait>()
+            ))),
         }
     }
 }
