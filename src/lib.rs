@@ -22,6 +22,7 @@ pub mod castable_factory;
 pub mod libs;
 
 // Private
+mod di_container_binding_map;
 mod provider;
 
 /// Shortcut for creating a DI container binding for a injectable without a declared interface.
