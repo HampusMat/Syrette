@@ -104,5 +104,6 @@ fn main()
 For more examples see the [examples folder](https://git.hampusmat.com/syrette/tree/examples).
 
 ## Todo
-- Add support generic factories
+- Add support for generic factories
+- Add asynchronous functionality
 
