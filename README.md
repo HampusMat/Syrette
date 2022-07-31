@@ -17,6 +17,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 - Helpful error messages
 - Enforces the use of interface traits
 - Supports generic implementations & generic interface traits
+- Binding singletons
 
 ## Optional features
 - `factory`. Binding factories (Rust nightly required)
