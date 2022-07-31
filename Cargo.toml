@@ -1,6 +1,6 @@
 [package]
 name = "syrette"
-version = "0.1.1"
+version = "0.2.0"
 license = "LGPL-2.1"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "The convenient dependency injection library"
@@ -19,7 +19,7 @@ name = "factory"
 required-features = ["factory"]
 
 [dependencies]
-syrette_macros = { path = "./macros", version = "0.1.1" }
+syrette_macros = { path = "./macros", version = "0.2.0" }
 linkme = "0.3.0"
 once_cell = "1.4"
 error-stack = "0.1.1"
