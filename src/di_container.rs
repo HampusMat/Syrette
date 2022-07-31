@@ -1,3 +1,48 @@
+//! Dependency injection container and other related utilities.
+///
+/// # Examples
+/// ```
+/// use std::collections::HashMap;
+///
+/// use syrette::{DIContainer, injectable};
+/// use syrette::errors::di_container::DIContainerError;
+///
+/// trait IDatabaseService
+/// {
+///     fn get_all_records(&self, table_name: String) -> HashMap<String, String>;
+/// }
+///
+/// struct DatabaseService {}
+///
+/// #[injectable(IDatabaseService)]
+/// impl DatabaseService
+/// {
+///     fn new() -> Self
+///     {
+///         Self {}
+///     }
+/// }
+///
+/// impl IDatabaseService for DatabaseService
+/// {
+///     fn get_all_records(&self, table_name: String) -> HashMap<String, String>
+///     {
+///         // Do stuff here
+///         HashMap::<String, String>::new()
+///     }
+/// }
+///
+/// fn main() -> error_stack::Result<(), DIContainerError>
+/// {
+///     let mut di_container = DIContainer::new();
+///
+///     di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>();
+///
+///     let database_service = di_container.get::<dyn IDatabaseService>()?;
+///
+///     Ok(())
+/// }
+/// ```
 use std::any::type_name;
 use std::marker::PhantomData;
 
@@ -101,50 +146,6 @@ where
 }
 
 /// Dependency injection container.
-///
-/// # Examples
-/// ```
-/// use std::collections::HashMap;
-///
-/// use syrette::{DIContainer, injectable};
-/// use syrette::errors::di_container::DIContainerError;
-///
-/// trait IDatabaseService
-/// {
-///     fn get_all_records(&self, table_name: String) -> HashMap<String, String>;
-/// }
-///
-/// struct DatabaseService {}
-///
-/// #[injectable(IDatabaseService)]
-/// impl DatabaseService
-/// {
-///     fn new() -> Self
-///     {
-///         Self {}
-///     }
-/// }
-///
-/// impl IDatabaseService for DatabaseService
-/// {
-///     fn get_all_records(&self, table_name: String) -> HashMap<String, String>
-///     {
-///         // Do stuff here
-///         HashMap::<String, String>::new()
-///     }
-/// }
-///
-/// fn main() -> error_stack::Result<(), DIContainerError>
-/// {
-///     let mut di_container = DIContainer::new();
-///
-///     di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>();
-///
-///     let database_service = di_container.get::<dyn IDatabaseService>()?;
-///
-///     Ok(())
-/// }
-/// ```
 pub struct DIContainer
 {
     bindings: DIContainerBindingMap,
@@ -176,7 +177,7 @@ impl DIContainer
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
-    /// - The binding for `Interface` is not injectable
+    /// - The binding for `Interface` is not transient
     pub fn get<Interface>(
         &self,
     ) -> error_stack::Result<TransientPtr<Interface>, DIContainerError>

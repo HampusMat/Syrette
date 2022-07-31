@@ -1,8 +1,11 @@
+//! Error types for the DI container.
+
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
 use error_stack::Context;
 
+/// Error for when the DI container fails to do something.
 #[derive(Debug)]
 pub struct DIContainerError;
 
@@ -16,6 +19,7 @@ impl Display for DIContainerError
 
 impl Context for DIContainerError {}
 
+/// Error for when the binding builder fails to do something.
 #[derive(Debug)]
 pub struct BindingBuilderError;
 

@@ -17,3 +17,5 @@ quote = "1.0.18"
 proc-macro2 = "1.0.40"
 uuid = { version = "0.8", features = ["v4"] }
 
+[dev_dependencies]
+syrette = { version = "0.2.0", path = "..", features = ["factory"] }

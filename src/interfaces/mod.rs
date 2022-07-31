@@ -1,3 +1,5 @@
+//! Various useful interfaces.
+
 pub mod any_factory;
 pub mod injectable;
 

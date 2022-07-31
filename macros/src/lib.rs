@@ -1,5 +1,8 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
+#![deny(missing_docs)]
+
+//! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -27,8 +30,26 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 ///
 /// # Important
 /// If the interface trait argument is excluded, you should either manually
-/// declare the interface with the `declare_interface` macro or use
-/// the `di_container_bind` macro to create a DI container binding.
+/// declare the interface with the [`declare_interface!`] macro or use
+/// the [`di_container_bind`] macro to create a DI container binding.
+///
+/// # Example
+/// ```
+/// use syrette::injectable;
+///
+/// struct PasswordManager {}
+///
+/// #[injectable]
+/// impl PasswordManager {
+///     pub fn new() -> Self {
+///         Self {}
+///     }
+/// }
+/// ```
+///
+/// [`DIContainer`]: ../syrette/di_container/struct.DIContainer.html
+/// [`Injectable`]: ../syrette/interfaces/injectable/trait.Injectable.html
+/// [`di_container_bind`]: ../syrette/macro.di_container_bind.html
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
@@ -62,6 +83,57 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///
 /// # Panics
 /// If the attributed item is not a type alias.
+///
+/// # Examples
+/// ```
+/// use std::collections::HashMap;
+///
+/// use syrette::interfaces::factory::IFactory;
+/// use syrette::factory;
+///
+/// enum ConfigValue
+/// {
+///     String(String),
+///     Bool(bool),
+///     Int(i32),
+///     None,
+/// }
+///
+/// trait IConfigurator
+/// {
+///     fn configure(&self, key: String, value: ConfigValue);
+/// }
+///
+/// struct Configurator {
+///     config: HashMap<String, ConfigValue>,
+/// }
+///
+/// impl Configurator
+/// {
+///     fn new(keys: Vec<String>) -> Self
+///     {
+///         Self {
+///             config: HashMap::from(
+///                 keys
+///                     .iter()
+///                     .map(|key| (key.clone(), ConfigValue::None))
+///                     .collect::<HashMap<_, _>>()
+///             )
+///         }
+///     }
+/// }
+///
+/// impl IConfigurator for Configurator
+/// {
+///     fn configure(&self, key: String, value: ConfigValue)
+///     {
+///         // ...
+///     }
+/// }
+///
+/// #[factory]
+/// type IConfiguratorFactory = dyn IFactory<(Vec<String>,), dyn IConfigurator>;
+/// ```
 #[proc_macro_attribute]
 pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {

@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "factory", feature(unboxed_closures, fn_traits))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
+#![deny(missing_docs)]
 
 //! Syrette
 //!
