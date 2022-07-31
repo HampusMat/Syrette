@@ -14,16 +14,21 @@ mod factory_type_alias;
 mod injectable_impl;
 mod injectable_macro_args;
 mod libs;
+mod util;
 
 use declare_interface_args::DeclareInterfaceArgs;
 use injectable_impl::InjectableImpl;
 use injectable_macro_args::InjectableMacroArgs;
 use libs::intertrait_macros::gen_caster::generate_caster;
 
-/// Makes a struct injectable. Thereby usable with `DIContainer`.
+/// Makes a struct injectable. Thereby usable with [`DIContainer`].
 ///
 /// # Arguments
 /// * (Optional) A interface trait the struct implements.
+/// * (Zero or more) Flags wrapped in curly braces. Like `{ a = true, b = false }`
+///
+/// # Flags
+/// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from documentation.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
@@ -53,15 +58,19 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
-    let should_declare_interface = !args_stream.is_empty();
+    let InjectableMacroArgs { interface, flags } = parse_macro_input!(args_stream);
+
+    let mut flags_iter = flags.iter();
+
+    let no_doc_hidden = flags_iter
+        .find(|flag| flag.flag.to_string().as_str() == "no_doc_hidden")
+        .map_or(false, |flag| flag.is_on.value);
 
     let injectable_impl: InjectableImpl = parse(impl_stream).unwrap();
 
-    let expanded_injectable_impl = injectable_impl.expand();
+    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden);
 
-    let maybe_decl_interface = if should_declare_interface {
-        let InjectableMacroArgs { interface } = parse_macro_input!(args_stream);
-
+    let maybe_decl_interface = if interface.is_some() {
         let self_type = &injectable_impl.self_type;
 
         quote! {

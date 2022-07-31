@@ -38,7 +38,7 @@ impl Parse for InjectableImpl
 
 impl InjectableImpl
 {
-    pub fn expand(&self) -> proc_macro2::TokenStream
+    pub fn expand(&self, no_doc_hidden: bool) -> proc_macro2::TokenStream
     {
         let Self {
             dependency_types,
@@ -51,9 +51,18 @@ impl InjectableImpl
 
         let get_dependencies = Self::_create_get_dependencies(dependency_types);
 
+        let maybe_doc_hidden = if no_doc_hidden {
+            quote! {}
+        } else {
+            quote! {
+                #[doc(hidden)]
+            }
+        };
+
         quote! {
             #original_impl
 
+            #maybe_doc_hidden
             impl #generics syrette::interfaces::injectable::Injectable for #self_type {
                 fn resolve(
                     #di_container_var: &syrette::DIContainer
