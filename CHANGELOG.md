@@ -1,11 +1,47 @@
 ## Unreleased
 
 
+## v0.2.0 - 2022-07-31
+### Build System/Dependency Changes
+- add docs.rs all-features flag
+
+### Code Refactoring
+- tidy up DI container internals
+- add Intertrait cast error
+- rename InterfacePtr to TransientPtr
+- add back Intertrait tests & Rc support
+- hide castable factory from docs
+- clean up intertrait lib
+
+### Documentation Changes
+- add asynchronous functionality to todo
+- add generics support to list of features
+
+### Features
+- add injecting singletons into constructors
+- implement binding singletons
+- add support for generics
+
+### Performance Improvements
+- use ahash in DI container
+
+### BREAKING CHANGE
+
+InterfacePtr has been renamed to TransientPtr
+
+
 ## v0.1.1 - 2022-07-22
-### Build
+### Build System/Dependency Changes
+- bump versions to 0.1.1
 - add local path to macros dependency
 
-### Docs
+### Code Refactoring
+- make factories an optional feature
+- re-export dependency of error_stack
+- reorganize folder hierarchy
+
+### Documentation Changes
+- add v0.1.1 to changelog
 - add optional factory feature name in readme
 - add changelog
 - fix typo in example in readme
@@ -13,20 +49,28 @@
 - rename example folder to examples
 - use syrette from crates.io in example
 
-### Refactor
-- make factories an optional feature
-- re-export dependency of error_stack
-- reorganize folder hierarchy
-
 
 ## v0.1.0 - 2022-07-20
-### Build
+### Build System/Dependency Changes
 - use syrette_macros from crates.io
 
-### Chore
+### Chores
 - add repository & keywords to Cargo manifests
 
-### Docs
+### Code Refactoring
+- use aggressive clippy linting
+- remove unused intertrait code
+- rename the castable_to macro to declare_interface
+- reduce the capabilities of the castable_to macro
+- reorganize and improve macros
+- use common pointer type aliases
+- add dedicated interface & error modules
+- move injectable type provider to own file
+
+### Code Testing
+- add DI container unit tests
+
+### Documentation Changes
 - replace symlinked readme with a copy
 - add readme symlink to syrette
 - improve and clean up doc comment examples
@@ -37,24 +81,11 @@
 - add documentation comments
 - add readme
 
-### Feat
+### Features
 - add binding factories to DI container
 - add DI container
 
-### Refactor
-- use aggressive clippy linting
-- remove unused intertrait code
-- rename the castable_to macro to declare_interface
-- reduce the capabilities of the castable_to macro
-- reorganize and improve macros
-- use common pointer type aliases
-- add dedicated interface & error modules
-- move injectable type provider to own file
-
-### Style
+### Style Improvements
 - group imports
 - add rustfmt config
-
-### Test
-- add DI container unit tests
 
