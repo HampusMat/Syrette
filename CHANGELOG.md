@@ -1,8 +1,15 @@
 ## Unreleased
 
 
+## v0.2.1 - 2022-07-31
+### Documentation Changes
+- add doc comments & deny missing docs
+- add contributing section in readme
+
+
 ## v0.2.0 - 2022-07-31
 ### Build System/Dependency Changes
+- bump versions to 0.2.0
 - add docs.rs all-features flag
 
 ### Code Refactoring
@@ -14,6 +21,8 @@
 - clean up intertrait lib
 
 ### Documentation Changes
+- add v0.2.0 to changelog
+- add binding singletons to list of features
 - add asynchronous functionality to todo
 - add generics support to list of features
 
