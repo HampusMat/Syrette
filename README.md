@@ -108,3 +108,8 @@ For more examples see the [examples folder](https://git.hampusmat.com/syrette/tr
 - Add support for generic factories
 - Add asynchronous functionality
 
+## Contributing
+You can reach out by joining the [mailing list](https://lists.hampusmat.com/postorius/lists/syrette.lists.hampusmat.com/).
+
+This is the place to submit patches, feature requests and to report bugs.
+
