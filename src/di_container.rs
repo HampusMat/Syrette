@@ -126,6 +126,8 @@ where
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
     /// associated [`DIContainer`].
+    ///
+    /// *This function is only available if Syrette is built with the "factory" feature.*
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &mut self,
@@ -227,6 +229,8 @@ impl DIContainer
     }
 
     /// Returns the factory bound with factory type `Interface`.
+    ///
+    /// *This function is only available if Syrette is built with the "factory" feature.*
     ///
     /// # Errors
     /// Will return `Err` if:

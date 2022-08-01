@@ -1,7 +1,10 @@
 #![allow(clippy::module_name_repetitions)]
 
 //! Interface for a factory.
-
+//!
+//! ---
+//!
+//! *This module is only available if Syrette is built with the "factory" feature.*
 use crate::libs::intertrait::CastFrom;
 use crate::ptr::TransientPtr;
 

@@ -90,6 +90,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 
 /// Makes a type alias usable as a factory interface.
 ///
+/// *This macro is only available if Syrette is built with the "factory" feature.*
+///
 /// # Panics
 /// If the attributed item is not a type alias.
 ///
