@@ -12,7 +12,7 @@ edition = "2021"
 all-features = true
 
 [features]
-factory = []
+factory = ["syrette_macros/factory"]
 
 [[example]]
 name = "factory"

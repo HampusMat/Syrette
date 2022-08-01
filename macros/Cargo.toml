@@ -11,6 +11,12 @@ edition = "2021"
 [lib]
 proc_macro = true
 
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+factory = []
+
 [dependencies]
 syn = { version = "1.0.96", features = ["full"] }
 quote = "1.0.18"

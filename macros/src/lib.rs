@@ -144,6 +144,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// type IConfiguratorFactory = dyn IFactory<(Vec<String>,), dyn IConfigurator>;
 /// ```
 #[proc_macro_attribute]
+#[cfg(feature = "factory")]
 pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
     let factory_type_alias::FactoryTypeAlias {
