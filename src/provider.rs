@@ -7,8 +7,6 @@ use crate::interfaces::injectable::Injectable;
 use crate::ptr::{FactoryPtr, SingletonPtr, TransientPtr};
 use crate::DIContainer;
 
-extern crate error_stack;
-
 pub enum Providable
 {
     Transient(TransientPtr<dyn Injectable>),
@@ -22,6 +20,7 @@ pub trait IProvider
     fn provide(
         &self,
         di_container: &DIContainer,
+        dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<Providable, ResolveError>;
 }
 
@@ -51,10 +50,12 @@ where
     fn provide(
         &self,
         di_container: &DIContainer,
+        dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<Providable, ResolveError>
     {
         Ok(Providable::Transient(InjectableType::resolve(
             di_container,
+            dependency_history,
         )?))
     }
 }
@@ -83,6 +84,7 @@ where
     fn provide(
         &self,
         _di_container: &DIContainer,
+        _dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<Providable, ResolveError>
     {
         Ok(Providable::Singleton(self.singleton.clone()))
@@ -110,6 +112,7 @@ impl IProvider for FactoryProvider
     fn provide(
         &self,
         _di_container: &DIContainer,
+        _dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<Providable, ResolveError>
     {
         Ok(Providable::Factory(self.factory.clone()))

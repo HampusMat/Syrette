@@ -49,7 +49,14 @@ impl InjectableImpl
 
         let di_container_var: Ident = parse_str(DI_CONTAINER_VAR_NAME).unwrap();
 
-        let get_dependencies = Self::_create_get_dependencies(dependency_types);
+        let get_dep_method_names = Self::_create_get_dep_method_names(dependency_types);
+
+        let get_dependencies = get_dep_method_names.iter().map(|get_dep_method_name| {
+            parse_str::<ExprMethodCall>(
+                format!("{}(dependency_history.clone())", get_dep_method_name).as_str(),
+            )
+            .unwrap()
+        });
 
         let maybe_doc_hidden = if no_doc_hidden {
             quote! {}
@@ -65,20 +72,52 @@ impl InjectableImpl
             #maybe_doc_hidden
             impl #generics syrette::interfaces::injectable::Injectable for #self_type {
                 fn resolve(
-                    #di_container_var: &syrette::DIContainer
+                    #di_container_var: &syrette::DIContainer,
+                    mut dependency_history: Vec<&'static str>,
                 ) -> syrette::libs::error_stack::Result<
                     syrette::ptr::TransientPtr<Self>,
                     syrette::errors::injectable::ResolveError>
                 {
-                    use syrette::libs::error_stack::ResultExt;
+                    use syrette::libs::error_stack::{ResultExt, report};
+                    use syrette::errors::injectable::ResolveError;
+
+                    let self_type_name = std::any::type_name::<#self_type>();
+
+                    if dependency_history.contains(&self_type_name) {
+                        dependency_history.push(self_type_name);
+
+                        let dependency_trace = dependency_history
+                            .iter()
+                            .map(|dep| {
+                                if dep == &self_type_name {
+                                    format!("\x1b[1m{}\x1b[22m", dep)
+                                } else {
+                                    dep.to_string()
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" -> ");
+
+                        return Err(
+                            report!(ResolveError)
+                                .attach_printable(
+                                    format!(
+                                        "Detected circular dependencies. {}",
+                                        dependency_trace.clone(),
+                                    )
+                                )
+                        );
+                    }
+
+                    dependency_history.push(self_type_name);
 
                     return Ok(syrette::ptr::TransientPtr::new(Self::new(
                         #(#get_dependencies
-                            .change_context(syrette::errors::injectable::ResolveError)
+                            .change_context(ResolveError)
                             .attach_printable(
                                 format!(
                                     "Unable to resolve a dependency of {}",
-                                    std::any::type_name::<#self_type>()
+                                    self_type_name
                                 )
                             )?
                         ),*
@@ -88,48 +127,34 @@ impl InjectableImpl
         }
     }
 
-    fn _create_get_dependencies(
-        dependency_types: &[DependencyType],
-    ) -> Vec<ExprMethodCall>
+    fn _create_get_dep_method_names(dependency_types: &[DependencyType]) -> Vec<String>
     {
         dependency_types
             .iter()
             .filter_map(|dep_type| match &dep_type.interface {
-                Type::TraitObject(dep_type_trait) => Some(
-                    parse_str(
-                        format!(
-                            "{}.get{}::<{}>()",
-                            DI_CONTAINER_VAR_NAME,
-                            if dep_type.ptr == "SingletonPtr" {
-                                "_singleton"
-                            } else {
-                                ""
-                            },
-                            dep_type_trait.to_token_stream()
-                        )
-                        .as_str(),
-                    )
-                    .unwrap(),
-                ),
+                Type::TraitObject(dep_type_trait) => Some(format!(
+                    "{}.get_{}::<{}>",
+                    DI_CONTAINER_VAR_NAME,
+                    if dep_type.ptr == "SingletonPtr" {
+                        "singleton_with_history"
+                    } else {
+                        "with_history"
+                    },
+                    dep_type_trait.to_token_stream()
+                )),
                 Type::Path(dep_type_path) => {
                     let dep_type_path_str = Self::_path_to_string(&dep_type_path.path);
 
                     let get_method_name = if dep_type_path_str.ends_with("Factory") {
-                        "get_factory"
+                        "factory"
                     } else {
-                        "get"
+                        "with_history"
                     };
 
-                    Some(
-                        parse_str(
-                            format!(
-                                "{}.{}::<{}>()",
-                                DI_CONTAINER_VAR_NAME, get_method_name, dep_type_path_str
-                            )
-                            .as_str(),
-                        )
-                        .unwrap(),
-                    )
+                    Some(format!(
+                        "get_{}.{}::<{}>",
+                        DI_CONTAINER_VAR_NAME, get_method_name, dep_type_path_str
+                    ))
                 }
                 &_ => None,
             })

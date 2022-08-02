@@ -13,6 +13,7 @@ pub trait Injectable: CastFrom
     /// Will return `Err` if resolving the dependencies fails.
     fn resolve(
         di_container: &DIContainer,
+        dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<TransientPtr<Self>, ResolveError>
     where
         Self: Sized;

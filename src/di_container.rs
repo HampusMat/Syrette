@@ -113,7 +113,7 @@ where
         Implementation: Injectable,
     {
         let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
-            Implementation::resolve(self.di_container)
+            Implementation::resolve(self.di_container, Vec::new())
                 .change_context(BindingBuilderError)?,
         );
 
@@ -186,18 +186,7 @@ impl DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        let binding_providable = self.get_binding_providable::<Interface>()?;
-
-        if let Providable::Transient(binding_transient) = binding_providable {
-            return binding_transient
-                .cast::<Interface>()
-                .map_err(unable_to_cast_binding::<Interface>);
-        }
-
-        Err(report!(DIContainerError).attach_printable(format!(
-            "Binding for interface '{}' is not transient",
-            type_name::<Interface>()
-        )))
+        self.get_with_history::<Interface>(Vec::new())
     }
 
     /// Returns the singleton instance bound with `Interface`.
@@ -214,18 +203,7 @@ impl DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        let binding_providable = self.get_binding_providable::<Interface>()?;
-
-        if let Providable::Singleton(binding_singleton) = binding_providable {
-            return binding_singleton
-                .cast::<Interface>()
-                .map_err(unable_to_cast_binding::<Interface>);
-        }
-
-        Err(report!(DIContainerError).attach_printable(format!(
-            "Binding for interface '{}' is not a singleton",
-            type_name::<Interface>()
-        )))
+        self.get_singleton_with_history(Vec::new())
     }
 
     /// Returns the factory bound with factory type `Interface`.
@@ -245,7 +223,7 @@ impl DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        let binding_providable = self.get_binding_providable::<Interface>()?;
+        let binding_providable = self.get_binding_providable::<Interface>(Vec::new())?;
 
         if let Providable::Factory(binding_factory) = binding_providable {
             return binding_factory
@@ -259,15 +237,62 @@ impl DIContainer
         )))
     }
 
+    #[doc(hidden)]
+    pub fn get_with_history<Interface>(
+        &self,
+        dependency_history: Vec<&'static str>,
+    ) -> error_stack::Result<TransientPtr<Interface>, DIContainerError>
+    where
+        Interface: 'static + ?Sized,
+    {
+        let binding_providable =
+            self.get_binding_providable::<Interface>(dependency_history)?;
+
+        if let Providable::Transient(binding_transient) = binding_providable {
+            return binding_transient
+                .cast::<Interface>()
+                .map_err(unable_to_cast_binding::<Interface>);
+        }
+
+        Err(report!(DIContainerError).attach_printable(format!(
+            "Binding for interface '{}' is not transient",
+            type_name::<Interface>()
+        )))
+    }
+
+    #[doc(hidden)]
+    pub fn get_singleton_with_history<Interface>(
+        &self,
+        dependency_history: Vec<&'static str>,
+    ) -> error_stack::Result<SingletonPtr<Interface>, DIContainerError>
+    where
+        Interface: 'static + ?Sized,
+    {
+        let binding_providable =
+            self.get_binding_providable::<Interface>(dependency_history)?;
+
+        if let Providable::Singleton(binding_singleton) = binding_providable {
+            return binding_singleton
+                .cast::<Interface>()
+                .map_err(unable_to_cast_binding::<Interface>);
+        }
+
+        Err(report!(DIContainerError).attach_printable(format!(
+            "Binding for interface '{}' is not a singleton",
+            type_name::<Interface>()
+        )))
+    }
+
     fn get_binding_providable<Interface>(
         &self,
+        dependency_history: Vec<&'static str>,
     ) -> error_stack::Result<Providable, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
         self.bindings
             .get::<Interface>()?
-            .provide(self)
+            .provide(self, dependency_history)
             .change_context(DIContainerError)
             .attach_printable(format!(
                 "Failed to resolve binding for interface '{}'",
@@ -325,6 +350,7 @@ mod tests
         {
             fn resolve(
                 _di_container: &DIContainer,
+                _dependency_history: Vec<&'static str>,
             ) -> error_stack::Result<
                 TransientPtr<Self>,
                 crate::errors::injectable::ResolveError,
@@ -374,6 +400,7 @@ mod tests
         {
             fn resolve(
                 _di_container: &DIContainer,
+                _dependency_history: Vec<&'static str>,
             ) -> error_stack::Result<
                 TransientPtr<Self>,
                 crate::errors::injectable::ResolveError,
@@ -494,6 +521,7 @@ mod tests
                 fn provide(
                     &self,
                     di_container: &DIContainer,
+                    dependency_history: Vec<&'static str>,
                 ) -> error_stack::Result<Providable, ResolveError>;
             }
         }
@@ -502,7 +530,7 @@ mod tests
 
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_| {
+        mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Transient(TransientPtr::new(UserManager::new())))
         });
 
@@ -579,6 +607,7 @@ mod tests
                 fn provide(
                     &self,
                     di_container: &DIContainer,
+                    dependency_history: Vec<&'static str>,
                 ) -> error_stack::Result<Providable, ResolveError>;
             }
         }
@@ -593,7 +622,7 @@ mod tests
 
         mock_provider
             .expect_provide()
-            .returning_st(move |_| Ok(Providable::Singleton(singleton.clone())));
+            .returning_st(move |_, _| Ok(Providable::Singleton(singleton.clone())));
 
         di_container
             .bindings
@@ -664,6 +693,7 @@ mod tests
                 fn provide(
                     &self,
                     di_container: &DIContainer,
+                    dependency_history: Vec<&'static str>,
                 ) -> error_stack::Result<Providable, ResolveError>;
             }
         }
