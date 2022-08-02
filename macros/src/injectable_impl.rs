@@ -86,26 +86,15 @@ impl InjectableImpl
                     if dependency_history.contains(&self_type_name) {
                         dependency_history.push(self_type_name);
 
-                        let dependency_trace = dependency_history
-                            .iter()
-                            .map(|dep| {
-                                if dep == &self_type_name {
-                                    format!("\x1b[1m{}\x1b[22m", dep)
-                                } else {
-                                    dep.to_string()
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .join(" -> ");
-
                         return Err(
                             report!(ResolveError)
-                                .attach_printable(
-                                    format!(
-                                        "Detected circular dependencies. {}",
-                                        dependency_trace.clone(),
+                                .attach_printable(format!(
+                                    "Detected circular dependencies. {}",
+                                    syrette::dependency_trace::create_dependency_trace(
+                                        dependency_history.as_slice(),
+                                        self_type_name
                                     )
-                                )
+                                ))
                         );
                     }
 

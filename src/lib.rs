@@ -20,6 +20,9 @@ pub use syrette_macros::*;
 pub mod castable_factory;
 
 #[doc(hidden)]
+pub mod dependency_trace;
+
+#[doc(hidden)]
 pub mod libs;
 
 // Private
