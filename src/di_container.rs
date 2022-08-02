@@ -312,8 +312,6 @@ impl Default for DIContainer
 #[cfg(test)]
 mod tests
 {
-    use std::fmt::Debug;
-
     use mockall::mock;
 
     use super::*;
@@ -321,126 +319,30 @@ mod tests
     use crate::provider::IProvider;
     use crate::ptr::TransientPtr;
 
-    #[test]
-    fn can_bind_to()
+    mod subjects
     {
-        trait IUserManager
+        //! Test subjects.
+
+        use std::fmt::Debug;
+
+        use syrette_macros::declare_interface;
+
+        use super::DIContainer;
+        use crate::interfaces::injectable::Injectable;
+        use crate::ptr::TransientPtr;
+
+        pub trait IUserManager
         {
             fn add_user(&self, user_id: i128);
 
             fn remove_user(&self, user_id: i128);
         }
 
-        struct UserManager {}
-
-        impl IUserManager for UserManager
-        {
-            fn add_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-
-            fn remove_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-        }
-
-        impl Injectable for UserManager
-        {
-            fn resolve(
-                _di_container: &DIContainer,
-                _dependency_history: Vec<&'static str>,
-            ) -> error_stack::Result<
-                TransientPtr<Self>,
-                crate::errors::injectable::ResolveError,
-            >
-            where
-                Self: Sized,
-            {
-                Ok(TransientPtr::new(Self {}))
-            }
-        }
-
-        let mut di_container: DIContainer = DIContainer::new();
-
-        assert_eq!(di_container.bindings.count(), 0);
-
-        di_container.bind::<dyn IUserManager>().to::<UserManager>();
-
-        assert_eq!(di_container.bindings.count(), 1);
-    }
-
-    #[test]
-    fn can_bind_to_singleton() -> error_stack::Result<(), BindingBuilderError>
-    {
-        trait IUserManager
-        {
-            fn add_user(&self, user_id: i128);
-
-            fn remove_user(&self, user_id: i128);
-        }
-
-        struct UserManager {}
-
-        impl IUserManager for UserManager
-        {
-            fn add_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-
-            fn remove_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-        }
-
-        impl Injectable for UserManager
-        {
-            fn resolve(
-                _di_container: &DIContainer,
-                _dependency_history: Vec<&'static str>,
-            ) -> error_stack::Result<
-                TransientPtr<Self>,
-                crate::errors::injectable::ResolveError,
-            >
-            where
-                Self: Sized,
-            {
-                Ok(TransientPtr::new(Self {}))
-            }
-        }
-
-        let mut di_container: DIContainer = DIContainer::new();
-
-        assert_eq!(di_container.bindings.count(), 0);
-
-        di_container
-            .bind::<dyn IUserManager>()
-            .to_singleton::<UserManager>()?;
-
-        assert_eq!(di_container.bindings.count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(feature = "factory")]
-    fn can_bind_to_factory()
-    {
-        trait IUserManager
-        {
-            fn add_user(&self, user_id: i128);
-
-            fn remove_user(&self, user_id: i128);
-        }
-
-        struct UserManager {}
+        pub struct UserManager {}
 
         impl UserManager
         {
-            fn new() -> Self
+            pub fn new() -> Self
             {
                 Self {}
             }
@@ -458,95 +360,28 @@ mod tests
                 // ...
             }
         }
-
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn IUserManager>;
-
-        let mut di_container: DIContainer = DIContainer::new();
-
-        assert_eq!(di_container.bindings.count(), 0);
-
-        di_container.bind::<IUserManagerFactory>().to_factory(&|| {
-            let user_manager: TransientPtr<dyn IUserManager> =
-                TransientPtr::new(UserManager::new());
-
-            user_manager
-        });
-
-        assert_eq!(di_container.bindings.count(), 1);
-    }
-
-    #[test]
-    fn can_get() -> error_stack::Result<(), DIContainerError>
-    {
-        trait IUserManager
-        {
-            fn add_user(&self, user_id: i128);
-
-            fn remove_user(&self, user_id: i128);
-        }
-
-        struct UserManager {}
 
         use crate as syrette;
-        use crate::injectable;
 
-        #[injectable(IUserManager)]
-        impl UserManager
+        declare_interface!(UserManager -> IUserManager);
+
+        impl Injectable for UserManager
         {
-            fn new() -> Self
+            fn resolve(
+                _di_container: &DIContainer,
+                _dependency_history: Vec<&'static str>,
+            ) -> error_stack::Result<
+                TransientPtr<Self>,
+                crate::errors::injectable::ResolveError,
+            >
+            where
+                Self: Sized,
             {
-                Self {}
+                Ok(TransientPtr::new(Self::new()))
             }
         }
 
-        impl IUserManager for UserManager
-        {
-            fn add_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-
-            fn remove_user(&self, _user_id: i128)
-            {
-                // ...
-            }
-        }
-
-        mock! {
-            Provider {}
-
-            impl IProvider for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &DIContainer,
-                    dependency_history: Vec<&'static str>,
-                ) -> error_stack::Result<Providable, ResolveError>;
-            }
-        }
-
-        let mut di_container: DIContainer = DIContainer::new();
-
-        let mut mock_provider = MockProvider::new();
-
-        mock_provider.expect_provide().returning(|_, _| {
-            Ok(Providable::Transient(TransientPtr::new(UserManager::new())))
-        });
-
-        di_container
-            .bindings
-            .set::<dyn IUserManager>(Box::new(mock_provider));
-
-        di_container.get::<dyn IUserManager>()?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_get_singleton() -> error_stack::Result<(), DIContainerError>
-    {
-        trait INumber
+        pub trait INumber
         {
             fn get(&self) -> i32;
 
@@ -569,18 +404,14 @@ mod tests
             }
         }
 
-        struct Number
+        pub struct Number
         {
-            num: i32,
+            pub num: i32,
         }
 
-        use crate as syrette;
-        use crate::injectable;
-
-        #[injectable(INumber)]
         impl Number
         {
-            fn new() -> Self
+            pub fn new() -> Self
             {
                 Self { num: 0 }
             }
@@ -599,6 +430,79 @@ mod tests
             }
         }
 
+        declare_interface!(Number -> INumber);
+
+        impl Injectable for Number
+        {
+            fn resolve(
+                _di_container: &DIContainer,
+                _dependency_history: Vec<&'static str>,
+            ) -> error_stack::Result<
+                TransientPtr<Self>,
+                crate::errors::injectable::ResolveError,
+            >
+            where
+                Self: Sized,
+            {
+                Ok(TransientPtr::new(Self::new()))
+            }
+        }
+    }
+
+    #[test]
+    fn can_bind_to()
+    {
+        let mut di_container: DIContainer = DIContainer::new();
+
+        assert_eq!(di_container.bindings.count(), 0);
+
+        di_container
+            .bind::<dyn subjects::IUserManager>()
+            .to::<subjects::UserManager>();
+
+        assert_eq!(di_container.bindings.count(), 1);
+    }
+
+    #[test]
+    fn can_bind_to_singleton() -> error_stack::Result<(), BindingBuilderError>
+    {
+        let mut di_container: DIContainer = DIContainer::new();
+
+        assert_eq!(di_container.bindings.count(), 0);
+
+        di_container
+            .bind::<dyn subjects::IUserManager>()
+            .to_singleton::<subjects::UserManager>()?;
+
+        assert_eq!(di_container.bindings.count(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(feature = "factory")]
+    fn can_bind_to_factory()
+    {
+        type IUserManagerFactory =
+            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        assert_eq!(di_container.bindings.count(), 0);
+
+        di_container.bind::<IUserManagerFactory>().to_factory(&|| {
+            let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                TransientPtr::new(subjects::UserManager::new());
+
+            user_manager
+        });
+
+        assert_eq!(di_container.bindings.count(), 1);
+    }
+
+    #[test]
+    fn can_get() -> error_stack::Result<(), DIContainerError>
+    {
         mock! {
             Provider {}
 
@@ -616,9 +520,44 @@ mod tests
 
         let mut mock_provider = MockProvider::new();
 
-        let mut singleton = SingletonPtr::new(Number::new());
+        mock_provider.expect_provide().returning(|_, _| {
+            Ok(Providable::Transient(TransientPtr::new(
+                subjects::UserManager::new(),
+            )))
+        });
 
-        SingletonPtr::get_mut(&mut singleton).unwrap().set(2820);
+        di_container
+            .bindings
+            .set::<dyn subjects::IUserManager>(Box::new(mock_provider));
+
+        di_container.get::<dyn subjects::IUserManager>()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_get_singleton() -> error_stack::Result<(), DIContainerError>
+    {
+        mock! {
+            Provider {}
+
+            impl IProvider for Provider
+            {
+                fn provide(
+                    &self,
+                    di_container: &DIContainer,
+                    dependency_history: Vec<&'static str>,
+                ) -> error_stack::Result<Providable, ResolveError>;
+            }
+        }
+
+        let mut di_container: DIContainer = DIContainer::new();
+
+        let mut mock_provider = MockProvider::new();
+
+        let mut singleton = SingletonPtr::new(subjects::Number::new());
+
+        SingletonPtr::get_mut(&mut singleton).unwrap().num = 2820;
 
         mock_provider
             .expect_provide()
@@ -626,13 +565,13 @@ mod tests
 
         di_container
             .bindings
-            .set::<dyn INumber>(Box::new(mock_provider));
+            .set::<dyn subjects::INumber>(Box::new(mock_provider));
 
-        let first_number_rc = di_container.get_singleton::<dyn INumber>()?;
+        let first_number_rc = di_container.get_singleton::<dyn subjects::INumber>()?;
 
         assert_eq!(first_number_rc.get(), 2820);
 
-        let second_number_rc = di_container.get_singleton::<dyn INumber>()?;
+        let second_number_rc = di_container.get_singleton::<dyn subjects::INumber>()?;
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
 
@@ -702,7 +641,7 @@ mod tests
 
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_| {
+        mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Factory(crate::ptr::FactoryPtr::new(
                 CastableFactory::new(&|users| {
                     let user_manager: TransientPtr<dyn IUserManager> =
