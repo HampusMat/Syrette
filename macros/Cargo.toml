@@ -1,7 +1,7 @@
 [package]
 name = "syrette_macros"
 version = "0.2.1"
-license = "LGPL-2.1"
+license = "LGPL-2.1-only"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "Macros for Syrette, the convenient dependency injection library"
 repository = "https://git.hampusmat.com/syrette"
