@@ -16,6 +16,7 @@ all-features = true
 
 [features]
 factory = []
+prevent-circular = []
 
 [dependencies]
 syn = { version = "1.0.96", features = ["full"] }

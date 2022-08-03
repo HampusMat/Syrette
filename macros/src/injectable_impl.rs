@@ -66,6 +66,29 @@ impl InjectableImpl
             }
         };
 
+        let maybe_prevent_circular_deps = if cfg!(feature = "prevent-circular") {
+            quote! {
+                if dependency_history.contains(&self_type_name) {
+                    dependency_history.push(self_type_name);
+
+                    return Err(
+                        report!(ResolveError)
+                            .attach_printable(format!(
+                                "Detected circular dependencies. {}",
+                                syrette::dependency_trace::create_dependency_trace(
+                                    dependency_history.as_slice(),
+                                    self_type_name
+                                )
+                            ))
+                    );
+                }
+
+                dependency_history.push(self_type_name);
+            }
+        } else {
+            quote! {}
+        };
+
         quote! {
             #original_impl
 
@@ -83,22 +106,7 @@ impl InjectableImpl
 
                     let self_type_name = std::any::type_name::<#self_type>();
 
-                    if dependency_history.contains(&self_type_name) {
-                        dependency_history.push(self_type_name);
-
-                        return Err(
-                            report!(ResolveError)
-                                .attach_printable(format!(
-                                    "Detected circular dependencies. {}",
-                                    syrette::dependency_trace::create_dependency_trace(
-                                        dependency_history.as_slice(),
-                                        self_type_name
-                                    )
-                                ))
-                        );
-                    }
-
-                    dependency_history.push(self_type_name);
+                    #maybe_prevent_circular_deps
 
                     return Ok(syrette::ptr::TransientPtr::new(Self::new(
                         #(#get_dependencies

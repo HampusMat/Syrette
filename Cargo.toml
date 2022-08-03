@@ -12,7 +12,9 @@ edition = "2021"
 all-features = true
 
 [features]
+default = ["prevent-circular"]
 factory = ["syrette_macros/factory"]
+prevent-circular = ["syrette_macros/prevent-circular"]
 
 [[example]]
 name = "factory"
