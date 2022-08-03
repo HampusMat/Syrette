@@ -18,8 +18,8 @@ pub fn bootstrap() -> DIContainer
         .bind::<dyn IDog>()
         .to_singleton::<Dog>()
         .unwrap();
-    di_container.bind::<dyn ICat>().to::<Cat>();
-    di_container.bind::<dyn IHuman>().to::<Human>();
+    di_container.bind::<dyn ICat>().to::<Cat>().unwrap();
+    di_container.bind::<dyn IHuman>().to::<Human>().unwrap();
 
     di_container
 }

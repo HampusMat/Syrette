@@ -30,23 +30,29 @@ impl DIContainerBindingMap
             .get(&interface_typeid)
             .ok_or_else(|| {
                 report!(DIContainerError).attach_printable(format!(
-                    "No binding exists for {}",
+                    "No binding exists for interface '{}'",
                     type_name::<Interface>()
                 ))
             })?
             .as_ref())
     }
 
-    pub fn set<Interface>(&mut self, provider: Box<dyn IProvider>)
+    pub fn set<Interface>(&mut self, provider: Box<dyn IProvider>) -> Option<()>
     where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
+        if self.bindings.contains_key(&interface_typeid) {
+            return None;
+        }
+
         self.bindings.insert(interface_typeid, provider);
+
+        Some(())
     }
 
-    /// Only used by tests in the ``di_container`` module.
+    /// Only used by tests in the `di_container` module.
     #[cfg(test)]
     pub fn count(&self) -> usize
     {

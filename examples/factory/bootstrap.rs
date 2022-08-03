@@ -18,7 +18,8 @@ pub fn bootstrap() -> DIContainer
                 TransientPtr::new(User::new(name, date_of_birth, password));
 
             user
-        });
+        })
+        .unwrap();
 
     di_container
 }

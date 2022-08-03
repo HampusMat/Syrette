@@ -40,7 +40,7 @@ mod provider;
 #[macro_export]
 macro_rules! di_container_bind {
     ($interface: path => $implementation: ty, $di_container: ident) => {
-        $di_container.bind::<dyn $interface>().to::<$implementation>();
+        $di_container.bind::<dyn $interface>().to::<$implementation>().unwrap();
 
         syrette::declare_interface!($implementation -> $interface);
     };

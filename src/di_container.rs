@@ -92,20 +92,33 @@ where
 
     /// Creates a binding of type `Interface` to type `Implementation` inside of the
     /// associated [`DIContainer`].
-    pub fn to<Implementation>(&mut self)
+    ///
+    /// # Errors
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// the interface.
+    pub fn to<Implementation>(&mut self) -> error_stack::Result<(), BindingBuilderError>
     where
         Implementation: Injectable,
     {
         self.di_container
             .bindings
-            .set::<Interface>(Box::new(TransientTypeProvider::<Implementation>::new()));
+            .set::<Interface>(Box::new(TransientTypeProvider::<Implementation>::new()))
+            .ok_or_else(|| {
+                report!(BindingBuilderError).attach_printable(format!(
+                    "Binding already exists for interface '{}'",
+                    type_name::<Interface>()
+                ))
+            })?;
+
+        Ok(())
     }
 
     /// Creates a binding of type `Interface` to a new singleton of type `Implementation`
     /// inside of the associated [`DIContainer`].
     ///
     /// # Errors
-    /// Will return Err if creating the singleton fails.
+    /// Will return Err if creating the singleton fails or if the
+    /// associated [`DIContainer`] already have a binding for the interface.
     pub fn to_singleton<Implementation>(
         &mut self,
     ) -> error_stack::Result<(), BindingBuilderError>
@@ -119,7 +132,13 @@ where
 
         self.di_container
             .bindings
-            .set::<Interface>(Box::new(SingletonProvider::new(singleton)));
+            .set::<Interface>(Box::new(SingletonProvider::new(singleton)))
+            .ok_or_else(|| {
+                report!(BindingBuilderError).attach_printable(format!(
+                    "Binding already exists for interface '{}'",
+                    type_name::<Interface>()
+                ))
+            })?;
 
         Ok(())
     }
@@ -128,22 +147,35 @@ where
     /// associated [`DIContainer`].
     ///
     /// *This function is only available if Syrette is built with the "factory" feature.*
+    ///
+    /// # Errors
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// the interface.
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &mut self,
         factory_func: &'static dyn Fn<Args, Output = TransientPtr<Return>>,
-    ) where
+    ) -> error_stack::Result<(), BindingBuilderError>
+    where
         Args: 'static,
         Return: 'static + ?Sized,
         Interface: crate::interfaces::factory::IFactory<Args, Return>,
     {
         let factory_impl = CastableFactory::new(factory_func);
 
-        self.di_container.bindings.set::<Interface>(Box::new(
-            crate::provider::FactoryProvider::new(crate::ptr::FactoryPtr::new(
-                factory_impl,
-            )),
-        ));
+        self.di_container
+            .bindings
+            .set::<Interface>(Box::new(crate::provider::FactoryProvider::new(
+                crate::ptr::FactoryPtr::new(factory_impl),
+            )))
+            .ok_or_else(|| {
+                report!(BindingBuilderError).attach_printable(format!(
+                    "Binding already exists for interface '{}'",
+                    type_name::<Interface>()
+                ))
+            })?;
+
+        Ok(())
     }
 }
 
