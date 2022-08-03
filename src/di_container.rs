@@ -482,7 +482,7 @@ mod tests
     }
 
     #[test]
-    fn can_bind_to()
+    fn can_bind_to() -> error_stack::Result<(), BindingBuilderError>
     {
         let mut di_container: DIContainer = DIContainer::new();
 
@@ -490,9 +490,11 @@ mod tests
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>();
+            .to::<subjects::UserManager>()?;
 
         assert_eq!(di_container.bindings.count(), 1);
+
+        Ok(())
     }
 
     #[test]
@@ -513,7 +515,7 @@ mod tests
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_factory()
+    fn can_bind_to_factory() -> error_stack::Result<(), BindingBuilderError>
     {
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
@@ -527,9 +529,11 @@ mod tests
                 TransientPtr::new(subjects::UserManager::new());
 
             user_manager
-        });
+        })?;
 
         assert_eq!(di_container.bindings.count(), 1);
+
+        Ok(())
     }
 
     #[test]
