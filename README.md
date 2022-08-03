@@ -92,9 +92,9 @@ fn main()
 {
 	let mut di_container = DIContainer::new();
 
-	di_container.bind::<dyn IWeapon>().to::<Sword>();
+	di_container.bind::<dyn IWeapon>().to::<Sword>().unwrap();
 
-	di_container.bind::<dyn IWarrior>().to::<Warrior>();
+	di_container.bind::<dyn IWarrior>().to::<Warrior>().unwrap();
 
 	let warrior = di_container.get::<dyn IWarrior>().unwrap();
 

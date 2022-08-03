@@ -32,13 +32,17 @@
 //!     }
 //! }
 //!
-//! fn main() -> error_stack::Result<(), DIContainerError>
+//! fn main() -> Result<(), String>
 //! {
 //!     let mut di_container = DIContainer::new();
 //!
-//!     di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>();
+//!     di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>().map_err(|err| {
+//!         err.to_string()
+//!     })?;
 //!
-//!     let database_service = di_container.get::<dyn IDatabaseService>()?;
+//!     let database_service = di_container.get::<dyn IDatabaseService>().map_err(|err| {
+//!         err.to_string()
+//!     })?;
 //!
 //!     Ok(())
 //! }
