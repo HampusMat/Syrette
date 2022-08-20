@@ -20,6 +20,10 @@ prevent-circular = ["syrette_macros/prevent-circular"]
 name = "factory"
 required-features = ["factory"]
 
+[[example]]
+name = "with-3rd-party"
+required-features = ["factory"]
+
 [dependencies]
 syrette_macros = { path = "./macros", version = "0.2.1" }
 linkme = "0.3.0"
@@ -29,9 +33,11 @@ ahash = "0.7.6"
 
 [dev_dependencies]
 mockall = "0.11.1"
+third-party-lib = { path = "./examples/with-3rd-party/third-party-lib" }
 
 [workspace]
 members = [
 	"macros",
+	"examples/with-3rd-party/third-party-lib"
 ]
 
