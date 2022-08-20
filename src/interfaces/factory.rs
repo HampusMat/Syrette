@@ -12,7 +12,7 @@ use crate::ptr::TransientPtr;
 ///
 /// # Examples
 /// ```
-/// use syrette::interface::factory::IFactory;
+/// use syrette::interfaces::factory::IFactory;
 ///
 /// type StringFactory = dyn IFactory<(), String>;
 /// ```
