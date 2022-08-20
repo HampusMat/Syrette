@@ -19,6 +19,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 - Enforces the use of interface traits
 - Supports generic implementations & generic interface traits
 - Binding singletons
+- Injection of third-party structs & traits
 
 ## Optional features
 - `factory`. Binding factories (Rust nightly required)
