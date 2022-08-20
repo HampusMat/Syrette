@@ -12,7 +12,7 @@ pub mod errors;
 pub mod interfaces;
 pub mod ptr;
 
-pub use di_container::*;
+pub use di_container::DIContainer;
 pub use syrette_macros::*;
 
 #[cfg(feature = "factory")]
