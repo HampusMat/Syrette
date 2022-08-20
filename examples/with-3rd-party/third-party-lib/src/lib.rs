@@ -1,8 +1,3 @@
-pub trait IShuriken
-{
-    fn throw(&self);
-}
-
 pub struct Shuriken {}
 
 impl Shuriken
@@ -12,11 +7,8 @@ impl Shuriken
     {
         Self {}
     }
-}
 
-impl IShuriken for Shuriken
-{
-    fn throw(&self)
+    pub fn throw(&self)
     {
         println!("Threw shuriken!");
     }
