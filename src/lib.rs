@@ -67,7 +67,7 @@ macro_rules! di_container_bind {
 ///     // Methods and etc here...
 /// }
 ///
-/// declare_default_factory!(IParser);
+/// declare_default_factory!(dyn IParser);
 /// ```
 ///
 /// The expanded equivelent of this would be
