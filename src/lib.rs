@@ -45,3 +45,70 @@ macro_rules! di_container_bind {
         syrette::declare_interface!($implementation -> $interface);
     };
 }
+
+/// Shortcut for declaring a default factory.
+///
+/// A default factory is a factory that doesn't take any arguments.
+///
+/// More tedious ways to accomplish what this macro does would either be by using
+/// the [`factory`] macro or by manually declaring the interfaces
+/// with the [`declare_interface`] macro.
+///
+/// *This macro is only available if Syrette is built with the "factory" feature.*
+///
+/// # Arguments
+/// - Interface trait
+///
+/// # Examples
+/// ```
+/// use syrette::declare_default_factory;
+///
+/// trait IParser {
+///     // Methods and etc here...
+/// }
+///
+/// declare_default_factory!(IParser);
+/// ```
+///
+/// The expanded equivelent of this would be
+///
+/// ```
+/// use syrette::declare_default_factory;
+///
+/// trait IParser {
+///     // Methods and etc here...
+/// }
+///
+/// syrette::declare_interface!(
+///     syrette::castable_factory::CastableFactory<
+///         (),
+///         dyn IParser,
+///     > -> syrette::interfaces::factory::IFactory<(), dyn IParser>
+/// );
+///
+/// syrette::declare_interface!(
+///     syrette::castable_factory::CastableFactory<
+///         (),
+///         dyn IParser,
+///     > -> syrette::interfaces::any_factory::AnyFactory
+/// );
+/// ```
+#[macro_export]
+#[cfg(feature = "factory")]
+macro_rules! declare_default_factory {
+    ($interface: path) => {
+        syrette::declare_interface!(
+            syrette::castable_factory::CastableFactory<
+                (),
+                dyn $interface,
+            > -> syrette::interfaces::factory::IFactory<(), dyn $interface>
+        );
+
+        syrette::declare_interface!(
+            syrette::castable_factory::CastableFactory<
+                (),
+                dyn $interface,
+            > -> syrette::interfaces::any_factory::AnyFactory
+        );
+    }
+}

@@ -181,6 +181,39 @@ where
 
         Ok(())
     }
+
+    /// Creates a binding of type `Interface` to a factory that takes no arguments
+    /// inside of the associated [`DIContainer`].
+    ///
+    /// *This function is only available if Syrette is built with the "factory" feature.*
+    ///
+    /// # Errors
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// the interface.
+    #[cfg(feature = "factory")]
+    pub fn to_default_factory<Return>(
+        &mut self,
+        factory_func: &'static dyn Fn<(), Output = TransientPtr<Return>>,
+    ) -> error_stack::Result<(), BindingBuilderError>
+    where
+        Return: 'static + ?Sized,
+    {
+        let factory_impl = CastableFactory::new(factory_func);
+
+        self.di_container
+            .bindings
+            .set::<Interface>(Box::new(crate::provider::FactoryProvider::new(
+                crate::ptr::FactoryPtr::new(factory_impl),
+            )))
+            .ok_or_else(|| {
+                report!(BindingBuilderError).attach_printable(format!(
+                    "Binding already exists for interface '{}'",
+                    type_name::<Interface>()
+                ))
+            })?;
+
+        Ok(())
+    }
 }
 
 /// Dependency injection container.
@@ -288,6 +321,17 @@ impl DIContainer
             return binding_transient
                 .cast::<Interface>()
                 .map_err(unable_to_cast_binding::<Interface>);
+        }
+
+        #[cfg(feature = "factory")]
+        if let Providable::Factory(binding_factory) = binding_providable {
+            use crate::interfaces::factory::IFactory;
+
+            let factory = binding_factory
+                .cast::<dyn IFactory<(), Interface>>()
+                .map_err(unable_to_cast_binding::<Interface>)?;
+
+            return Ok(factory());
         }
 
         Err(report!(DIContainerError).attach_printable(format!(
