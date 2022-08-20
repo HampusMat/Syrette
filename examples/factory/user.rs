@@ -27,16 +27,16 @@ impl IUser for User
 {
     fn get_name(&self) -> &'static str
     {
-        self.name.clone()
+        self.name
     }
 
     fn get_date_of_birth(&self) -> &'static str
     {
-        self.date_of_birth.clone()
+        self.date_of_birth
     }
 
     fn get_password(&self) -> &'static str
     {
-        self.password.clone()
+        self.password
     }
 }

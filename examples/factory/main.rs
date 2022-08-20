@@ -5,22 +5,11 @@
 mod bootstrap;
 mod interfaces;
 mod user;
+mod user_manager;
 
 use bootstrap::bootstrap;
-use interfaces::user::IUser;
-use interfaces::user::IUserFactory;
-use syrette::ptr::FactoryPtr;
-use syrette::ptr::TransientPtr;
 
-fn add_users(
-    users: &mut Vec<TransientPtr<dyn IUser>>,
-    user_factory: &FactoryPtr<IUserFactory>,
-)
-{
-    users.push(user_factory("Bob", "1983-04-13", "abc1234"));
-    users.push(user_factory("Anna", "1998-01-20", "IlovemYCat"));
-    users.push(user_factory("David", "2000-11-05", "12345678"));
-}
+use crate::interfaces::user_manager::IUserManager;
 
 fn main()
 {
@@ -28,20 +17,11 @@ fn main()
 
     let di_container = bootstrap();
 
-    let user_factory = di_container.get_factory::<IUserFactory>().unwrap();
+    let mut user_manager = di_container.get::<dyn IUserManager>().unwrap();
 
-    let mut users = Vec::<TransientPtr<dyn IUser>>::new();
-
-    add_users(&mut users, &user_factory);
+    user_manager.fill_with_users();
 
     println!("Printing user information");
 
-    for user in users {
-        println!(
-            "{}, born {}, password is '{}'",
-            user.get_name(),
-            user.get_date_of_birth(),
-            user.get_password()
-        );
-    }
+    user_manager.print_users();
 }
