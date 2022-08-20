@@ -96,18 +96,18 @@ macro_rules! di_container_bind {
 #[macro_export]
 #[cfg(feature = "factory")]
 macro_rules! declare_default_factory {
-    ($interface: path) => {
+    ($interface: ty) => {
         syrette::declare_interface!(
             syrette::castable_factory::CastableFactory<
                 (),
-                dyn $interface,
-            > -> syrette::interfaces::factory::IFactory<(), dyn $interface>
+                $interface,
+            > -> syrette::interfaces::factory::IFactory<(), $interface>
         );
 
         syrette::declare_interface!(
             syrette::castable_factory::CastableFactory<
                 (),
-                dyn $interface,
+                $interface,
             > -> syrette::interfaces::any_factory::AnyFactory
         );
     }
