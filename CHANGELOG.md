@@ -1,8 +1,64 @@
 ## Unreleased
 
 
-## v0.2.1 - 2022-07-31
+## v0.3.0 - 2022-08-21
+### Bug Fixes
+- make DI container get_factory calls in the injectable macro valid
+
+### Build System/Dependency Changes
+- change license in manifests to LGPL-2.1-only
+
+### Chores
+- change license to MIT or Apache-2.0
+
+### Code Refactoring
+- change errors to be more sane
+- make the declare_default_factory macro take a ty
+- only re-export DIContainer
+- add Cargo feature for preventing circular dependencies
+- move creating a dependency trace to it's own function
+- hide AnyFactory from docs
+- limit the factory macro to the factory feature
+
+### Code Testing
+- correct DI container bind tests
+- reduce repetition in DI container tests
+
 ### Documentation Changes
+- change project descriptions to describe it as a framework
+- fix declare_default_factory example
+- add injection of 3rd-party structs & traits to features list
+- add example for displaying a unbound interface error
+- simplify with-3rd-party example
+- add a example that uses a 3rd party library
+- fix IFactory example use statement
+- improve the factory example
+- correct examples
+- fix DI container module documentation
+- add license shield to readme
+- add factory feature notices
+
+### Features
+- allow bind interface to default factory
+- prevent binding the same interface more than once
+- add detection and prevention of circular dependencies
+- add hide impl of Injectable from documentation
+
+### BREAKING CHANGE
+
+Major improvements have been made to error types and the error_stack crate is no longer used
+
+Only DIContainer is re-exported from the di_container module
+
+The 'to' and 'to_factory' methods of BindingBuilder now return 'Result'
+
+
+## v0.2.1 - 2022-08-01
+### Build System/Dependency Changes
+- bump versions to 0.2.1
+
+### Documentation Changes
+- add v0.2.1 to changelog
 - add doc comments & deny missing docs
 - add contributing section in readme
 
