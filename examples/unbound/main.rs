@@ -2,6 +2,9 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
+use std::error::Error;
+
+mod animal_store;
 mod animals;
 mod bootstrap;
 mod interfaces;
@@ -10,7 +13,7 @@ use bootstrap::bootstrap;
 use interfaces::dog::IDog;
 use interfaces::human::IHuman;
 
-fn main()
+fn main() -> Result<(), Box<dyn Error>>
 {
     println!("Hello, world!");
 
@@ -20,7 +23,9 @@ fn main()
 
     dog.woof();
 
-    let human = di_container.get::<dyn IHuman>().unwrap();
+    let human = di_container.get::<dyn IHuman>()?;
 
     human.make_pets_make_sounds();
+
+    Ok(())
 }

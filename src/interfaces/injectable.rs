@@ -1,5 +1,7 @@
 //! Interface for structs that can be injected into or be injected to.
-use crate::errors::injectable::ResolveError;
+use std::fmt::Debug;
+
+use crate::errors::injectable::InjectableError;
 use crate::libs::intertrait::CastFrom;
 use crate::ptr::TransientPtr;
 use crate::DIContainer;
@@ -14,7 +16,15 @@ pub trait Injectable: CastFrom
     fn resolve(
         di_container: &DIContainer,
         dependency_history: Vec<&'static str>,
-    ) -> error_stack::Result<TransientPtr<Self>, ResolveError>
+    ) -> Result<TransientPtr<Self>, InjectableError>
     where
         Self: Sized;
+}
+
+impl Debug for dyn Injectable
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        f.write_str("{}")
+    }
 }

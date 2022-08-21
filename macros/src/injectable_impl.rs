@@ -66,16 +66,13 @@ impl InjectableImpl
                 if #dependency_history_var.contains(&self_type_name) {
                     #dependency_history_var.push(self_type_name);
 
-                    return Err(
-                        report!(ResolveError)
-                            .attach_printable(format!(
-                                "Detected circular dependencies. {}",
-                                syrette::dependency_trace::create_dependency_trace(
-                                    #dependency_history_var.as_slice(),
-                                    self_type_name
-                                )
-                            ))
-                    );
+                    let dependency_trace =
+                        syrette::dependency_trace::create_dependency_trace(
+                            #dependency_history_var.as_slice(),
+                            self_type_name
+                        );
+
+                    return Err(InjectableError::DetectedCircular {dependency_trace });
                 }
 
                 #dependency_history_var.push(self_type_name);
@@ -92,26 +89,24 @@ impl InjectableImpl
                 fn resolve(
                     #di_container_var: &syrette::DIContainer,
                     mut #dependency_history_var: Vec<&'static str>,
-                ) -> syrette::libs::error_stack::Result<
+                ) -> Result<
                     syrette::ptr::TransientPtr<Self>,
-                    syrette::errors::injectable::ResolveError>
+                    syrette::errors::injectable::InjectableError>
                 {
-                    use syrette::libs::error_stack::{ResultExt, report};
-                    use syrette::errors::injectable::ResolveError;
+                    use std::any::type_name;
 
-                    let self_type_name = std::any::type_name::<#self_type>();
+                    use syrette::errors::injectable::InjectableError;
+
+                    let self_type_name = type_name::<#self_type>();
 
                     #maybe_prevent_circular_deps
 
                     return Ok(syrette::ptr::TransientPtr::new(Self::new(
                         #(#get_dep_method_calls
-                            .change_context(ResolveError)
-                            .attach_printable(
-                                format!(
-                                    "Unable to resolve a dependency of {}",
-                                    self_type_name
-                                )
-                            )?
+                            .map_err(|err| InjectableError::ResolveFailed {
+                                reason: Box::new(err),
+                                affected: self_type_name
+                            })?
                         ),*
                     )));
                 }

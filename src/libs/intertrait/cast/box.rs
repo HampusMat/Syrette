@@ -12,8 +12,6 @@
 
 use std::any::type_name;
 
-use error_stack::report;
-
 use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::{caster, CastFrom};
 
@@ -22,7 +20,7 @@ pub trait CastBox
     /// Casts a box to this trait into that of type `OtherTrait`.
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Box<Self>,
-    ) -> error_stack::Result<Box<OtherTrait>, CastError>;
+    ) -> Result<Box<OtherTrait>, CastError>;
 }
 
 /// A blanket implementation of `CastBox` for traits extending `CastFrom`.
@@ -30,15 +28,14 @@ impl<CastFromSelf: ?Sized + CastFrom> CastBox for CastFromSelf
 {
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Box<Self>,
-    ) -> error_stack::Result<Box<OtherTrait>, CastError>
+    ) -> Result<Box<OtherTrait>, CastError>
     {
         match caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_box)(self.box_any())),
-            None => Err(report!(CastError).attach_printable(format!(
-                "From {} to {}",
-                type_name::<CastFromSelf>(),
-                type_name::<OtherTrait>()
-            ))),
+            None => Err(CastError::CastFailed {
+                from: type_name::<CastFromSelf>(),
+                to: type_name::<OtherTrait>(),
+            }),
         }
     }
 }

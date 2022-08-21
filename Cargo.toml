@@ -28,8 +28,10 @@ required-features = ["factory"]
 syrette_macros = { path = "./macros", version = "0.2.1" }
 linkme = "0.3.0"
 once_cell = "1.4"
-error-stack = "0.1.1"
 ahash = "0.7.6"
+thiserror = "1.0.32"
+strum = "0.24.1"
+strum_macros = "0.24.3"
 
 [dev_dependencies]
 mockall = "0.11.1"

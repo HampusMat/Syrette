@@ -1,17 +1,10 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
-
-use error_stack::Context;
-
-#[derive(Debug)]
-pub struct CastError;
-
-impl Display for CastError
+#[derive(thiserror::Error, Debug)]
+pub enum CastError
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
+    #[error("Failed to cast from trait {from} to trait {to}")]
+    CastFailed
     {
-        fmt.write_str("Failed to cast between traits")
-    }
+        from: &'static str,
+        to: &'static str,
+    },
 }
-
-impl Context for CastError {}

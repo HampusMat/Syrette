@@ -1,12 +1,13 @@
 #![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
 
-use crate::errors::injectable::ResolveError;
+use crate::errors::injectable::InjectableError;
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{FactoryPtr, SingletonPtr, TransientPtr};
 use crate::DIContainer;
 
+#[derive(strum_macros::Display, Debug)]
 pub enum Providable
 {
     Transient(TransientPtr<dyn Injectable>),
@@ -21,7 +22,7 @@ pub trait IProvider
         &self,
         di_container: &DIContainer,
         dependency_history: Vec<&'static str>,
-    ) -> error_stack::Result<Providable, ResolveError>;
+    ) -> Result<Providable, InjectableError>;
 }
 
 pub struct TransientTypeProvider<InjectableType>
@@ -51,7 +52,7 @@ where
         &self,
         di_container: &DIContainer,
         dependency_history: Vec<&'static str>,
-    ) -> error_stack::Result<Providable, ResolveError>
+    ) -> Result<Providable, InjectableError>
     {
         Ok(Providable::Transient(InjectableType::resolve(
             di_container,
@@ -85,7 +86,7 @@ where
         &self,
         _di_container: &DIContainer,
         _dependency_history: Vec<&'static str>,
-    ) -> error_stack::Result<Providable, ResolveError>
+    ) -> Result<Providable, InjectableError>
     {
         Ok(Providable::Singleton(self.singleton.clone()))
     }
@@ -113,7 +114,7 @@ impl IProvider for FactoryProvider
         &self,
         _di_container: &DIContainer,
         _dependency_history: Vec<&'static str>,
-    ) -> error_stack::Result<Providable, ResolveError>
+    ) -> Result<Providable, InjectableError>
     {
         Ok(Providable::Factory(self.factory.clone()))
     }

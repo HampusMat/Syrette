@@ -1,4 +1,5 @@
-use syrette::errors::di_container::BindingBuilderError;
+use std::error::Error;
+
 use syrette::ptr::TransientPtr;
 use syrette::{declare_default_factory, DIContainer};
 use third_party_lib::Shuriken;
@@ -11,7 +12,7 @@ use crate::ninja::Ninja;
 
 declare_default_factory!(Shuriken);
 
-pub fn bootstrap() -> error_stack::Result<DIContainer, BindingBuilderError>
+pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
 {
     let mut di_container: DIContainer = DIContainer::new();
 

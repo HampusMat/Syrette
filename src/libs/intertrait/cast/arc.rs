@@ -12,8 +12,6 @@
 use std::any::type_name;
 use std::sync::Arc;
 
-use error_stack::report;
-
 use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::{caster, CastFromSync};
 
@@ -22,7 +20,7 @@ pub trait CastArc
     /// Casts an `Arc` for this trait into that for type `OtherTrait`.
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Arc<Self>,
-    ) -> error_stack::Result<Arc<OtherTrait>, CastError>;
+    ) -> Result<Arc<OtherTrait>, CastError>;
 }
 
 /// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and `Send`.
@@ -30,15 +28,14 @@ impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
 {
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Arc<Self>,
-    ) -> error_stack::Result<Arc<OtherTrait>, CastError>
+    ) -> Result<Arc<OtherTrait>, CastError>
     {
         match caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_arc)(self.arc_any())),
-            None => Err(report!(CastError).attach_printable(format!(
-                "From {} to {}",
-                type_name::<CastFromSelf>(),
-                type_name::<OtherTrait>()
-            ))),
+            None => Err(CastError::CastFailed {
+                from: type_name::<CastFromSelf>(),
+                to: type_name::<OtherTrait>(),
+            }),
         }
     }
 }

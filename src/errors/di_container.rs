@@ -1,34 +1,61 @@
-//! Error types for the DI container.
+//! Error types for [`DIContainer`] and it's related structs.
+//!
+//! [`DIContainer`]: crate::di_container::DIContainer
 
-use std::fmt;
-use std::fmt::{Display, Formatter};
+use crate::errors::injectable::InjectableError;
 
-use error_stack::Context;
-
-/// Error for when the DI container fails to do something.
-#[derive(Debug)]
-pub struct DIContainerError;
-
-impl Display for DIContainerError
+/// Error type for [`DIContainer`].
+///
+/// [`DIContainer`]: crate::di_container::DIContainer
+#[derive(thiserror::Error, Debug)]
+pub enum DIContainerError
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
+    /// Unable to cast a binding for a interface.
+    #[error("Unable to cast binding for interface '{0}'")]
+    CastFailed(&'static str),
+
+    /// Wrong binding type.
+    #[error("Wrong binding type for interface '{interface}'. Expected a {expected}. Found a {found}")]
+    WrongBindingType
     {
-        fmt.write_str("A DI container error has occurred")
-    }
+        /// The affected bound interface.
+        interface: &'static str,
+
+        /// The expected binding type.
+        expected: &'static str,
+
+        /// The found binding type.
+        found: String,
+    },
+
+    /// Failed to resolve a binding for a interface.
+    #[error("Failed to resolve binding for interface '{interface}'")]
+    BindingResolveFailed
+    {
+        /// The reason for the problem.
+        #[source]
+        reason: InjectableError,
+
+        /// The affected bound interface.
+        interface: &'static str,
+    },
+
+    /// No binding exists for a interface.
+    #[error("No binding exists for interface '{0}'")]
+    BindingNotFound(&'static str),
 }
 
-impl Context for DIContainerError {}
-
-/// Error for when the binding builder fails to do something.
-#[derive(Debug)]
-pub struct BindingBuilderError;
-
-impl Display for BindingBuilderError
+/// Error type for [`BindingBuilder`].
+///
+/// [`BindingBuilder`]: crate::di_container::BindingBuilder
+#[derive(thiserror::Error, Debug)]
+pub enum BindingBuilderError
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
-    {
-        fmt.write_str("A binding builder error has occurred")
-    }
-}
+    /// A binding already exists for a interface.
+    #[error("Binding already exists for interface '{0}'")]
+    BindingAlreadyExists(&'static str),
 
-impl Context for BindingBuilderError {}
+    /// Resolving a singleton failed.
+    #[error("Resolving the given singleton failed")]
+    SingletonResolveFailed(#[from] InjectableError),
+}

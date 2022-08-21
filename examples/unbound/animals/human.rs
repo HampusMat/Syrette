@@ -1,22 +1,20 @@
 use syrette::injectable;
-use syrette::ptr::{SingletonPtr, TransientPtr};
+use syrette::ptr::TransientPtr;
 
-use crate::interfaces::cat::ICat;
-use crate::interfaces::dog::IDog;
+use crate::interfaces::animal_store::IAnimalStore;
 use crate::interfaces::human::IHuman;
 
 pub struct Human
 {
-    dog: SingletonPtr<dyn IDog>,
-    cat: TransientPtr<dyn ICat>,
+    animal_store: TransientPtr<dyn IAnimalStore>,
 }
 
 #[injectable(IHuman)]
 impl Human
 {
-    pub fn new(dog: SingletonPtr<dyn IDog>, cat: TransientPtr<dyn ICat>) -> Self
+    pub fn new(animal_store: TransientPtr<dyn IAnimalStore>) -> Self
     {
-        Self { dog, cat }
+        Self { animal_store }
     }
 }
 
@@ -24,12 +22,16 @@ impl IHuman for Human
 {
     fn make_pets_make_sounds(&self)
     {
+        let dog = self.animal_store.get_dog();
+
         println!("Hi doggy!");
 
-        self.dog.woof();
+        dog.woof();
+
+        let cat = self.animal_store.get_cat();
 
         println!("Hi kitty!");
 
-        self.cat.meow();
+        cat.meow();
     }
 }

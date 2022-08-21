@@ -12,8 +12,6 @@
 use std::any::type_name;
 use std::rc::Rc;
 
-use error_stack::report;
-
 use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::{caster, CastFrom};
 
@@ -22,7 +20,7 @@ pub trait CastRc
     /// Casts an `Rc` for this trait into that for type `OtherTrait`.
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Rc<Self>,
-    ) -> error_stack::Result<Rc<OtherTrait>, CastError>;
+    ) -> Result<Rc<OtherTrait>, CastError>;
 }
 
 /// A blanket implementation of `CastRc` for traits extending `CastFrom`.
@@ -30,15 +28,14 @@ impl<CastFromSelf: ?Sized + CastFrom> CastRc for CastFromSelf
 {
     fn cast<OtherTrait: ?Sized + 'static>(
         self: Rc<Self>,
-    ) -> error_stack::Result<Rc<OtherTrait>, CastError>
+    ) -> Result<Rc<OtherTrait>, CastError>
     {
         match caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_rc)(self.rc_any())),
-            None => Err(report!(CastError).attach_printable(format!(
-                "From {} to {}",
-                type_name::<CastFromSelf>(),
-                type_name::<OtherTrait>()
-            ))),
+            None => Err(CastError::CastFailed {
+                from: type_name::<CastFromSelf>(),
+                to: type_name::<OtherTrait>(),
+            }),
         }
     }
 }

@@ -1,7 +1,6 @@
 use std::any::{type_name, TypeId};
 
 use ahash::AHashMap;
-use error_stack::report;
 
 use crate::{errors::di_container::DIContainerError, provider::IProvider};
 
@@ -19,7 +18,7 @@ impl DIContainerBindingMap
         }
     }
 
-    pub fn get<Interface>(&self) -> error_stack::Result<&dyn IProvider, DIContainerError>
+    pub fn get<Interface>(&self) -> Result<&dyn IProvider, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -28,12 +27,7 @@ impl DIContainerBindingMap
         Ok(self
             .bindings
             .get(&interface_typeid)
-            .ok_or_else(|| {
-                report!(DIContainerError).attach_printable(format!(
-                    "No binding exists for interface '{}'",
-                    type_name::<Interface>()
-                ))
-            })?
+            .ok_or_else(|| DIContainerError::BindingNotFound(type_name::<Interface>()))?
             .as_ref())
     }
 

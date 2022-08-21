@@ -1,10 +1,12 @@
 use syrette::DIContainer;
 
 // Concrete implementations
+use crate::animal_store::AnimalStore;
 use crate::animals::dog::Dog;
 use crate::animals::human::Human;
 //
 // Interfaces
+use crate::interfaces::animal_store::IAnimalStore;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;
 
@@ -18,6 +20,11 @@ pub fn bootstrap() -> DIContainer
         .unwrap();
 
     di_container.bind::<dyn IHuman>().to::<Human>().unwrap();
+
+    di_container
+        .bind::<dyn IAnimalStore>()
+        .to::<AnimalStore>()
+        .unwrap();
 
     di_container
 }

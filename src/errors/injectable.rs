@@ -1,20 +1,33 @@
-//! Error types for structs implementing Injectable.
+#![allow(clippy::module_name_repetitions)]
+//! Error types for structs that implement [`Injectable`].
+//!
+//! [`Injectable`]: crate::interfaces::injectable::Injectable
 
-use core::fmt;
-use std::fmt::{Display, Formatter};
+use super::di_container::DIContainerError;
 
-use error_stack::Context;
-
-/// Error for when a injectable struct fails to be resolved.
-#[derive(Debug)]
-pub struct ResolveError;
-
-impl Display for ResolveError
+/// Error type for structs that implement [`Injectable`].
+///
+/// [`Injectable`]: crate::interfaces::injectable::Injectable
+#[derive(thiserror::Error, Debug)]
+pub enum InjectableError
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result
+    /// Failed to resolve dependencies.
+    #[error("Failed to resolve a dependency of '{affected}'")]
+    ResolveFailed
     {
-        fmt.write_str("Failed to resolve injectable struct")
-    }
-}
+        /// The reason for the problem.
+        #[source]
+        reason: Box<DIContainerError>,
 
-impl Context for ResolveError {}
+        /// The affected injectable type.
+        affected: &'static str,
+    },
+
+    /// Detected circular dependencies.
+    #[error("Detected circular dependencies. {dependency_trace}")]
+    DetectedCircular
+    {
+        /// A visual trace of dependencies.
+        dependency_trace: String,
+    },
+}
