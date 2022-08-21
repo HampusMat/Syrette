@@ -1,6 +1,6 @@
 [package]
 name = "syrette_macros"
-version = "0.2.1"
+version = "0.3.0"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "Macros for Syrette, the convenient dependency injection framework"
@@ -25,4 +25,4 @@ proc-macro2 = "1.0.40"
 uuid = { version = "0.8", features = ["v4"] }
 
 [dev_dependencies]
-syrette = { version = "0.2.1", path = "..", features = ["factory"] }
+syrette = { version = "0.3.0", path = "..", features = ["factory"] }
