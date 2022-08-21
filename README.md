@@ -3,7 +3,7 @@
 [![Documentation](https://img.shields.io/badge/docs.rs-syrette-brightgreen)](https://docs.rs/syrette)
 [![License](https://img.shields.io/crates/l/syrette)](https://git.hampusmat.com/syrette/tree/LICENSE)
 
-The convenient dependency injection library for Rust.
+The convenient dependency injection framework for Rust.
 
 ## Namesake
 From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
@@ -28,7 +28,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 To use these features, you must [enable it in Cargo](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features).
 
 ## Motivation
-Other DI libraries for Rust are either unmaintained ([di](https://crates.io/crates/di) for example),
+Other DI/IOC libraries for Rust are either unmaintained ([di](https://crates.io/crates/di) for example),
 overcomplicated and or bloated ([anthill-di](https://crates.io/crates/anthill-di) for example)
 or has a weird API ([teloc](https://crates.io/crates/teloc) for example).
 

@@ -3,9 +3,9 @@ name = "syrette"
 version = "0.2.1"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
-description = "The convenient dependency injection library"
+description = "The convenient dependency injection framework"
 repository = "https://git.hampusmat.com/syrette"
-keywords = ["DI", "dependency-injection", "ioc", "inversion-of-control"]
+keywords = ["di", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 
 [package.metadata.docs.rs]

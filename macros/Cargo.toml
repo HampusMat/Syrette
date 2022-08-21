@@ -3,9 +3,9 @@ name = "syrette_macros"
 version = "0.2.1"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
-description = "Macros for Syrette, the convenient dependency injection library"
+description = "Macros for Syrette, the convenient dependency injection framework"
 repository = "https://git.hampusmat.com/syrette"
-keywords = ["DI", "dependency-injection", "ioc", "inversion-of-control"]
+keywords = ["di", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 
 [lib]
