@@ -2,11 +2,12 @@ use quote::{format_ident, quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::Generics;
 use syn::{
-    parse_str, punctuated::Punctuated, token::Comma, ExprMethodCall, FnArg, ImplItem,
-    ImplItemMethod, ItemImpl, Path, Type, TypePath,
+    parse_str, punctuated::Punctuated, token::Comma, ExprMethodCall, FnArg, ItemImpl,
+    Path, Type, TypePath,
 };
 
 use crate::dependency_type::DependencyType;
+use crate::util::item_impl::find_impl_method_by_name;
 
 const DI_CONTAINER_VAR_NAME: &str = "di_container";
 const DEPENDENCY_HISTORY_VAR_NAME: &str = "dependency_history";
@@ -25,7 +26,7 @@ impl Parse for InjectableImpl
     {
         let impl_parsed_input = input.parse::<ItemImpl>()?;
 
-        let dependency_types = Self::_get_dependency_types(&impl_parsed_input)
+        let dependency_types = Self::get_dependency_types(&impl_parsed_input)
             .map_err(|err| input.error(err))?;
 
         Ok(Self {
@@ -51,7 +52,7 @@ impl InjectableImpl
         let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let get_dep_method_calls = Self::_create_get_dep_method_calls(dependency_types);
+        let get_dep_method_calls = Self::create_get_dep_method_calls(dependency_types);
 
         let maybe_doc_hidden = if no_doc_hidden {
             quote! {}
@@ -114,7 +115,7 @@ impl InjectableImpl
         }
     }
 
-    fn _create_get_dep_method_calls(
+    fn create_get_dep_method_calls(
         dependency_types: &[DependencyType],
     ) -> Vec<ExprMethodCall>
     {
@@ -137,7 +138,7 @@ impl InjectableImpl
                 )
                 .ok(),
                 Type::Path(dep_type_path) => {
-                    let dep_type_path_str = Self::_path_to_string(&dep_type_path.path);
+                    let dep_type_path_str = Self::path_to_string(&dep_type_path.path);
 
                     if dep_type_path_str.ends_with("Factory") {
                         parse_str(
@@ -166,22 +167,6 @@ impl InjectableImpl
             .collect()
     }
 
-    fn _find_method_by_name<'impl_lt>(
-        item_impl: &'impl_lt ItemImpl,
-        method_name: &'static str,
-    ) -> Option<&'impl_lt ImplItemMethod>
-    {
-        let impl_items = &item_impl.items;
-
-        impl_items
-            .iter()
-            .filter_map(|impl_item| match impl_item {
-                ImplItem::Method(method_item) => Some(method_item),
-                &_ => None,
-            })
-            .find(|method_item| method_item.sig.ident == method_name)
-    }
-
     #[allow(clippy::match_wildcard_for_single_variants)]
     fn get_has_fn_args_self(fn_args: &Punctuated<FnArg, Comma>) -> bool
     {
@@ -191,7 +176,7 @@ impl InjectableImpl
         })
     }
 
-    fn _get_fn_arg_type_paths(fn_args: &Punctuated<FnArg, Comma>) -> Vec<&TypePath>
+    fn get_fn_arg_type_paths(fn_args: &Punctuated<FnArg, Comma>) -> Vec<&TypePath>
     {
         fn_args
             .iter()
@@ -209,7 +194,7 @@ impl InjectableImpl
             .collect()
     }
 
-    fn _path_to_string(path: &Path) -> String
+    fn path_to_string(path: &Path) -> String
     {
         path.segments
             .pairs()
@@ -231,9 +216,9 @@ impl InjectableImpl
             })
     }
 
-    fn _is_type_path_ptr(type_path: &TypePath) -> bool
+    fn is_type_path_ptr(type_path: &TypePath) -> bool
     {
-        let arg_type_path_string = Self::_path_to_string(&type_path.path);
+        let arg_type_path_string = Self::path_to_string(&type_path.path);
 
         arg_type_path_string == "TransientPtr"
             || arg_type_path_string == "ptr::TransientPtr"
@@ -246,14 +231,12 @@ impl InjectableImpl
             || arg_type_path_string == "syrrete::ptr::FactoryPtr"
     }
 
-    fn _get_dependency_types(
+    fn get_dependency_types(
         item_impl: &ItemImpl,
     ) -> Result<Vec<DependencyType>, &'static str>
     {
-        let new_method_impl_item = match Self::_find_method_by_name(item_impl, "new") {
-            Some(method_item) => Ok(method_item),
-            None => Err("Missing a 'new' method"),
-        }?;
+        let new_method_impl_item = find_impl_method_by_name(item_impl, "new")
+            .map_or_else(|| Err("Missing a 'new' method"), Ok)?;
 
         let new_method_args = &new_method_impl_item.sig.inputs;
 
@@ -261,11 +244,11 @@ impl InjectableImpl
             return Err("Unexpected self argument in 'new' method");
         }
 
-        let new_method_arg_type_paths = Self::_get_fn_arg_type_paths(new_method_args);
+        let new_method_arg_type_paths = Self::get_fn_arg_type_paths(new_method_args);
 
         if new_method_arg_type_paths
             .iter()
-            .any(|arg_type_path| !Self::_is_type_path_ptr(arg_type_path))
+            .any(|arg_type_path| !Self::is_type_path_ptr(arg_type_path))
         {
             return Err("All argument types in 'new' method must ptr types");
         }
