@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use syrette::DIContainer;
 
 // Concrete implementations
@@ -10,21 +12,20 @@ use crate::interfaces::animal_store::IAnimalStore;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;
 
-pub fn bootstrap() -> DIContainer
+pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
 {
     let mut di_container: DIContainer = DIContainer::new();
 
     di_container
         .bind::<dyn IDog>()
-        .to_singleton::<Dog>()
-        .unwrap();
+        .to::<Dog>()?
+        .in_singleton_scope()?;
 
-    di_container.bind::<dyn IHuman>().to::<Human>().unwrap();
+    di_container.bind::<dyn IHuman>().to::<Human>()?;
 
     di_container
         .bind::<dyn IAnimalStore>()
-        .to::<AnimalStore>()
-        .unwrap();
+        .to::<AnimalStore>()?;
 
-    di_container
+    Ok(di_container)
 }

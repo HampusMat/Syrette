@@ -17,9 +17,9 @@ fn main() -> Result<(), Box<dyn Error>>
 {
     println!("Hello, world!");
 
-    let di_container = bootstrap();
+    let di_container = bootstrap()?;
 
-    let dog = di_container.get_singleton::<dyn IDog>().unwrap();
+    let dog = di_container.get_singleton::<dyn IDog>()?;
 
     dog.woof();
 

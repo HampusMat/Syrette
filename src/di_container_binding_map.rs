@@ -31,19 +31,22 @@ impl DIContainerBindingMap
             .as_ref())
     }
 
-    pub fn set<Interface>(&mut self, provider: Box<dyn IProvider>) -> Option<()>
+    pub fn set<Interface>(&mut self, provider: Box<dyn IProvider>)
     where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        if self.bindings.contains_key(&interface_typeid) {
-            return None;
-        }
-
         self.bindings.insert(interface_typeid, provider);
+    }
 
-        Some(())
+    pub fn has<Interface>(&self) -> bool
+    where
+        Interface: 'static + ?Sized,
+    {
+        let interface_typeid = TypeId::of::<Interface>();
+
+        self.bindings.contains_key(&interface_typeid)
     }
 
     /// Only used by tests in the `di_container` module.

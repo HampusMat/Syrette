@@ -54,7 +54,14 @@ pub enum BindingBuilderError
     /// A binding already exists for a interface.
     #[error("Binding already exists for interface '{0}'")]
     BindingAlreadyExists(&'static str),
+}
 
+/// Error type for [`BindingScopeConfigurator`].
+///
+/// [`BindingBuilder`]: crate::di_container::BindingScopeConfigurator
+#[derive(thiserror::Error, Debug)]
+pub enum BindingScopeConfiguratorError
+{
     /// Resolving a singleton failed.
     #[error("Resolving the given singleton failed")]
     SingletonResolveFailed(#[from] InjectableError),

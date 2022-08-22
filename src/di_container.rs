@@ -53,26 +53,83 @@ use std::marker::PhantomData;
 #[cfg(feature = "factory")]
 use crate::castable_factory::CastableFactory;
 use crate::di_container_binding_map::DIContainerBindingMap;
-use crate::errors::di_container::{BindingBuilderError, DIContainerError};
+use crate::errors::di_container::{
+    BindingBuilderError, BindingScopeConfiguratorError, DIContainerError,
+};
 use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast::{CastBox, CastRc};
 use crate::provider::{Providable, SingletonProvider, TransientTypeProvider};
 use crate::ptr::{SingletonPtr, TransientPtr};
 
+/// Scope configurator for a binding for type 'Interface' inside a [`DIContainer`].
+pub struct BindingScopeConfigurator<'di_container, Interface, Implementation>
+where
+    Interface: 'static + ?Sized,
+    Implementation: Injectable,
+{
+    di_container: &'di_container mut DIContainer,
+    interface_phantom: PhantomData<Interface>,
+    implementation_phantom: PhantomData<Implementation>,
+}
+
+impl<'di_container, Interface, Implementation>
+    BindingScopeConfigurator<'di_container, Interface, Implementation>
+where
+    Interface: 'static + ?Sized,
+    Implementation: Injectable,
+{
+    fn new(di_container: &'di_container mut DIContainer) -> Self
+    {
+        Self {
+            di_container,
+            interface_phantom: PhantomData,
+            implementation_phantom: PhantomData,
+        }
+    }
+
+    /// Configures the binding to be in a transient scope.
+    ///
+    /// This is the default.
+    pub fn in_transient_scope(&mut self)
+    {
+        self.di_container
+            .bindings
+            .set::<Interface>(Box::new(TransientTypeProvider::<Implementation>::new()));
+    }
+
+    /// Configures the binding to be in a singleton scope.
+    ///
+    /// # Errors
+    /// Will return Err if resolving the implementation fails.
+    pub fn in_singleton_scope(&mut self) -> Result<(), BindingScopeConfiguratorError>
+    {
+        let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
+            Implementation::resolve(self.di_container, Vec::new())
+                .map_err(BindingScopeConfiguratorError::SingletonResolveFailed)?,
+        );
+
+        self.di_container
+            .bindings
+            .set::<Interface>(Box::new(SingletonProvider::new(singleton)));
+
+        Ok(())
+    }
+}
+
 /// Binding builder for type `Interface` inside a [`DIContainer`].
-pub struct BindingBuilder<'di_container_lt, Interface>
+pub struct BindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container_lt mut DIContainer,
+    di_container: &'di_container mut DIContainer,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'di_container_lt, Interface> BindingBuilder<'di_container_lt, Interface>
+impl<'di_container, Interface> BindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'di_container_lt mut DIContainer) -> Self
+    fn new(di_container: &'di_container mut DIContainer) -> Self
     {
         Self {
             di_container,
@@ -83,46 +140,30 @@ where
     /// Creates a binding of type `Interface` to type `Implementation` inside of the
     /// associated [`DIContainer`].
     ///
+    /// The scope of the binding is transient. But that can be changed by using the
+    /// returned [`BindingScopeConfigurator`]
+    ///
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
-    pub fn to<Implementation>(&mut self) -> Result<(), BindingBuilderError>
+    pub fn to<Implementation>(
+        &mut self,
+    ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
     where
         Implementation: Injectable,
     {
-        self.di_container
-            .bindings
-            .set::<Interface>(Box::new(TransientTypeProvider::<Implementation>::new()))
-            .ok_or_else(|| {
-                BindingBuilderError::BindingAlreadyExists(type_name::<Interface>())
-            })?;
+        if self.di_container.bindings.has::<Interface>() {
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
+        }
 
-        Ok(())
-    }
+        let mut binding_scope_configurator =
+            BindingScopeConfigurator::new(self.di_container);
 
-    /// Creates a binding of type `Interface` to a new singleton of type `Implementation`
-    /// inside of the associated [`DIContainer`].
-    ///
-    /// # Errors
-    /// Will return Err if creating the singleton fails or if the
-    /// associated [`DIContainer`] already have a binding for the interface.
-    pub fn to_singleton<Implementation>(&mut self) -> Result<(), BindingBuilderError>
-    where
-        Implementation: Injectable,
-    {
-        let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
-            Implementation::resolve(self.di_container, Vec::new())
-                .map_err(BindingBuilderError::SingletonResolveFailed)?,
-        );
+        binding_scope_configurator.in_transient_scope();
 
-        self.di_container
-            .bindings
-            .set::<Interface>(Box::new(SingletonProvider::new(singleton)))
-            .ok_or_else(|| {
-                BindingBuilderError::BindingAlreadyExists(type_name::<Interface>())
-            })?;
-
-        Ok(())
+        Ok(binding_scope_configurator)
     }
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
@@ -143,16 +184,19 @@ where
         Return: 'static + ?Sized,
         Interface: crate::interfaces::factory::IFactory<Args, Return>,
     {
+        if self.di_container.bindings.has::<Interface>() {
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
+        }
+
         let factory_impl = CastableFactory::new(factory_func);
 
-        self.di_container
-            .bindings
-            .set::<Interface>(Box::new(crate::provider::FactoryProvider::new(
-                crate::ptr::FactoryPtr::new(factory_impl),
-            )))
-            .ok_or_else(|| {
-                BindingBuilderError::BindingAlreadyExists(type_name::<Interface>())
-            })?;
+        self.di_container.bindings.set::<Interface>(Box::new(
+            crate::provider::FactoryProvider::new(crate::ptr::FactoryPtr::new(
+                factory_impl,
+            )),
+        ));
 
         Ok(())
     }
@@ -173,16 +217,19 @@ where
     where
         Return: 'static + ?Sized,
     {
+        if self.di_container.bindings.has::<Interface>() {
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
+        }
+
         let factory_impl = CastableFactory::new(factory_func);
 
-        self.di_container
-            .bindings
-            .set::<Interface>(Box::new(crate::provider::FactoryProvider::new(
-                crate::ptr::FactoryPtr::new(factory_impl),
-            )))
-            .ok_or_else(|| {
-                BindingBuilderError::BindingAlreadyExists(type_name::<Interface>())
-            })?;
+        self.di_container.bindings.set::<Interface>(Box::new(
+            crate::provider::FactoryProvider::new(crate::ptr::FactoryPtr::new(
+                factory_impl,
+            )),
+        ));
 
         Ok(())
     }
@@ -364,6 +411,8 @@ impl Default for DIContainer
 #[cfg(test)]
 mod tests
 {
+    use std::error::Error;
+
     use mockall::mock;
 
     use super::*;
@@ -512,7 +561,7 @@ mod tests
     }
 
     #[test]
-    fn can_bind_to_singleton() -> Result<(), BindingBuilderError>
+    fn can_bind_to_singleton() -> Result<(), Box<dyn Error>>
     {
         let mut di_container: DIContainer = DIContainer::new();
 
@@ -520,7 +569,8 @@ mod tests
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to_singleton::<subjects::UserManager>()?;
+            .to::<subjects::UserManager>()?
+            .in_singleton_scope()?;
 
         assert_eq!(di_container.bindings.count(), 1);
 
