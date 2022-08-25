@@ -313,13 +313,6 @@ impl DIContainer
                     }
                 }
             }
-            #[cfg(not(feature = "factory"))]
-            Providable::Factory(_) => {
-                return Err(DIContainerError::CantHandleFactoryBinding(type_name::<
-                    Interface,
-                >(
-                )));
-            }
         }
     }
 

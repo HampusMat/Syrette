@@ -2,9 +2,8 @@
 use std::marker::PhantomData;
 
 use crate::errors::injectable::InjectableError;
-use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::injectable::Injectable;
-use crate::ptr::{FactoryPtr, SingletonPtr, TransientPtr};
+use crate::ptr::{SingletonPtr, TransientPtr};
 use crate::DIContainer;
 
 #[derive(strum_macros::Display, Debug)]
@@ -12,8 +11,8 @@ pub enum Providable
 {
     Transient(TransientPtr<dyn Injectable>),
     Singleton(SingletonPtr<dyn Injectable>),
-    #[allow(dead_code)]
-    Factory(FactoryPtr<dyn AnyFactory>),
+    #[cfg(feature = "factory")]
+    Factory(crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>),
 }
 
 pub trait IProvider
@@ -95,13 +94,15 @@ where
 #[cfg(feature = "factory")]
 pub struct FactoryProvider
 {
-    factory: FactoryPtr<dyn AnyFactory>,
+    factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
 }
 
 #[cfg(feature = "factory")]
 impl FactoryProvider
 {
-    pub fn new(factory: FactoryPtr<dyn AnyFactory>) -> Self
+    pub fn new(
+        factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+    ) -> Self
     {
         Self { factory }
     }

@@ -14,6 +14,7 @@ pub type TransientPtr<Interface> = Box<Interface>;
 pub type SingletonPtr<Interface> = Rc<Interface>;
 
 /// A smart pointer to a factory.
+#[cfg(feature = "factory")]
 pub type FactoryPtr<FactoryInterface> = Rc<FactoryInterface>;
 
 /// Some smart pointer.
@@ -29,6 +30,7 @@ where
     Singleton(SingletonPtr<Interface>),
 
     /// A smart pointer to a factory.
+    #[cfg(feature = "factory")]
     Factory(FactoryPtr<Interface>),
 }
 
@@ -63,5 +65,7 @@ where
 {
     create_as_variant_fn!(Transient);
     create_as_variant_fn!(Singleton);
+
+    #[cfg(feature = "factory")]
     create_as_variant_fn!(Factory);
 }

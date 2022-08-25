@@ -29,10 +29,6 @@ pub enum DIContainerError
     /// No binding exists for a interface.
     #[error("No binding exists for interface '{0}'")]
     BindingNotFound(&'static str),
-
-    /// The binding for a interface is a factory but the factory feature isn't enabled.
-    #[error("The binding for interface '{0}' is a factory but the factory feature isn't enabled")]
-    CantHandleFactoryBinding(&'static str),
 }
 
 /// Error type for [`BindingBuilder`].
