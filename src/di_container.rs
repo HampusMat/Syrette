@@ -3,9 +3,9 @@
 //! # Examples
 //! ```
 //! use std::collections::HashMap;
+//! use std::error::Error;
 //!
 //! use syrette::{DIContainer, injectable};
-//! use syrette::errors::di_container::DIContainerError;
 //!
 //! trait IDatabaseService
 //! {
@@ -32,7 +32,7 @@
 //!     }
 //! }
 //!
-//! fn main() -> Result<(), String>
+//! fn main() -> Result<(), Box<dyn Error>>
 //! {
 //!     let mut di_container = DIContainer::new();
 //!
@@ -42,7 +42,7 @@
 //!
 //!     let database_service = di_container.get::<dyn IDatabaseService>().map_err(|err| {
 //!         err.to_string()
-//!     })?;
+//!     })?.transient()?;
 //!
 //!     Ok(())
 //! }
