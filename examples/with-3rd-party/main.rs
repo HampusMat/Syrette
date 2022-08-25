@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>>
 
     let di_container = bootstrap()?;
 
-    let ninja = di_container.get::<dyn INinja>()?;
+    let ninja = di_container.get::<dyn INinja>()?.transient()?;
 
     ninja.throw_shuriken();
 

@@ -103,12 +103,7 @@ impl InjectableImpl
                     #maybe_prevent_circular_deps
 
                     return Ok(syrette::ptr::TransientPtr::new(Self::new(
-                        #(#get_dep_method_calls
-                            .map_err(|err| InjectableError::ResolveFailed {
-                                reason: Box::new(err),
-                                affected: self_type_name
-                            })?
-                        ),*
+                        #(#get_dep_method_calls),*
                     )));
                 }
             }
@@ -117,52 +112,58 @@ impl InjectableImpl
 
     fn create_get_dep_method_calls(
         dependency_types: &[DependencyType],
-    ) -> Vec<ExprMethodCall>
+    ) -> Vec<proc_macro2::TokenStream>
     {
         dependency_types
             .iter()
             .filter_map(|dep_type| match &dep_type.interface {
-                Type::TraitObject(dep_type_trait) => parse_str::<ExprMethodCall>(
-                    format!(
-                        "{}.get_{}::<{}>({}.clone())",
-                        DI_CONTAINER_VAR_NAME,
-                        if dep_type.ptr == "SingletonPtr" {
-                            "singleton_with_history"
-                        } else {
-                            "with_history"
-                        },
-                        dep_type_trait.to_token_stream(),
-                        DEPENDENCY_HISTORY_VAR_NAME
+                Type::TraitObject(dep_type_trait) => {
+                    let method_call = parse_str::<ExprMethodCall>(
+                        format!(
+                            "{}.get_bound::<{}>({}.clone())",
+                            DI_CONTAINER_VAR_NAME,
+                            dep_type_trait.to_token_stream(),
+                            DEPENDENCY_HISTORY_VAR_NAME
+                        )
+                        .as_str(),
                     )
-                    .as_str(),
-                )
-                .ok(),
+                    .ok()?;
+
+                    Some((method_call, dep_type))
+
+                    /*
+                     */
+                }
                 Type::Path(dep_type_path) => {
                     let dep_type_path_str = Self::path_to_string(&dep_type_path.path);
 
-                    if dep_type_path_str.ends_with("Factory") {
-                        parse_str(
-                            format!(
-                                "{}.get_factory::<{}>()",
-                                DI_CONTAINER_VAR_NAME, dep_type_path_str
-                            )
-                            .as_str(),
+                    let method_call: ExprMethodCall = parse_str(
+                        format!(
+                            "{}.get_bound::<{}>({}.clone())",
+                            DI_CONTAINER_VAR_NAME,
+                            dep_type_path_str,
+                            DEPENDENCY_HISTORY_VAR_NAME
                         )
-                        .ok()
-                    } else {
-                        parse_str(
-                            format!(
-                                "{}.get_with_history::<{}>({}.clone())",
-                                DI_CONTAINER_VAR_NAME,
-                                dep_type_path_str,
-                                DEPENDENCY_HISTORY_VAR_NAME
-                            )
-                            .as_str(),
-                        )
-                        .ok()
-                    }
+                        .as_str(),
+                    )
+                    .ok()?;
+
+                    Some((method_call, dep_type))
                 }
                 &_ => None,
+            })
+            .map(|(method_call, dep_type)| {
+                let ptr_name = dep_type.ptr.to_string();
+
+                let to_ptr =
+                    format_ident!("{}", ptr_name.replace("Ptr", "").to_lowercase());
+
+                quote! {
+                    #method_call.map_err(|err| InjectableError::ResolveFailed {
+                        reason: Box::new(err),
+                        affected: self_type_name
+                    })?.#to_ptr().unwrap()
+                }
             })
             .collect()
     }

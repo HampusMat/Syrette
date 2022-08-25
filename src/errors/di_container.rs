@@ -14,20 +14,6 @@ pub enum DIContainerError
     #[error("Unable to cast binding for interface '{0}'")]
     CastFailed(&'static str),
 
-    /// Wrong binding type.
-    #[error("Wrong binding type for interface '{interface}'. Expected a {expected}. Found a {found}")]
-    WrongBindingType
-    {
-        /// The affected bound interface.
-        interface: &'static str,
-
-        /// The expected binding type.
-        expected: &'static str,
-
-        /// The found binding type.
-        found: String,
-    },
-
     /// Failed to resolve a binding for a interface.
     #[error("Failed to resolve binding for interface '{interface}'")]
     BindingResolveFailed
@@ -43,6 +29,10 @@ pub enum DIContainerError
     /// No binding exists for a interface.
     #[error("No binding exists for interface '{0}'")]
     BindingNotFound(&'static str),
+
+    /// The binding for a interface is a factory but the factory feature isn't enabled.
+    #[error("The binding for interface '{0}' is a factory but the factory feature isn't enabled")]
+    CantHandleFactoryBinding(&'static str),
 }
 
 /// Error type for [`BindingBuilder`].
@@ -58,7 +48,7 @@ pub enum BindingBuilderError
 
 /// Error type for [`BindingScopeConfigurator`].
 ///
-/// [`BindingBuilder`]: crate::di_container::BindingScopeConfigurator
+/// [`BindingScopeConfigurator`]: crate::di_container::BindingScopeConfigurator
 #[derive(thiserror::Error, Debug)]
 pub enum BindingScopeConfiguratorError
 {

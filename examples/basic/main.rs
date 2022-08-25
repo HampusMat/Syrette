@@ -18,11 +18,11 @@ fn main() -> Result<(), Box<dyn Error>>
 
     let di_container = bootstrap()?;
 
-    let dog = di_container.get_singleton::<dyn IDog>()?;
+    let dog = di_container.get::<dyn IDog>()?.singleton()?;
 
     dog.woof();
 
-    let human = di_container.get::<dyn IHuman>()?;
+    let human = di_container.get::<dyn IHuman>()?.transient()?;
 
     human.make_pets_make_sounds();
 

@@ -59,7 +59,7 @@ use crate::errors::di_container::{
 use crate::interfaces::injectable::Injectable;
 use crate::libs::intertrait::cast::{CastBox, CastRc};
 use crate::provider::{Providable, SingletonProvider, TransientTypeProvider};
-use crate::ptr::{SingletonPtr, TransientPtr};
+use crate::ptr::{SingletonPtr, SomePtr};
 
 /// Scope configurator for a binding for type 'Interface' inside a [`DIContainer`].
 pub struct BindingScopeConfigurator<'di_container, Interface, Implementation>
@@ -177,7 +177,7 @@ where
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &mut self,
-        factory_func: &'static dyn Fn<Args, Output = TransientPtr<Return>>,
+        factory_func: &'static dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
     ) -> Result<(), BindingBuilderError>
     where
         Args: 'static,
@@ -212,7 +212,7 @@ where
     #[cfg(feature = "factory")]
     pub fn to_default_factory<Return>(
         &mut self,
-        factory_func: &'static dyn Fn<(), Output = TransientPtr<Return>>,
+        factory_func: &'static dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
     ) -> Result<(), BindingBuilderError>
     where
         Return: 'static + ?Sized,
@@ -260,127 +260,67 @@ impl DIContainer
         BindingBuilder::<Interface>::new(self)
     }
 
-    /// Returns a new instance of the type bound with `Interface`.
+    /// Returns the type bound with `Interface`.
     ///
     /// # Errors
     /// Will return `Err` if:
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
-    /// - The binding for `Interface` is not transient
-    pub fn get<Interface>(&self) -> Result<TransientPtr<Interface>, DIContainerError>
+    pub fn get<Interface>(&self) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
-        self.get_with_history::<Interface>(Vec::new())
-    }
-
-    /// Returns the singleton instance bound with `Interface`.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    /// - The binding for `Interface` is not a singleton
-    pub fn get_singleton<Interface>(
-        &self,
-    ) -> Result<SingletonPtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized,
-    {
-        self.get_singleton_with_history(Vec::new())
-    }
-
-    /// Returns the factory bound with factory type `Interface`.
-    ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    /// - The binding for `Interface` is not a factory
-    #[cfg(feature = "factory")]
-    pub fn get_factory<Interface>(
-        &self,
-    ) -> Result<crate::ptr::FactoryPtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized,
-    {
-        let binding_providable = self.get_binding_providable::<Interface>(Vec::new())?;
-
-        if let Providable::Factory(binding_factory) = binding_providable {
-            return binding_factory
-                .cast::<Interface>()
-                .map_err(|_| DIContainerError::CastFailed(type_name::<Interface>()));
-        }
-
-        Err(DIContainerError::WrongBindingType {
-            interface: type_name::<Interface>(),
-            expected: "factory",
-            found: binding_providable.to_string().to_lowercase(),
-        })
+        self.get_bound::<Interface>(Vec::new())
     }
 
     #[doc(hidden)]
-    pub fn get_with_history<Interface>(
+    pub fn get_bound<Interface>(
         &self,
         dependency_history: Vec<&'static str>,
-    ) -> Result<TransientPtr<Interface>, DIContainerError>
+    ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
         let binding_providable =
             self.get_binding_providable::<Interface>(dependency_history)?;
 
-        if let Providable::Transient(binding_transient) = binding_providable {
-            return binding_transient
-                .cast::<Interface>()
-                .map_err(|_| DIContainerError::CastFailed(type_name::<Interface>()));
+        match binding_providable {
+            Providable::Transient(transient_binding) => Ok(SomePtr::Transient(
+                transient_binding.cast::<Interface>().map_err(|_| {
+                    DIContainerError::CastFailed(type_name::<Interface>())
+                })?,
+            )),
+            Providable::Singleton(singleton_binding) => Ok(SomePtr::Singleton(
+                singleton_binding.cast::<Interface>().map_err(|_| {
+                    DIContainerError::CastFailed(type_name::<Interface>())
+                })?,
+            )),
+            #[cfg(feature = "factory")]
+            Providable::Factory(factory_binding) => {
+                match factory_binding.clone().cast::<Interface>() {
+                    Ok(factory) => Ok(SomePtr::Factory(factory)),
+                    Err(_err) => {
+                        use crate::interfaces::factory::IFactory;
+
+                        let default_factory = factory_binding
+                            .cast::<dyn IFactory<(), Interface>>()
+                            .map_err(|_| {
+                                DIContainerError::CastFailed(type_name::<Interface>())
+                            })?;
+
+                        Ok(SomePtr::Transient(default_factory()))
+                    }
+                }
+            }
+            #[cfg(not(feature = "factory"))]
+            Providable::Factory(_) => {
+                return Err(DIContainerError::CantHandleFactoryBinding(type_name::<
+                    Interface,
+                >(
+                )));
+            }
         }
-
-        #[cfg(feature = "factory")]
-        if let Providable::Factory(binding_factory) = binding_providable {
-            use crate::interfaces::factory::IFactory;
-
-            let factory = binding_factory
-                .cast::<dyn IFactory<(), Interface>>()
-                .map_err(|_| DIContainerError::CastFailed(type_name::<Interface>()))?;
-
-            return Ok(factory());
-        }
-
-        Err(DIContainerError::WrongBindingType {
-            interface: type_name::<Interface>(),
-            expected: "transient",
-            found: binding_providable.to_string().to_lowercase(),
-        })
-    }
-
-    #[doc(hidden)]
-    pub fn get_singleton_with_history<Interface>(
-        &self,
-        dependency_history: Vec<&'static str>,
-    ) -> Result<SingletonPtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized,
-    {
-        let binding_providable =
-            self.get_binding_providable::<Interface>(dependency_history)?;
-
-        if let Providable::Singleton(binding_singleton) = binding_providable {
-            return binding_singleton
-                .cast::<Interface>()
-                .map_err(|_| DIContainerError::CastFailed(type_name::<Interface>()));
-        }
-
-        Err(DIContainerError::WrongBindingType {
-            interface: type_name::<Interface>(),
-            expected: "singleton",
-            found: binding_providable.to_string().to_lowercase(),
-        })
     }
 
     fn get_binding_providable<Interface>(
@@ -545,7 +485,7 @@ mod tests
     }
 
     #[test]
-    fn can_bind_to() -> Result<(), BindingBuilderError>
+    fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
         let mut di_container: DIContainer = DIContainer::new();
 
@@ -579,7 +519,7 @@ mod tests
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_factory() -> Result<(), BindingBuilderError>
+    fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
     {
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
@@ -601,7 +541,7 @@ mod tests
     }
 
     #[test]
-    fn can_get() -> Result<(), DIContainerError>
+    fn can_get() -> Result<(), Box<dyn Error>>
     {
         mock! {
             Provider {}
@@ -636,7 +576,7 @@ mod tests
     }
 
     #[test]
-    fn can_get_singleton() -> Result<(), DIContainerError>
+    fn can_get_singleton() -> Result<(), Box<dyn Error>>
     {
         mock! {
             Provider {}
@@ -667,11 +607,12 @@ mod tests
             .bindings
             .set::<dyn subjects::INumber>(Box::new(mock_provider));
 
-        let first_number_rc = di_container.get_singleton::<dyn subjects::INumber>()?;
+        let first_number_rc = di_container.get::<dyn subjects::INumber>()?.singleton()?;
 
         assert_eq!(first_number_rc.get(), 2820);
 
-        let second_number_rc = di_container.get_singleton::<dyn subjects::INumber>()?;
+        let second_number_rc =
+            di_container.get::<dyn subjects::INumber>()?.singleton()?;
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
 
@@ -680,7 +621,7 @@ mod tests
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_get_factory() -> Result<(), DIContainerError>
+    fn can_get_factory() -> Result<(), Box<dyn Error>>
     {
         trait IUserManager
         {
@@ -756,7 +697,7 @@ mod tests
             .bindings
             .set::<IUserManagerFactory>(Box::new(mock_provider));
 
-        di_container.get_factory::<IUserManagerFactory>()?;
+        di_container.get::<IUserManagerFactory>()?;
 
         Ok(())
     }

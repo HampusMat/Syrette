@@ -2,3 +2,4 @@
 
 pub mod di_container;
 pub mod injectable;
+pub mod ptr;
