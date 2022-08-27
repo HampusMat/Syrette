@@ -26,9 +26,19 @@ pub enum DIContainerError
         interface: &'static str,
     },
 
-    /// No binding exists for a interface.
-    #[error("No binding exists for interface '{0}'")]
-    BindingNotFound(&'static str),
+    /// No binding exists for a interface (and optionally a name).
+    #[error(
+        "No binding exists for interface '{interface}' {}",
+        .name.map_or_else(String::new, |name| format!("with name '{}'", name))
+    )]
+    BindingNotFound
+    {
+        /// The interface that doesn't have a binding.
+        interface: &'static str,
+
+        /// The name of the binding if one exists.
+        name: Option<&'static str>,
+    },
 }
 
 /// Error type for [`BindingBuilder`].
@@ -51,4 +61,15 @@ pub enum BindingScopeConfiguratorError
     /// Resolving a singleton failed.
     #[error("Resolving the given singleton failed")]
     SingletonResolveFailed(#[from] InjectableError),
+}
+
+/// Error type for [`BindingWhenConfigurator`].
+///
+/// [`BindingWhenConfigurator`]: crate::di_container::BindingWhenConfigurator
+#[derive(thiserror::Error, Debug)]
+pub enum BindingWhenConfiguratorError
+{
+    /// A binding for a interface wasn't found.
+    #[error("A binding for interface '{0}' wasn't found'")]
+    BindingNotFound(&'static str),
 }

@@ -9,11 +9,12 @@ use quote::quote;
 use syn::{parse, parse_macro_input};
 
 mod declare_interface_args;
-mod dependency_type;
+mod dependency;
 mod factory_type_alias;
 mod injectable_impl;
 mod injectable_macro_args;
 mod libs;
+mod named_attr_input;
 mod util;
 
 use declare_interface_args::DeclareInterfaceArgs;
@@ -38,15 +39,60 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// declare the interface with the [`declare_interface!`] macro or use
 /// the [`di_container_bind`] macro to create a DI container binding.
 ///
+/// # Attributes
+/// Attributes specific to impls with this attribute macro.
+///
+/// ### Named
+/// Used inside the `new` method before a dependency argument. Declares the name of the
+/// dependency. Should be given the name quoted inside parenthesis.
+///
+/// The [`macro@named`] ghost attribute macro can be used for intellisense and
+/// autocompletion for this attribute.
+///
+/// For example:
+/// ```
+/// # use syrette::ptr::TransientPtr;
+/// # use syrette::injectable;
+/// #
+/// # trait IArmor {}
+/// #
+/// # trait IKnight {}
+/// #
+/// # struct Knight
+/// # {
+/// #     tough_armor: TransientPtr<dyn IArmor>,
+/// #     light_armor: TransientPtr<dyn IArmor>,
+/// # }
+/// #
+/// #[injectable(IKnight)]
+/// impl Knight
+/// {
+///     pub fn new(
+///         #[named("tough")]
+///         tough_armor: TransientPtr<dyn IArmor>,
+///
+///         #[named("light")]
+///         light_armor: TransientPtr<dyn IArmor>
+///     ) -> Self
+///     {
+///         Self { tough_armor, light_armor }
+///     }
+/// }
+/// #
+/// # impl IKnight for Knight {}
+/// ```
+///
 /// # Example
 /// ```
-/// use syrette::injectable;
-///
-/// struct PasswordManager {}
-///
+/// # use syrette::injectable;
+/// #
+/// # struct PasswordManager {}
+/// #
 /// #[injectable]
-/// impl PasswordManager {
-///     pub fn new() -> Self {
+/// impl PasswordManager
+/// {
+///     pub fn new() -> Self
+///     {
 ///         Self {}
 ///     }
 /// }
@@ -190,4 +236,53 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
     } = parse_macro_input!(input);
 
     generate_caster(&implementation, &interface).into()
+}
+
+/// Declares the name of a dependency.
+///
+/// This macro attribute doesn't actually do anything. It only exists for the
+/// convenience of having intellisense and autocompletion.
+/// You might as well just use `named` if you don't care about that.
+///
+/// Only means something inside a `new` method inside a impl with
+/// the [`macro@injectable`] macro attribute.
+///
+/// # Examples
+/// ```
+/// # use syrette::ptr::TransientPtr;
+/// # use syrette::injectable;
+/// #
+/// # trait INinja {}
+/// # trait IWeapon {}
+/// #
+/// # struct Ninja
+/// # {
+/// #   strong_weapon: TransientPtr<dyn IWeapon>,
+/// #   weak_weapon: TransientPtr<dyn IWeapon>,
+/// # }
+/// #
+/// #[injectable(INinja)]
+/// impl Ninja
+/// {
+///     pub fn new(
+///         #[syrette::named("strong")]
+///         strong_weapon: TransientPtr<dyn IWeapon>,
+///
+///         #[syrette::named("weak")]
+///         weak_weapon: TransientPtr<dyn IWeapon>,
+///     ) -> Self
+///     {
+///         Self {
+///             strong_weapon,
+///             weak_weapon,
+///         }
+///     }
+/// }
+/// #
+/// # impl INinja for Ninja {}
+/// ```
+#[proc_macro_attribute]
+pub fn named(_: TokenStream, _: TokenStream) -> TokenStream
+{
+    TokenStream::new()
 }

@@ -4,9 +4,16 @@ use ahash::AHashMap;
 
 use crate::{errors::di_container::DIContainerError, provider::IProvider};
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct DIContainerBindingKey
+{
+    type_id: TypeId,
+    name: Option<&'static str>,
+}
+
 pub struct DIContainerBindingMap
 {
-    bindings: AHashMap<TypeId, Box<dyn IProvider>>,
+    bindings: AHashMap<DIContainerBindingKey, Box<dyn IProvider>>,
 }
 
 impl DIContainerBindingMap
@@ -18,7 +25,10 @@ impl DIContainerBindingMap
         }
     }
 
-    pub fn get<Interface>(&self) -> Result<&dyn IProvider, DIContainerError>
+    pub fn get<Interface>(
+        &self,
+        name: Option<&'static str>,
+    ) -> Result<&dyn IProvider, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -26,27 +36,60 @@ impl DIContainerBindingMap
 
         Ok(self
             .bindings
-            .get(&interface_typeid)
-            .ok_or_else(|| DIContainerError::BindingNotFound(type_name::<Interface>()))?
+            .get(&DIContainerBindingKey {
+                type_id: interface_typeid,
+                name,
+            })
+            .ok_or_else(|| DIContainerError::BindingNotFound {
+                interface: type_name::<Interface>(),
+                name,
+            })?
             .as_ref())
     }
 
-    pub fn set<Interface>(&mut self, provider: Box<dyn IProvider>)
-    where
+    pub fn set<Interface>(
+        &mut self,
+        name: Option<&'static str>,
+        provider: Box<dyn IProvider>,
+    ) where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        self.bindings.insert(interface_typeid, provider);
+        self.bindings.insert(
+            DIContainerBindingKey {
+                type_id: interface_typeid,
+                name,
+            },
+            provider,
+        );
     }
 
-    pub fn has<Interface>(&self) -> bool
+    pub fn remove<Interface>(
+        &mut self,
+        name: Option<&'static str>,
+    ) -> Option<Box<dyn IProvider>>
     where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        self.bindings.contains_key(&interface_typeid)
+        self.bindings.remove(&DIContainerBindingKey {
+            type_id: interface_typeid,
+            name,
+        })
+    }
+
+    pub fn has<Interface>(&self, name: Option<&'static str>) -> bool
+    where
+        Interface: 'static + ?Sized,
+    {
+        let interface_typeid = TypeId::of::<Interface>();
+
+        self.bindings.contains_key(&DIContainerBindingKey {
+            type_id: interface_typeid,
+            name,
+        })
     }
 
     /// Only used by tests in the `di_container` module.
