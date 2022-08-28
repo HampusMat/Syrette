@@ -38,6 +38,8 @@ The goal of Syrette is to be a simple, useful, convenient and familiar DI librar
 
 ## Example usage
 ```rust
+use std::error::Error;
+
 use syrette::{injectable, DIContainer};
 use syrette::ptr::TransientPtr;
 
@@ -70,7 +72,8 @@ trait IWarrior
 	fn fight(&self);
 }
 
-struct Warrior {
+struct Warrior
+{
 	weapon: TransientPtr<dyn IWeapon>,
 }
 
@@ -91,19 +94,21 @@ impl IWarrior for Warrior
 	}
 }
 
-fn main()
+fn main() -> Result<(), Box<dyn Error>>
 {
 	let mut di_container = DIContainer::new();
 
-	di_container.bind::<dyn IWeapon>().to::<Sword>().unwrap();
+	di_container.bind::<dyn IWeapon>().to::<Sword>()?;
 
-	di_container.bind::<dyn IWarrior>().to::<Warrior>().unwrap();
+	di_container.bind::<dyn IWarrior>().to::<Warrior>()?;
 
-	let warrior = di_container.get::<dyn IWarrior>().unwrap();
+	let warrior = di_container.get::<dyn IWarrior>()?.transient()?;
 
 	warrior.fight();
 
 	println!("Warrior has fighted");
+
+	Ok(())
 }
 ```
 
