@@ -1,7 +1,7 @@
 version: 2.1
 
 jobs:
-  test:
+  test-all:
     docker:
       - image: cimg/rust:1.63.0
     steps:
@@ -12,4 +12,9 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --workspace --all-features
+
+workflows:
+  test:
+    jobs:
+      - test-all
 
