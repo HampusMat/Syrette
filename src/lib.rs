@@ -29,7 +29,8 @@ pub mod libs;
 mod di_container_binding_map;
 mod provider;
 
-/// Shortcut for creating a DI container binding for a injectable without a declared interface.
+/// Shortcut for creating a DI container binding for a injectable without a declared
+/// interface.
 ///
 /// This will declare a interface for the implementation.
 ///
@@ -63,7 +64,8 @@ macro_rules! di_container_bind {
 /// ```
 /// use syrette::declare_default_factory;
 ///
-/// trait IParser {
+/// trait IParser
+/// {
 ///     // Methods and etc here...
 /// }
 ///

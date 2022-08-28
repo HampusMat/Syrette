@@ -7,9 +7,9 @@
 //! (i.e. without involving the concrete type of the backing value) is possible
 //! (even no coercion from a trait object to that of its super-trait yet).
 //!
-//! With this crate, any trait object with [`CastFrom`] as its super-trait can be cast directly
-//! to another trait object implemented by the underlying type if the target traits are
-//! registered beforehand with the macros provided by this crate.
+//! With this crate, any trait object with [`CastFrom`] as its super-trait can be cast
+//! directly to another trait object implemented by the underlying type if the target
+//! traits are registered beforehand with the macros provided by this crate.
 //!
 //!
 //! Originally from Intertrait by CodeChain
@@ -64,20 +64,21 @@ fn cast_arc_panic<Trait: ?Sized + 'static>(_: Arc<dyn Any + Sync + Send>) -> Arc
 }
 
 /// A `Caster` knows how to cast a reference to or `Box` of a trait object for `Any`
-/// to a trait object of trait `Trait`. Each `Caster` instance is specific to a concrete type.
-/// That is, it knows how to cast to single specific trait implemented by single specific type.
+/// to a trait object of trait `Trait`. Each `Caster` instance is specific to a concrete
+/// type. That is, it knows how to cast to single specific trait implemented by single
+/// specific type.
 ///
 /// An implementation of a trait for a concrete type doesn't need to manually provide
 /// a `Caster`. Instead attach `#[cast_to]` to the `impl` block.
 #[doc(hidden)]
 pub struct Caster<Trait: ?Sized + 'static>
 {
-    /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait object
-    /// for trait `Trait`.
+    /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait
+    /// object for trait `Trait`.
     pub cast_box: fn(from: Box<dyn Any>) -> Box<Trait>,
 
-    /// Casts an `Rc` holding a trait object for `Any` to another `Rc` holding a trait object
-    /// for trait `Trait`.
+    /// Casts an `Rc` holding a trait object for `Any` to another `Rc` holding a trait
+    /// object for trait `Trait`.
     pub cast_rc: fn(from: Rc<dyn Any>) -> Rc<Trait>,
 
     /// Casts an `Arc` holding a trait object for `Any + Sync + Send + 'static`
@@ -114,7 +115,8 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
     }
 }
 
-/// Returns a `Caster<S, Trait>` from a concrete type `S` to a trait `Trait` implemented by it.
+/// Returns a `Caster<S, Trait>` from a concrete type `S` to a trait `Trait` implemented
+/// by it.
 fn caster<Trait: ?Sized + 'static>(type_id: TypeId) -> Option<&'static Caster<Trait>>
 {
     CASTER_MAP
@@ -122,10 +124,11 @@ fn caster<Trait: ?Sized + 'static>(type_id: TypeId) -> Option<&'static Caster<Tr
         .and_then(|caster| caster.downcast_ref::<Caster<Trait>>())
 }
 
-/// `CastFrom` must be extended by a trait that wants to allow for casting into another trait.
+/// `CastFrom` must be extended by a trait that wants to allow for casting into another
+/// trait.
 ///
-/// It is used for obtaining a trait object for [`Any`] from a trait object for its sub-trait,
-/// and blanket implemented for all `Sized + Any + 'static` types.
+/// It is used for obtaining a trait object for [`Any`] from a trait object for its
+/// sub-trait, and blanket implemented for all `Sized + Any + 'static` types.
 ///
 /// # Examples
 /// ```ignore
@@ -146,8 +149,9 @@ pub trait CastFrom: Any + 'static
 /// and wants to allow for casting into another trait behind references and smart pointers
 /// especially including `Arc`.
 ///
-/// It is used for obtaining a trait object for [`Any + Sync + Send + 'static`] from an object
-/// for its sub-trait, and blanket implemented for all `Sized + Sync + Send + 'static` types.
+/// It is used for obtaining a trait object for [`Any + Sync + Send + 'static`] from an
+/// object for its sub-trait, and blanket implemented for all `Sized + Sync + Send +
+/// 'static` types.
 ///
 /// # Examples
 /// ```ignore

@@ -23,7 +23,8 @@ pub trait CastArc
     ) -> Result<Arc<OtherTrait>, CastError>;
 }
 
-/// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and `Send`.
+/// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and
+/// `Send`.
 impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
 {
     fn cast<OtherTrait: ?Sized + 'static>(

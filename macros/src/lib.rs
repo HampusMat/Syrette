@@ -29,7 +29,8 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// * (Zero or more) Flags wrapped in curly braces. Like `{ a = true, b = false }`
 ///
 /// # Flags
-/// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from documentation.
+/// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from
+///   documentation.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
@@ -68,14 +69,15 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// impl Knight
 /// {
 ///     pub fn new(
-///         #[named("tough")]
-///         tough_armor: TransientPtr<dyn IArmor>,
+///         #[named("tough")] tough_armor: TransientPtr<dyn IArmor>,
 ///
-///         #[named("light")]
-///         light_armor: TransientPtr<dyn IArmor>
+///         #[named("light")] light_armor: TransientPtr<dyn IArmor>,
 ///     ) -> Self
 ///     {
-///         Self { tough_armor, light_armor }
+///         Self {
+///             tough_armor,
+///             light_armor,
+///         }
 ///     }
 /// }
 /// #
@@ -145,8 +147,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// ```
 /// use std::collections::HashMap;
 ///
-/// use syrette::interfaces::factory::IFactory;
 /// use syrette::factory;
+/// use syrette::interfaces::factory::IFactory;
 ///
 /// enum ConfigValue
 /// {
@@ -161,7 +163,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///     fn configure(&self, key: String, value: ConfigValue);
 /// }
 ///
-/// struct Configurator {
+/// struct Configurator
+/// {
 ///     config: HashMap<String, ConfigValue>,
 /// }
 ///
@@ -171,11 +174,10 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///     {
 ///         Self {
 ///             config: HashMap::from(
-///                 keys
-///                     .iter()
+///                 keys.iter()
 ///                     .map(|key| (key.clone(), ConfigValue::None))
-///                     .collect::<HashMap<_, _>>()
-///             )
+///                     .collect::<HashMap<_, _>>(),
+///             ),
 ///         }
 ///     }
 /// }
@@ -226,7 +228,6 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 ///
 /// # Arguments
 /// {Implementation} -> {Interface}
-///
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
 {
@@ -265,11 +266,9 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
 /// impl Ninja
 /// {
 ///     pub fn new(
-///         #[syrette::named("strong")]
-///         strong_weapon: TransientPtr<dyn IWeapon>,
+///         #[syrette::named("strong")] strong_weapon: TransientPtr<dyn IWeapon>,
 ///
-///         #[syrette::named("weak")]
-///         weak_weapon: TransientPtr<dyn IWeapon>,
+///         #[syrette::named("weak")] weak_weapon: TransientPtr<dyn IWeapon>,
 ///     ) -> Self
 ///     {
 ///         Self {

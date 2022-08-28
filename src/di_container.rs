@@ -5,7 +5,7 @@
 //! use std::collections::HashMap;
 //! use std::error::Error;
 //!
-//! use syrette::{DIContainer, injectable};
+//! use syrette::{injectable, DIContainer};
 //!
 //! trait IDatabaseService
 //! {
@@ -36,13 +36,15 @@
 //! {
 //!     let mut di_container = DIContainer::new();
 //!
-//!     di_container.bind::<dyn IDatabaseService>().to::<DatabaseService>().map_err(|err| {
-//!         err.to_string()
-//!     })?;
+//!     di_container
+//!         .bind::<dyn IDatabaseService>()
+//!         .to::<DatabaseService>()
+//!         .map_err(|err| err.to_string())?;
 //!
-//!     let database_service = di_container.get::<dyn IDatabaseService>().map_err(|err| {
-//!         err.to_string()
-//!     })?.transient()?;
+//!     let database_service = di_container
+//!         .get::<dyn IDatabaseService>()
+//!         .map_err(|err| err.to_string())?
+//!         .transient()?;
 //!
 //!     Ok(())
 //! }
@@ -54,7 +56,9 @@ use std::marker::PhantomData;
 use crate::castable_factory::CastableFactory;
 use crate::di_container_binding_map::DIContainerBindingMap;
 use crate::errors::di_container::{
-    BindingBuilderError, BindingScopeConfiguratorError, BindingWhenConfiguratorError,
+    BindingBuilderError,
+    BindingScopeConfiguratorError,
+    BindingWhenConfiguratorError,
     DIContainerError,
 };
 use crate::interfaces::injectable::Injectable;

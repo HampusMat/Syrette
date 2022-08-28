@@ -2,7 +2,8 @@ use std::any::{type_name, TypeId};
 
 use ahash::AHashMap;
 
-use crate::{errors::di_container::DIContainerError, provider::IProvider};
+use crate::errors::di_container::DIContainerError;
+use crate::provider::IProvider;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct DIContainerBindingKey

@@ -64,6 +64,7 @@ where
     Interface: 'static + ?Sized,
 {
     create_as_variant_fn!(Transient);
+
     create_as_variant_fn!(Singleton);
 
     #[cfg(feature = "factory")]

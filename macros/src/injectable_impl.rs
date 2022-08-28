@@ -2,8 +2,7 @@ use std::error::Error;
 
 use quote::{format_ident, quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
-use syn::Generics;
-use syn::{parse_str, ExprMethodCall, FnArg, ItemImpl, Type};
+use syn::{parse_str, ExprMethodCall, FnArg, Generics, ItemImpl, Type};
 
 use crate::dependency::Dependency;
 use crate::util::item_impl::find_impl_method_by_name_mut;
