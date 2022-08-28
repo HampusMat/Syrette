@@ -1,5 +1,4 @@
-use std::error::Error;
-
+use anyhow::Result;
 use syrette::DIContainer;
 
 // Concrete implementations
@@ -12,7 +11,7 @@ use crate::interfaces::animal_store::IAnimalStore;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;
 
-pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
+pub fn bootstrap() -> Result<DIContainer>
 {
     let mut di_container: DIContainer = DIContainer::new();
 

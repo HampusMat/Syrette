@@ -2,7 +2,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-use std::error::Error;
+use anyhow::Result;
 
 mod animal_store;
 mod animals;
@@ -13,7 +13,7 @@ use bootstrap::bootstrap;
 use interfaces::dog::IDog;
 use interfaces::human::IHuman;
 
-fn main() -> Result<(), Box<dyn Error>>
+fn main() -> Result<()>
 {
     println!("Hello, world!");
 
