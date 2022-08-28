@@ -38,6 +38,30 @@ mod provider;
 ///
 /// # Arguments
 /// {interface} => {implementation}, {DI container variable name}
+///
+/// # Examples
+/// ```
+/// # use syrette::{di_container_bind, DIContainer, injectable};
+/// #
+/// # trait INinja {}
+/// #
+/// # struct Ninja {}
+/// #
+/// # #[injectable]
+/// # impl Ninja
+/// # {
+/// #     fn new() -> Self
+/// #     {
+/// #         Self {}
+/// #     }
+/// # }
+/// #
+/// # impl INinja for Ninja {}
+/// #
+/// let mut di_container = DIContainer::new();
+///
+/// di_container_bind!(INinja => Ninja, di_container);
+/// ```
 #[macro_export]
 macro_rules! di_container_bind {
     ($interface: path => $implementation: ty, $di_container: ident) => {
@@ -62,8 +86,8 @@ macro_rules! di_container_bind {
 ///
 /// # Examples
 /// ```
-/// use syrette::declare_default_factory;
-///
+/// # use syrette::declare_default_factory;
+/// #
 /// trait IParser
 /// {
 ///     // Methods and etc here...
@@ -75,8 +99,8 @@ macro_rules! di_container_bind {
 /// The expanded equivelent of this would be
 ///
 /// ```
-/// use syrette::declare_default_factory;
-///
+/// # use syrette::declare_default_factory;
+/// #
 /// trait IParser {
 ///     // Methods and etc here...
 /// }

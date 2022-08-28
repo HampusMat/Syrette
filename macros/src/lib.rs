@@ -70,7 +70,6 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// {
 ///     pub fn new(
 ///         #[named("tough")] tough_armor: TransientPtr<dyn IArmor>,
-///
 ///         #[named("light")] light_armor: TransientPtr<dyn IArmor>,
 ///     ) -> Self
 ///     {
@@ -145,51 +144,23 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///
 /// # Examples
 /// ```
-/// use std::collections::HashMap;
-///
-/// use syrette::factory;
-/// use syrette::interfaces::factory::IFactory;
-///
-/// enum ConfigValue
-/// {
-///     String(String),
-///     Bool(bool),
-///     Int(i32),
-///     None,
-/// }
-///
-/// trait IConfigurator
-/// {
-///     fn configure(&self, key: String, value: ConfigValue);
-/// }
-///
-/// struct Configurator
-/// {
-///     config: HashMap<String, ConfigValue>,
-/// }
-///
-/// impl Configurator
-/// {
-///     fn new(keys: Vec<String>) -> Self
-///     {
-///         Self {
-///             config: HashMap::from(
-///                 keys.iter()
-///                     .map(|key| (key.clone(), ConfigValue::None))
-///                     .collect::<HashMap<_, _>>(),
-///             ),
-///         }
-///     }
-/// }
-///
-/// impl IConfigurator for Configurator
-/// {
-///     fn configure(&self, key: String, value: ConfigValue)
-///     {
-///         // ...
-///     }
-/// }
-///
+/// # use syrette::factory;
+/// # use syrette::interfaces::factory::IFactory;
+/// #
+/// # trait IConfigurator {}
+/// #
+/// # struct Configurator {}
+/// #
+/// # impl Configurator
+/// # {
+/// #     fn new() -> Self
+/// #     {
+/// #         Self {}
+/// #     }
+/// # }
+/// #
+/// # impl IConfigurator for Configurator {}
+/// #
 /// #[factory]
 /// type IConfiguratorFactory = dyn IFactory<(Vec<String>,), dyn IConfigurator>;
 /// ```
@@ -228,6 +199,19 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 ///
 /// # Arguments
 /// {Implementation} -> {Interface}
+///
+/// # Examples
+/// ```
+/// # use syrette::declare_interface;
+/// #
+/// # trait INinja {}
+/// #
+/// # struct Ninja {}
+/// #
+/// # impl INinja for Ninja {}
+/// #
+/// declare_interface!(Ninja -> INinja);
+/// ```
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
 {
@@ -267,7 +251,6 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
 /// {
 ///     pub fn new(
 ///         #[syrette::named("strong")] strong_weapon: TransientPtr<dyn IWeapon>,
-///
 ///         #[syrette::named("weak")] weak_weapon: TransientPtr<dyn IWeapon>,
 ///     ) -> Self
 ///     {
