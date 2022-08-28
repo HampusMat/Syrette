@@ -1,6 +1,8 @@
 ## Syrette
 [![Latest Version](https://img.shields.io/crates/v/syrette)](https://crates.io/crates/syrette)
-[![Documentation](https://img.shields.io/badge/docs.rs-syrette-brightgreen)](https://docs.rs/syrette)
+[![Documentation](https://img.shields.io/badge/docs.rs-syrette-blueviolet)](https://docs.rs/syrette)
+[![Build](https://img.shields.io/circleci/build/github/HampusMat/Syrette/master)](https://app.circleci.com/pipelines/github/HampusMat/Syrette)
+
 
 The convenient dependency injection framework for Rust.
 
