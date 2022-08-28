@@ -1,0 +1,15 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/rust:1.63.0
+    steps:
+      - checkout
+      - run: cargo --version
+      - run: rustup install nightly
+      - run: rustup default nightly
+      - run:
+          name: Run Tests
+          command: cargo test --workspace --all-features
+
