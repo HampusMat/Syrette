@@ -12,6 +12,11 @@ pub mod errors;
 pub mod interfaces;
 pub mod ptr;
 
+#[cfg(feature = "async")]
+pub mod async_di_container;
+
+#[cfg(feature = "async")]
+pub use async_di_container::AsyncDIContainer;
 pub use di_container::DIContainer;
 pub use syrette_macros::*;
 
@@ -75,9 +80,8 @@ macro_rules! di_container_bind {
 ///
 /// A default factory is a factory that doesn't take any arguments.
 ///
-/// More tedious ways to accomplish what this macro does would either be by using
-/// the [`factory`] macro or by manually declaring the interfaces
-/// with the [`declare_interface`] macro.
+/// The more tedious way to accomplish what this macro does would be by using
+/// the [`factory`] macro.
 ///
 /// *This macro is only available if Syrette is built with the "factory" feature.*
 ///
@@ -95,43 +99,19 @@ macro_rules! di_container_bind {
 ///
 /// declare_default_factory!(dyn IParser);
 /// ```
-///
-/// The expanded equivelent of this would be
-///
-/// ```
-/// # use syrette::declare_default_factory;
-/// #
-/// trait IParser {
-///     // Methods and etc here...
-/// }
-///
-/// syrette::declare_interface!(
-///     syrette::castable_factory::CastableFactory<
-///         (),
-///         dyn IParser,
-///     > -> syrette::interfaces::factory::IFactory<(), dyn IParser>
-/// );
-///
-/// syrette::declare_interface!(
-///     syrette::castable_factory::CastableFactory<
-///         (),
-///         dyn IParser,
-///     > -> syrette::interfaces::any_factory::AnyFactory
-/// );
-/// ```
 #[macro_export]
 #[cfg(feature = "factory")]
 macro_rules! declare_default_factory {
     ($interface: ty) => {
         syrette::declare_interface!(
-            syrette::castable_factory::CastableFactory<
+            syrette::castable_factory::blocking::CastableFactory<
                 (),
                 $interface,
             > -> syrette::interfaces::factory::IFactory<(), $interface>
         );
 
         syrette::declare_interface!(
-            syrette::castable_factory::CastableFactory<
+            syrette::castable_factory::blocking::CastableFactory<
                 (),
                 $interface,
             > -> syrette::interfaces::any_factory::AnyFactory

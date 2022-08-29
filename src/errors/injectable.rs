@@ -3,7 +3,7 @@
 //!
 //! [`Injectable`]: crate::interfaces::injectable::Injectable
 
-use super::di_container::DIContainerError;
+use crate::errors::di_container::DIContainerError;
 
 /// Error type for structs that implement [`Injectable`].
 ///
@@ -23,6 +23,18 @@ pub enum InjectableError
         affected: &'static str,
     },
 
+    /// Failed to resolve dependencies.
+    #[cfg(feature = "async")]
+    #[error("Failed to resolve a dependency of '{affected}'")]
+    AsyncResolveFailed
+    {
+        /// The reason for the problem.
+        #[source]
+        reason: Box<crate::errors::async_di_container::AsyncDIContainerError>,
+
+        /// The affected injectable type.
+        affected: &'static str,
+    },
     /// Detected circular dependencies.
     #[error("Detected circular dependencies. {dependency_trace}")]
     DetectedCircular

@@ -1,9 +1,6 @@
-use std::any::{type_name, TypeId};
+use std::any::TypeId;
 
 use ahash::AHashMap;
-
-use crate::errors::di_container::DIContainerError;
-use crate::provider::IProvider;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct DIContainerBindingKey
@@ -12,12 +9,16 @@ struct DIContainerBindingKey
     name: Option<&'static str>,
 }
 
-pub struct DIContainerBindingMap
+pub struct DIContainerBindingMap<Provider>
+where
+    Provider: 'static + ?Sized,
 {
-    bindings: AHashMap<DIContainerBindingKey, Box<dyn IProvider>>,
+    bindings: AHashMap<DIContainerBindingKey, Box<Provider>>,
 }
 
-impl DIContainerBindingMap
+impl<Provider> DIContainerBindingMap<Provider>
+where
+    Provider: 'static + ?Sized,
 {
     pub fn new() -> Self
     {
@@ -26,33 +27,22 @@ impl DIContainerBindingMap
         }
     }
 
-    pub fn get<Interface>(
-        &self,
-        name: Option<&'static str>,
-    ) -> Result<&dyn IProvider, DIContainerError>
+    pub fn get<Interface>(&self, name: Option<&'static str>) -> Option<&Provider>
     where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        Ok(self
-            .bindings
+        self.bindings
             .get(&DIContainerBindingKey {
                 type_id: interface_typeid,
                 name,
             })
-            .ok_or_else(|| DIContainerError::BindingNotFound {
-                interface: type_name::<Interface>(),
-                name,
-            })?
-            .as_ref())
+            .map(|provider| provider.as_ref())
     }
 
-    pub fn set<Interface>(
-        &mut self,
-        name: Option<&'static str>,
-        provider: Box<dyn IProvider>,
-    ) where
+    pub fn set<Interface>(&mut self, name: Option<&'static str>, provider: Box<Provider>)
+    where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
@@ -69,7 +59,7 @@ impl DIContainerBindingMap
     pub fn remove<Interface>(
         &mut self,
         name: Option<&'static str>,
-    ) -> Option<Box<dyn IProvider>>
+    ) -> Option<Box<Provider>>
     where
         Interface: 'static + ?Sized,
     {

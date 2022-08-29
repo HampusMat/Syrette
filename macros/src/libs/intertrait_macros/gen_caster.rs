@@ -22,15 +22,29 @@ const CASTER_FN_NAME_PREFIX: &[u8] = b"__";
 
 const FN_BUF_LEN: usize = CASTER_FN_NAME_PREFIX.len() + Simple::LENGTH;
 
-pub fn generate_caster(ty: &impl ToTokens, dst_trait: &impl ToTokens) -> TokenStream
+pub fn generate_caster(
+    ty: &impl ToTokens,
+    dst_trait: &impl ToTokens,
+    sync: bool,
+) -> TokenStream
 {
     let fn_ident = create_caster_fn_ident();
 
-    let new_caster = quote! {
-        syrette::libs::intertrait::Caster::<dyn #dst_trait>::new(
-            |from| from.downcast::<#ty>().unwrap(),
-            |from| from.downcast::<#ty>().unwrap(),
-        )
+    let new_caster = if sync {
+        quote! {
+            syrette::libs::intertrait::Caster::<dyn #dst_trait>::new_sync(
+                |from| from.downcast::<#ty>().unwrap(),
+                |from| from.downcast::<#ty>().unwrap(),
+                |from| from.downcast::<#ty>().unwrap()
+            )
+        }
+    } else {
+        quote! {
+            syrette::libs::intertrait::Caster::<dyn #dst_trait>::new(
+                |from| from.downcast::<#ty>().unwrap(),
+                |from| from.downcast::<#ty>().unwrap(),
+            )
+        }
     };
 
     quote! {

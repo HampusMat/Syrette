@@ -1,49 +1,16 @@
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{braced, Ident, LitBool, Token, TypePath};
+use syn::{braced, Token, TypePath};
 
+use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const INJECTABLE_MACRO_FLAGS: &[&str] = &["no_doc_hidden"];
-
-pub struct InjectableMacroFlag
-{
-    pub flag: Ident,
-    pub is_on: LitBool,
-}
-
-impl Parse for InjectableMacroFlag
-{
-    fn parse(input: ParseStream) -> syn::Result<Self>
-    {
-        let input_forked = input.fork();
-
-        let flag: Ident = input_forked.parse()?;
-
-        let flag_str = flag.to_string();
-
-        if !INJECTABLE_MACRO_FLAGS.contains(&flag_str.as_str()) {
-            return Err(input.error(format!(
-                "Unknown flag '{}'. Expected one of [ {} ]",
-                flag_str,
-                INJECTABLE_MACRO_FLAGS.join(",")
-            )));
-        }
-
-        input.parse::<Ident>()?;
-
-        input.parse::<Token![=]>()?;
-
-        let is_on: LitBool = input.parse()?;
-
-        Ok(Self { flag, is_on })
-    }
-}
+pub const INJECTABLE_MACRO_FLAGS: &[&str] = &["no_doc_hidden", "async"];
 
 pub struct InjectableMacroArgs
 {
     pub interface: Option<TypePath>,
-    pub flags: Punctuated<InjectableMacroFlag, Token![,]>,
+    pub flags: Punctuated<MacroFlag, Token![,]>,
 }
 
 impl Parse for InjectableMacroArgs
@@ -76,7 +43,19 @@ impl Parse for InjectableMacroArgs
 
         braced!(braced_content in input);
 
-        let flags = braced_content.parse_terminated(InjectableMacroFlag::parse)?;
+        let flags = braced_content.parse_terminated(MacroFlag::parse)?;
+
+        for flag in &flags {
+            let flag_str = flag.flag.to_string();
+
+            if !INJECTABLE_MACRO_FLAGS.contains(&flag_str.as_str()) {
+                return Err(input.error(format!(
+                    "Unknown flag '{}'. Expected one of [ {} ]",
+                    flag_str,
+                    INJECTABLE_MACRO_FLAGS.join(",")
+                )));
+            }
+        }
 
         let flag_names = flags
             .iter()

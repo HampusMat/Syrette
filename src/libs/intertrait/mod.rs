@@ -23,7 +23,7 @@
 //! MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 //!
 //! at your option.
-use std::any::{Any, TypeId};
+use std::any::{type_name, Any, TypeId};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -60,7 +60,10 @@ static CASTER_MAP: Lazy<AHashMap<(TypeId, TypeId), BoxedCaster>> = Lazy::new(|| 
 
 fn cast_arc_panic<Trait: ?Sized + 'static>(_: Arc<dyn Any + Sync + Send>) -> Arc<Trait>
 {
-    panic!("Prepend [sync] to the list of target traits for Sync + Send types")
+    panic!(
+        "Interface trait '{}' has not been marked async",
+        type_name::<Trait>()
+    )
 }
 
 /// A `Caster` knows how to cast a reference to or `Box` of a trait object for `Any`

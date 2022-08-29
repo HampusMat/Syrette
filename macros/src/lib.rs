@@ -2,7 +2,7 @@
 #![deny(clippy::pedantic)]
 #![deny(missing_docs)]
 
-//! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
+//! Macros for the [Sy&rette](https://crates.io/crates/syrette) crate.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -10,10 +10,12 @@ use syn::{parse, parse_macro_input};
 
 mod declare_interface_args;
 mod dependency;
+mod factory_macro_args;
 mod factory_type_alias;
 mod injectable_impl;
 mod injectable_macro_args;
 mod libs;
+mod macro_flag;
 mod named_attr_input;
 mod util;
 
@@ -31,6 +33,7 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 /// # Flags
 /// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from
 ///   documentation.
+/// - `async` - Mark as async.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
@@ -107,21 +110,31 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 {
     let InjectableMacroArgs { interface, flags } = parse_macro_input!(args_stream);
 
-    let mut flags_iter = flags.iter();
-
-    let no_doc_hidden = flags_iter
+    let no_doc_hidden = flags
+        .iter()
         .find(|flag| flag.flag.to_string().as_str() == "no_doc_hidden")
+        .map_or(false, |flag| flag.is_on.value);
+
+    let is_async = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "async")
         .map_or(false, |flag| flag.is_on.value);
 
     let injectable_impl: InjectableImpl = parse(impl_stream).unwrap();
 
-    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden);
+    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
     let maybe_decl_interface = if interface.is_some() {
         let self_type = &injectable_impl.self_type;
 
-        quote! {
-            syrette::declare_interface!(#self_type -> #interface);
+        if is_async {
+            quote! {
+                syrette::declare_interface!(#self_type -> #interface, async = true);
+            }
+        } else {
+            quote! {
+                syrette::declare_interface!(#self_type -> #interface);
+            }
         }
     } else {
         quote! {}
@@ -138,6 +151,12 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// Makes a type alias usable as a factory interface.
 ///
 /// *This macro is only available if Syrette is built with the "factory" feature.*
+///
+/// # Arguments
+/// * (Zero or more) Flags. Like `a = true, b = false`
+///
+/// # Flags
+/// - `async` - Mark as async.
 ///
 /// # Panics
 /// If the attributed item is not a type alias.
@@ -166,8 +185,17 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// ```
 #[proc_macro_attribute]
 #[cfg(feature = "factory")]
-pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
+pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
+    use crate::factory_macro_args::FactoryMacroArgs;
+
+    let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
+
+    let is_async = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "async")
+        .map_or(false, |flag| flag.is_on.value);
+
     let factory_type_alias::FactoryTypeAlias {
         type_alias,
         factory_interface,
@@ -175,22 +203,46 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
         return_type,
     } = parse(type_alias_stream).unwrap();
 
+    let decl_interfaces = if is_async {
+        quote! {
+            syrette::declare_interface!(
+                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                    #arg_types,
+                    #return_type
+                > -> #factory_interface,
+                async = true
+            );
+
+            syrette::declare_interface!(
+                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                    #arg_types,
+                    #return_type
+                > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
+                async = true
+            )
+        }
+    } else {
+        quote! {
+            syrette::declare_interface!(
+                syrette::castable_factory::blocking::CastableFactory<
+                    #arg_types,
+                    #return_type
+                > -> #factory_interface
+            );
+
+            syrette::declare_interface!(
+                syrette::castable_factory::blocking::CastableFactory<
+                    #arg_types,
+                    #return_type
+                > -> syrette::interfaces::any_factory::AnyFactory
+            );
+        }
+    };
+
     quote! {
         #type_alias
 
-        syrette::declare_interface!(
-            syrette::castable_factory::CastableFactory<
-                #arg_types,
-                #return_type
-            > -> #factory_interface
-        );
-
-        syrette::declare_interface!(
-            syrette::castable_factory::CastableFactory<
-                #arg_types,
-                #return_type
-            > -> syrette::interfaces::any_factory::AnyFactory
-        );
+        #decl_interfaces
     }
     .into()
 }
@@ -199,6 +251,10 @@ pub fn factory(_: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 ///
 /// # Arguments
 /// {Implementation} -> {Interface}
+/// * (Zero or more) Flags. Like `a = true, b = false`
+///
+/// # Flags
+/// - `async` - Mark as async.
 ///
 /// # Examples
 /// ```
@@ -218,9 +274,17 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
     let DeclareInterfaceArgs {
         implementation,
         interface,
+        flags,
     } = parse_macro_input!(input);
 
-    generate_caster(&implementation, &interface).into()
+    let opt_async_flag = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "async");
+
+    let is_async =
+        opt_async_flag.map_or_else(|| false, |async_flag| async_flag.is_on.value);
+
+    generate_caster(&implementation, &interface, is_async).into()
 }
 
 /// Declares the name of a dependency.
