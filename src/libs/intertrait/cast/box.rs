@@ -13,7 +13,7 @@
 use std::any::type_name;
 
 use crate::libs::intertrait::cast::error::CastError;
-use crate::libs::intertrait::{caster, CastFrom};
+use crate::libs::intertrait::{get_caster, CastFrom};
 
 pub trait CastBox
 {
@@ -30,7 +30,7 @@ impl<CastFromSelf: ?Sized + CastFrom> CastBox for CastFromSelf
         self: Box<Self>,
     ) -> Result<Box<OtherTrait>, CastError>
     {
-        match caster::<OtherTrait>((*self).type_id()) {
+        match get_caster::<OtherTrait>((*self).type_id()) {
             Some(caster) => Ok((caster.cast_box)(self.box_any())),
             None => Err(CastError::CastFailed {
                 from: type_name::<CastFromSelf>(),

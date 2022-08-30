@@ -7,4 +7,7 @@ pub enum CastError
         from: &'static str,
         to: &'static str,
     },
+
+    #[error("Trait '{0}' can't be cast to Arc")]
+    NotArcCastable(&'static str),
 }

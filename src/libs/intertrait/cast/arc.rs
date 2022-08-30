@@ -13,7 +13,7 @@ use std::any::type_name;
 use std::sync::Arc;
 
 use crate::libs::intertrait::cast::error::CastError;
-use crate::libs::intertrait::{caster, CastFromSync};
+use crate::libs::intertrait::{get_caster, CastFromSync};
 
 pub trait CastArc
 {
@@ -31,12 +31,19 @@ impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
         self: Arc<Self>,
     ) -> Result<Arc<OtherTrait>, CastError>
     {
-        match caster::<OtherTrait>((*self).type_id()) {
-            Some(caster) => Ok((caster.cast_arc)(self.arc_any())),
-            None => Err(CastError::CastFailed {
-                from: type_name::<CastFromSelf>(),
-                to: type_name::<OtherTrait>(),
-            }),
+        let caster = get_caster::<OtherTrait>((*self).type_id()).map_or_else(
+            || {
+                Err(CastError::CastFailed {
+                    from: type_name::<CastFromSelf>(),
+                    to: type_name::<OtherTrait>(),
+                })
+            },
+            Ok,
+        )?;
+
+        match caster.opt_cast_arc {
+            Some(cast_arc) => Ok(cast_arc(self.arc_any())),
+            None => Err(CastError::NotArcCastable(type_name::<OtherTrait>())),
         }
     }
 }

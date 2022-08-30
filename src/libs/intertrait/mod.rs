@@ -23,7 +23,7 @@
 //! MIT license (LICENSE-MIT or <http://opensource.org/licenses/MIT>)
 //!
 //! at your option.
-use std::any::{type_name, Any, TypeId};
+use std::any::{Any, TypeId};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -58,22 +58,12 @@ static CASTER_MAP: Lazy<AHashMap<(TypeId, TypeId), BoxedCaster>> = Lazy::new(|| 
         .collect()
 });
 
-fn cast_arc_panic<Trait: ?Sized + 'static>(_: Arc<dyn Any + Sync + Send>) -> Arc<Trait>
-{
-    panic!(
-        "Interface trait '{}' has not been marked async",
-        type_name::<Trait>()
-    )
-}
+type CastArcFn<Trait> = fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Arc<Trait>;
 
 /// A `Caster` knows how to cast a reference to or `Box` of a trait object for `Any`
 /// to a trait object of trait `Trait`. Each `Caster` instance is specific to a concrete
 /// type. That is, it knows how to cast to single specific trait implemented by single
 /// specific type.
-///
-/// An implementation of a trait for a concrete type doesn't need to manually provide
-/// a `Caster`. Instead attach `#[cast_to]` to the `impl` block.
-#[doc(hidden)]
 pub struct Caster<Trait: ?Sized + 'static>
 {
     /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait
@@ -86,7 +76,7 @@ pub struct Caster<Trait: ?Sized + 'static>
 
     /// Casts an `Arc` holding a trait object for `Any + Sync + Send + 'static`
     /// to another `Arc` holding a trait object for trait `Trait`.
-    pub cast_arc: fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Arc<Trait>,
+    pub opt_cast_arc: Option<CastArcFn<Trait>>,
 }
 
 impl<Trait: ?Sized + 'static> Caster<Trait>
@@ -99,7 +89,7 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
         Caster::<Trait> {
             cast_box,
             cast_rc,
-            cast_arc: cast_arc_panic,
+            opt_cast_arc: None,
         }
     }
 
@@ -113,14 +103,15 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
         Caster::<Trait> {
             cast_box,
             cast_rc,
-            cast_arc,
+            opt_cast_arc: Some(cast_arc),
         }
     }
 }
 
 /// Returns a `Caster<S, Trait>` from a concrete type `S` to a trait `Trait` implemented
 /// by it.
-fn caster<Trait: ?Sized + 'static>(type_id: TypeId) -> Option<&'static Caster<Trait>>
+fn get_caster<Trait: ?Sized + 'static>(type_id: TypeId)
+    -> Option<&'static Caster<Trait>>
 {
     CASTER_MAP
         .get(&(type_id, TypeId::of::<Caster<Trait>>()))
@@ -250,7 +241,7 @@ mod tests
         let caster = Box::new(Caster::<dyn Debug> {
             cast_box: |from| from.downcast::<TestStruct>().unwrap(),
             cast_rc: |from| from.downcast::<TestStruct>().unwrap(),
-            cast_arc: |from| from.downcast::<TestStruct>().unwrap(),
+            opt_cast_arc: Some(|from| from.downcast::<TestStruct>().unwrap()),
         });
         (type_id, caster)
     }

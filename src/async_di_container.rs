@@ -66,6 +66,7 @@ use crate::errors::async_di_container::{
     AsyncDIContainerError,
 };
 use crate::interfaces::async_injectable::AsyncInjectable;
+use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::cast::{CastArc, CastBox};
 use crate::provider::r#async::{
     AsyncProvidable,
@@ -410,11 +411,26 @@ impl AsyncDIContainer
                 ))
             }
             AsyncProvidable::Singleton(singleton_binding) => {
-                Ok(SomeThreadsafePtr::ThreadsafeSingleton(
-                    singleton_binding.cast::<Interface>().map_err(|_| {
-                        AsyncDIContainerError::CastFailed(type_name::<Interface>())
-                    })?,
-                ))
+                Ok(
+                    SomeThreadsafePtr::ThreadsafeSingleton(
+                        singleton_binding.cast::<Interface>().map_err(
+                            |err| match err {
+                                CastError::NotArcCastable(_) => {
+                                    AsyncDIContainerError::InterfaceNotAsync(type_name::<
+                                        Interface,
+                                    >(
+                                    ))
+                                }
+                                CastError::CastFailed { from: _, to: _ } => {
+                                    AsyncDIContainerError::CastFailed(type_name::<
+                                        Interface,
+                                    >(
+                                    ))
+                                }
+                            },
+                        )?,
+                    ),
+                )
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {

@@ -43,6 +43,10 @@ pub enum AsyncDIContainerError
         /// The name of the binding if one exists.
         name: Option<&'static str>,
     },
+
+    /// A interface has not been marked async.
+    #[error("Interface '{0}' has not been marked async")]
+    InterfaceNotAsync(&'static str),
 }
 
 /// Error type for [`AsyncBindingBuilder`].
