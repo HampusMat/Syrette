@@ -26,6 +26,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 ## Optional features
 - `factory`. Binding factories (Rust nightly required)
 - `prevent-circular`. Detection and prevention of circular dependencies. (Enabled by default)
+- `async`. Asynchronous support
 
 To use these features, you must [enable it in Cargo](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features).
 
@@ -116,7 +117,6 @@ For more examples see the [examples folder](https://git.hampusmat.com/syrette/tr
 
 ## Todo
 - Add support for generic factories
-- Add asynchronous functionality
 
 ## Contributing
 You can reach out by joining the [mailing list](https://lists.hampusmat.com/postorius/lists/syrette.lists.hampusmat.com/).
