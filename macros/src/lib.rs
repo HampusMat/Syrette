@@ -6,8 +6,9 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input};
+use syn::{parse, parse_macro_input, ItemTrait};
 
+mod decl_def_factory_args;
 mod declare_interface_args;
 mod dependency;
 mod factory_macro_args;
@@ -243,6 +244,88 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         #type_alias
 
         #decl_interfaces
+    }
+    .into()
+}
+
+/// Shortcut for declaring a default factory.
+///
+/// A default factory is a factory that doesn't take any arguments.
+///
+/// The more tedious way to accomplish what this macro does would be by using
+/// the [`factory`] macro.
+///
+/// *This macro is only available if Syrette is built with the "factory" feature.*
+///
+/// # Arguments
+/// - Interface trait
+/// * (Zero or more) Flags. Like `a = true, b = false`
+///
+/// # Flags
+/// - `threadsafe` - Mark as threadsafe.
+///
+/// # Panics
+/// If the provided arguments are invalid.
+///
+/// # Examples
+/// ```
+/// # use syrette::declare_default_factory;
+/// #
+/// trait IParser
+/// {
+///     // Methods and etc here...
+/// }
+///
+/// declare_default_factory!(dyn IParser);
+/// ```
+#[proc_macro]
+#[cfg(feature = "factory")]
+pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
+{
+    use crate::decl_def_factory_args::DeclareDefaultFactoryMacroArgs;
+
+    let DeclareDefaultFactoryMacroArgs { interface, flags } = parse(args_stream).unwrap();
+
+    let is_threadsafe = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
+        .map_or(false, |flag| flag.is_on.value);
+
+    if is_threadsafe {
+        return quote! {
+            syrette::declare_interface!(
+                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                    (),
+                    #interface,
+                > -> syrette::interfaces::factory::IFactory<(), #interface>,
+                async = true
+            );
+
+            syrette::declare_interface!(
+                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                    (),
+                    #interface,
+                > -> syrette::interfaces::any_factory::AnyFactory,
+                async = true
+            );
+        }
+        .into();
+    }
+
+    quote! {
+        syrette::declare_interface!(
+            syrette::castable_factory::blocking::CastableFactory<
+                (),
+                #interface,
+            > -> syrette::interfaces::factory::IFactory<(), #interface>
+        );
+
+        syrette::declare_interface!(
+            syrette::castable_factory::blocking::CastableFactory<
+                (),
+                #interface,
+            > -> syrette::interfaces::any_factory::AnyFactory
+        );
     }
     .into()
 }
