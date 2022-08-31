@@ -219,7 +219,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
                     #return_type
                 > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
                 async = true
-            )
+            );
         }
     } else {
         quote! {
