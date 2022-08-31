@@ -15,8 +15,17 @@ use crate::errors::injectable::InjectableError;
 pub enum AsyncDIContainerError
 {
     /// Unable to cast a binding for a interface.
-    #[error("Unable to cast binding for interface '{0}'")]
-    CastFailed(&'static str),
+    #[error(
+        "Unable to cast binding for interface '{interface} with kind '{binding_kind}'"
+    )]
+    CastFailed
+    {
+        /// The interface.
+        interface: &'static str,
+
+        /// The kind of the found binding.
+        binding_kind: &'static str,
+    },
 
     /// Failed to resolve a binding for a interface.
     #[error("Failed to resolve binding for interface '{interface}'")]

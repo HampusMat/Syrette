@@ -406,15 +406,49 @@ impl AsyncDIContainer
             AsyncProvidable::Transient(transient_binding) => {
                 Ok(SomeThreadsafePtr::Transient(
                     transient_binding.cast::<Interface>().map_err(|_| {
-                        AsyncDIContainerError::CastFailed(type_name::<Interface>())
+                        AsyncDIContainerError::CastFailed {
+                            interface: type_name::<Interface>(),
+                            binding_kind: "transient",
+                        }
                     })?,
                 ))
             }
             AsyncProvidable::Singleton(singleton_binding) => {
-                Ok(
-                    SomeThreadsafePtr::ThreadsafeSingleton(
-                        singleton_binding.cast::<Interface>().map_err(
-                            |err| match err {
+                Ok(SomeThreadsafePtr::ThreadsafeSingleton(
+                    singleton_binding
+                        .cast::<Interface>()
+                        .map_err(|err| match err {
+                            CastError::NotArcCastable(_) => {
+                                AsyncDIContainerError::InterfaceNotAsync(type_name::<
+                                    Interface,
+                                >(
+                                ))
+                            }
+                            CastError::CastFailed { from: _, to: _ } => {
+                                AsyncDIContainerError::CastFailed {
+                                    interface: type_name::<Interface>(),
+                                    binding_kind: "singleton",
+                                }
+                            }
+                        })?,
+                ))
+            }
+            #[cfg(feature = "factory")]
+            AsyncProvidable::Factory(factory_binding) => {
+                match factory_binding.clone().cast::<Interface>() {
+                    Ok(factory) => Ok(SomeThreadsafePtr::ThreadsafeFactory(factory)),
+                    Err(first_err) => {
+                        use crate::interfaces::factory::IFactory;
+
+                        if let CastError::NotArcCastable(_) = first_err {
+                            return Err(AsyncDIContainerError::InterfaceNotAsync(
+                                type_name::<Interface>(),
+                            ));
+                        }
+
+                        let default_factory = factory_binding
+                            .cast::<dyn IFactory<(), Interface>>()
+                            .map_err(|err| match err {
                                 CastError::NotArcCastable(_) => {
                                     AsyncDIContainerError::InterfaceNotAsync(type_name::<
                                         Interface,
@@ -422,32 +456,12 @@ impl AsyncDIContainer
                                     ))
                                 }
                                 CastError::CastFailed { from: _, to: _ } => {
-                                    AsyncDIContainerError::CastFailed(type_name::<
-                                        Interface,
-                                    >(
-                                    ))
+                                    AsyncDIContainerError::CastFailed {
+                                        interface: type_name::<Interface>(),
+                                        binding_kind: "factory",
+                                    }
                                 }
-                            },
-                        )?,
-                    ),
-                )
-            }
-            #[cfg(feature = "factory")]
-            AsyncProvidable::Factory(factory_binding) => {
-                match factory_binding.clone().cast::<Interface>() {
-                    Ok(factory) => Ok(SomeThreadsafePtr::ThreadsafeFactory(factory)),
-                    Err(_err) => {
-                        use crate::interfaces::factory::IFactory;
-
-                        let default_factory =
-                            factory_binding
-                                .cast::<dyn IFactory<(), Interface>>()
-                                .map_err(|_| {
-                                    AsyncDIContainerError::CastFailed(type_name::<
-                                        Interface,
-                                    >(
-                                    ))
-                                })?;
+                            })?;
 
                         Ok(SomeThreadsafePtr::Transient(default_factory()))
                     }
