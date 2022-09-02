@@ -11,7 +11,7 @@ pub struct Human
     cat: TransientPtr<dyn ICat>,
 }
 
-#[injectable(IHuman, { async = true })]
+#[injectable(IHuman, async = true)]
 impl Human
 {
     pub fn new(dog: ThreadsafeSingletonPtr<dyn IDog>, cat: TransientPtr<dyn ICat>)

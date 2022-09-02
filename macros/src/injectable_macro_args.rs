@@ -1,6 +1,6 @@
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{braced, Token, TypePath};
+use syn::{Token, TypePath};
 
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
@@ -39,11 +39,7 @@ impl Parse for InjectableMacroArgs
             });
         }
 
-        let braced_content;
-
-        braced!(braced_content in input);
-
-        let flags = braced_content.parse_terminated(MacroFlag::parse)?;
+        let flags = Punctuated::<MacroFlag, Token![,]>::parse_terminated(input)?;
 
         for flag in &flags {
             let flag_str = flag.flag.to_string();

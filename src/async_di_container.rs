@@ -14,7 +14,7 @@
 //!
 //! struct DatabaseService {}
 //!
-//! #[injectable(IDatabaseService, { async = true })]
+//! #[injectable(IDatabaseService, async = true)]
 //! impl DatabaseService
 //! {
 //!     fn new() -> Self

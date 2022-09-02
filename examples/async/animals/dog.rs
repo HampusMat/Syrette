@@ -4,7 +4,7 @@ use crate::interfaces::dog::IDog;
 
 pub struct Dog {}
 
-#[injectable(IDog, { async = true })]
+#[injectable(IDog, async = true)]
 impl Dog
 {
     pub fn new() -> Self

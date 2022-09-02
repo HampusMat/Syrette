@@ -29,7 +29,7 @@ use libs::intertrait_macros::gen_caster::generate_caster;
 ///
 /// # Arguments
 /// * (Optional) A interface trait the struct implements.
-/// * (Zero or more) Flags wrapped in curly braces. Like `{ a = true, b = false }`
+/// * (Zero or more) Flags. Like `a = true, b = false`
 ///
 /// # Flags
 /// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from
