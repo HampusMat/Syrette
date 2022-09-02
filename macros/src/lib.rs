@@ -6,7 +6,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input, ItemTrait};
+use syn::{parse, parse_macro_input};
 
 mod decl_def_factory_args;
 mod declare_interface_args;
