@@ -2,7 +2,7 @@
 #![deny(clippy::pedantic)]
 #![deny(missing_docs)]
 
-//! Macros for the [Sy&rette](https://crates.io/crates/syrette) crate.
+//! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -157,7 +157,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// * (Zero or more) Flags. Like `a = true, b = false`
 ///
 /// # Flags
-/// - `async` - Mark as async.
+/// - `threadsafe` - Mark as threadsafe.
 ///
 /// # Panics
 /// If the attributed item is not a type alias.
@@ -194,7 +194,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 
     let is_async = flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "async")
+        .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
         .map_or(false, |flag| flag.is_on.value);
 
     let factory_type_alias::FactoryTypeAlias {

@@ -1002,7 +1002,7 @@ mod tests
 
         use crate as syrette;
 
-        #[crate::factory(async = true)]
+        #[crate::factory(threadsafe = true)]
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(Vec<i128>,), dyn IUserManager>;
 
@@ -1091,7 +1091,7 @@ mod tests
 
         use crate as syrette;
 
-        #[crate::factory(async = true)]
+        #[crate::factory(threadsafe = true)]
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(Vec<i128>,), dyn IUserManager>;
 
