@@ -384,12 +384,18 @@ impl DIContainer
         match binding_providable {
             Providable::Transient(transient_binding) => Ok(SomePtr::Transient(
                 transient_binding.cast::<Interface>().map_err(|_| {
-                    DIContainerError::CastFailed(type_name::<Interface>())
+                    DIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "transient",
+                    }
                 })?,
             )),
             Providable::Singleton(singleton_binding) => Ok(SomePtr::Singleton(
                 singleton_binding.cast::<Interface>().map_err(|_| {
-                    DIContainerError::CastFailed(type_name::<Interface>())
+                    DIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "singleton",
+                    }
                 })?,
             )),
             #[cfg(feature = "factory")]
@@ -401,8 +407,9 @@ impl DIContainer
 
                         let default_factory = factory_binding
                             .cast::<dyn IFactory<(), Interface>>()
-                            .map_err(|_| {
-                                DIContainerError::CastFailed(type_name::<Interface>())
+                            .map_err(|_| DIContainerError::CastFailed {
+                                interface: type_name::<Interface>(),
+                                binding_kind: "factory",
                             })?;
 
                         Ok(SomePtr::Transient(default_factory()))
