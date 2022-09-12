@@ -2,10 +2,7 @@ use std::rc::Rc;
 
 use syrette::{di_container_bind, DIContainer};
 
-// Interfaces
 use crate::interfaces::printer::IPrinter;
-//
-// Implementations
 use crate::printer::Printer;
 
 pub fn bootstrap() -> Rc<DIContainer>

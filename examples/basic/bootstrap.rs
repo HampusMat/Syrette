@@ -3,12 +3,9 @@ use std::rc::Rc;
 
 use syrette::DIContainer;
 
-// Concrete implementations
 use crate::animals::cat::Cat;
 use crate::animals::dog::Dog;
 use crate::animals::human::Human;
-//
-// Interfaces
 use crate::interfaces::cat::ICat;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;

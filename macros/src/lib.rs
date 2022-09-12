@@ -13,6 +13,7 @@ mod declare_interface_args;
 mod dependency;
 mod factory_macro_args;
 mod factory_type_alias;
+mod fn_trait;
 mod injectable_impl;
 mod injectable_macro_args;
 mod libs;
@@ -166,6 +167,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// ```
 /// # use syrette::factory;
 /// # use syrette::interfaces::factory::IFactory;
+/// # use syrette::ptr::TransientPtr;
 /// #
 /// # trait IConfigurator {}
 /// #
@@ -182,7 +184,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// # impl IConfigurator for Configurator {}
 /// #
 /// #[factory]
-/// type IConfiguratorFactory = dyn IFactory<(Vec<String>,), dyn IConfigurator>;
+/// type IConfiguratorFactory = dyn Fn(Vec<String>) -> TransientPtr<dyn IConfigurator>;
 /// ```
 #[proc_macro_attribute]
 #[cfg(feature = "factory")]
@@ -226,15 +228,18 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         quote! {
             syrette::declare_interface!(
                 syrette::castable_factory::blocking::CastableFactory<
-                    #arg_types,
-                    #return_type
-                > -> #factory_interface
+                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    #factory_interface
+                > -> syrette::interfaces::factory::IFactory<
+                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    #factory_interface
+                >
             );
 
             syrette::declare_interface!(
                 syrette::castable_factory::blocking::CastableFactory<
-                    #arg_types,
-                    #return_type
+                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    #factory_interface
                 > -> syrette::interfaces::any_factory::AnyFactory
             );
         }
@@ -315,14 +320,17 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
     quote! {
         syrette::declare_interface!(
             syrette::castable_factory::blocking::CastableFactory<
-                (),
+                (std::rc::Rc<syrette::di_container::DIContainer>,),
                 #interface,
-            > -> syrette::interfaces::factory::IFactory<(), #interface>
+            > -> syrette::interfaces::factory::IFactory<
+                (std::rc::Rc<syrette::di_container::DIContainer>,),
+                #interface
+            >
         );
 
         syrette::declare_interface!(
             syrette::castable_factory::blocking::CastableFactory<
-                (),
+                (std::rc::Rc<syrette::di_container::DIContainer>,),
                 #interface,
             > -> syrette::interfaces::any_factory::AnyFactory
         );

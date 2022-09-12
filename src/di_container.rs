@@ -249,20 +249,28 @@ where
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &self,
-        factory_func: &'static dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
+        factory_func: &'static dyn Fn<
+            (std::rc::Rc<DIContainer>,),
+            Output = Box<dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>>,
+        >,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Args: 'static,
         Return: 'static + ?Sized,
-        Interface: crate::interfaces::factory::IFactory<Args, Return>,
+        Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
     {
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
+        {
+            let bindings = self.di_container.bindings.borrow();
 
-        if bindings_mut.has::<Interface>(None) {
-            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                Interface,
-            >()));
+            if bindings.has::<Interface>(None) {
+                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                    Interface,
+                >(
+                )));
+            }
         }
+
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
         let factory_impl = CastableFactory::new(factory_func);
 
@@ -270,6 +278,7 @@ where
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
+                false,
             )),
         );
 
@@ -287,18 +296,26 @@ where
     #[cfg(feature = "factory")]
     pub fn to_default_factory<Return>(
         &self,
-        factory_func: &'static dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
+        factory_func: &'static dyn Fn<
+            (Rc<DIContainer>,),
+            Output = crate::ptr::TransientPtr<Return>,
+        >,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
     {
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
+        {
+            let bindings = self.di_container.bindings.borrow();
 
-        if bindings_mut.has::<Interface>(None) {
-            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                Interface,
-            >()));
+            if bindings.has::<Interface>(None) {
+                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                    Interface,
+                >(
+                )));
+            }
         }
+
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
         let factory_impl = CastableFactory::new(factory_func);
 
@@ -306,6 +323,7 @@ where
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
+                true,
             )),
         );
 
@@ -381,10 +399,11 @@ impl DIContainer
         let binding_providable =
             self.get_binding_providable::<Interface>(name, dependency_history)?;
 
-        Self::handle_binding_providable(binding_providable)
+        self.handle_binding_providable(binding_providable)
     }
 
     fn handle_binding_providable<Interface>(
+        self: &Rc<Self>,
         binding_providable: Providable,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -409,21 +428,29 @@ impl DIContainer
             )),
             #[cfg(feature = "factory")]
             Providable::Factory(factory_binding) => {
-                match factory_binding.clone().cast::<Interface>() {
-                    Ok(factory) => Ok(SomePtr::Factory(factory)),
-                    Err(_err) => {
-                        use crate::interfaces::factory::IFactory;
+                use crate::interfaces::factory::IFactory;
 
-                        let default_factory = factory_binding
-                            .cast::<dyn IFactory<(), Interface>>()
-                            .map_err(|_| DIContainerError::CastFailed {
-                                interface: type_name::<Interface>(),
-                                binding_kind: "factory",
-                            })?;
+                let factory = factory_binding
+                    .cast::<dyn IFactory<(Rc<DIContainer>,), Interface>>()
+                    .map_err(|_| DIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "factory",
+                    })?;
 
-                        Ok(SomePtr::Transient(default_factory()))
-                    }
-                }
+                Ok(SomePtr::Factory(factory(self.clone()).into()))
+            }
+            #[cfg(feature = "factory")]
+            Providable::DefaultFactory(factory_binding) => {
+                use crate::interfaces::factory::IFactory;
+
+                let default_factory = factory_binding
+                    .cast::<dyn IFactory<(Rc<DIContainer>,), Interface>>()
+                    .map_err(|_| DIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "default factory",
+                    })?;
+
+                Ok(SomePtr::Transient(default_factory(self.clone())))
             }
         }
     }
@@ -690,12 +717,16 @@ mod tests
 
         assert_eq!(di_container.bindings.borrow().count(), 0);
 
-        di_container.bind::<IUserManagerFactory>().to_factory(&|| {
-            let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                TransientPtr::new(subjects::UserManager::new());
+        di_container
+            .bind::<IUserManagerFactory>()
+            .to_factory(&|_| {
+                Box::new(move || {
+                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                        TransientPtr::new(subjects::UserManager::new());
 
-            user_manager
-        })?;
+                    user_manager
+                })
+            })?;
 
         assert_eq!(di_container.bindings.borrow().count(), 1);
 
@@ -715,11 +746,13 @@ mod tests
 
         di_container
             .bind::<IUserManagerFactory>()
-            .to_factory(&|| {
-                let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                    TransientPtr::new(subjects::UserManager::new());
+            .to_factory(&|_| {
+                Box::new(move || {
+                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                        TransientPtr::new(subjects::UserManager::new());
 
-                user_manager
+                    user_manager
+                })
             })?
             .when_named("awesome")?;
 
@@ -901,6 +934,8 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory() -> Result<(), Box<dyn Error>>
     {
+        use crate::ptr::FactoryPtr;
+
         trait IUserManager
         {
             fn add_user(&mut self, user_id: i128);
@@ -940,8 +975,7 @@ mod tests
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(Vec<i128>,), dyn IUserManager>;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         mock! {
             Provider {}
@@ -958,17 +992,26 @@ mod tests
 
         let di_container = DIContainer::new();
 
+        let factory_func: &'static dyn Fn<
+            (std::rc::Rc<DIContainer>,),
+            Output = Box<
+                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
+            >,
+        > = &|_: Rc<DIContainer>| {
+            Box::new(move |users| {
+                let user_manager: TransientPtr<dyn IUserManager> =
+                    TransientPtr::new(UserManager::new(users));
+
+                user_manager
+            })
+        };
+
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_, _| {
-            Ok(Providable::Factory(crate::ptr::FactoryPtr::new(
-                CastableFactory::new(&|users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
-
-                    user_manager
-                }),
-            )))
+        mock_provider.expect_provide().returning_st(|_, _| {
+            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
+                factory_func,
+            ))))
         });
 
         di_container
@@ -985,6 +1028,8 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named() -> Result<(), Box<dyn Error>>
     {
+        use crate::ptr::FactoryPtr;
+
         trait IUserManager
         {
             fn add_user(&mut self, user_id: i128);
@@ -1024,8 +1069,7 @@ mod tests
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(Vec<i128>,), dyn IUserManager>;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         mock! {
             Provider {}
@@ -1042,17 +1086,26 @@ mod tests
 
         let di_container = DIContainer::new();
 
+        let factory_func: &'static dyn Fn<
+            (std::rc::Rc<DIContainer>,),
+            Output = Box<
+                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
+            >,
+        > = &|_: Rc<DIContainer>| {
+            Box::new(move |users| {
+                let user_manager: TransientPtr<dyn IUserManager> =
+                    TransientPtr::new(UserManager::new(users));
+
+                user_manager
+            })
+        };
+
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_, _| {
-            Ok(Providable::Factory(crate::ptr::FactoryPtr::new(
-                CastableFactory::new(&|users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
-
-                    user_manager
-                }),
-            )))
+        mock_provider.expect_provide().returning_st(|_, _| {
+            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
+                factory_func,
+            ))))
         });
 
         di_container

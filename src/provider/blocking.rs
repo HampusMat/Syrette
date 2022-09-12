@@ -14,6 +14,10 @@ pub enum Providable
     Singleton(SingletonPtr<dyn Injectable>),
     #[cfg(feature = "factory")]
     Factory(crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>),
+    #[cfg(feature = "factory")]
+    DefaultFactory(
+        crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+    ),
 }
 
 pub trait IProvider
@@ -96,6 +100,7 @@ where
 pub struct FactoryProvider
 {
     factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+    is_default_factory: bool,
 }
 
 #[cfg(feature = "factory")]
@@ -103,9 +108,13 @@ impl FactoryProvider
 {
     pub fn new(
         factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+        is_default_factory: bool,
     ) -> Self
     {
-        Self { factory }
+        Self {
+            factory,
+            is_default_factory,
+        }
     }
 }
 
@@ -118,6 +127,10 @@ impl IProvider for FactoryProvider
         _dependency_history: Vec<&'static str>,
     ) -> Result<Providable, InjectableError>
     {
-        Ok(Providable::Factory(self.factory.clone()))
+        Ok(if self.is_default_factory {
+            Providable::DefaultFactory(self.factory.clone())
+        } else {
+            Providable::Factory(self.factory.clone())
+        })
     }
 }
