@@ -194,7 +194,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
 
-    let is_async = flags
+    let is_threadsafe = flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
         .map_or(false, |flag| flag.is_on.value);
@@ -202,24 +202,27 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
     let factory_type_alias::FactoryTypeAlias {
         type_alias,
         factory_interface,
-        arg_types,
-        return_type,
+        arg_types: _,
+        return_type: _,
     } = parse(type_alias_stream).unwrap();
 
-    let decl_interfaces = if is_async {
+    let decl_interfaces = if is_threadsafe {
         quote! {
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    #arg_types,
-                    #return_type
-                > -> #factory_interface,
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    #factory_interface
+                > -> syrette::interfaces::factory::IFactory<
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    #factory_interface
+                >,
                 async = true
             );
 
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    #arg_types,
-                    #return_type
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    #factory_interface
                 > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
                 async = true
             );
@@ -300,17 +303,20 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
         return quote! {
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (),
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
                     #interface,
-                > -> syrette::interfaces::factory::IFactory<(), #interface>,
+                > -> syrette::interfaces::factory::IFactory<
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    #interface
+                >,
                 async = true
             );
 
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (),
+                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
                     #interface,
-                > -> syrette::interfaces::any_factory::AnyFactory,
+                > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
                 async = true
             );
         }

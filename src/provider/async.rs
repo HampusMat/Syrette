@@ -20,6 +20,12 @@ pub enum AsyncProvidable
             dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
         >,
     ),
+    #[cfg(feature = "factory")]
+    DefaultFactory(
+        crate::ptr::ThreadsafeFactoryPtr<
+            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+        >,
+    ),
 }
 
 #[async_trait]
@@ -150,6 +156,7 @@ pub struct AsyncFactoryProvider
     factory: crate::ptr::ThreadsafeFactoryPtr<
         dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
     >,
+    is_default_factory: bool,
 }
 
 #[cfg(feature = "factory")]
@@ -159,9 +166,13 @@ impl AsyncFactoryProvider
         factory: crate::ptr::ThreadsafeFactoryPtr<
             dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
         >,
+        is_default_factory: bool,
     ) -> Self
     {
-        Self { factory }
+        Self {
+            factory,
+            is_default_factory,
+        }
     }
 }
 
@@ -175,7 +186,11 @@ impl IAsyncProvider for AsyncFactoryProvider
         _dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>
     {
-        Ok(AsyncProvidable::Factory(self.factory.clone()))
+        Ok(if self.is_default_factory {
+            AsyncProvidable::DefaultFactory(self.factory.clone())
+        } else {
+            AsyncProvidable::Factory(self.factory.clone())
+        })
     }
 
     fn do_clone(&self) -> Box<dyn IAsyncProvider>
@@ -191,6 +206,7 @@ impl Clone for AsyncFactoryProvider
     {
         Self {
             factory: self.factory.clone(),
+            is_default_factory: self.is_default_factory.clone(),
         }
     }
 }

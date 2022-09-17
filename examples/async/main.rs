@@ -7,11 +7,14 @@ use tokio::spawn;
 
 mod animals;
 mod bootstrap;
+mod food;
 mod interfaces;
 
 use bootstrap::bootstrap;
 use interfaces::dog::IDog;
 use interfaces::human::IHuman;
+
+use crate::interfaces::food::IFoodFactory;
 
 #[tokio::main]
 async fn main() -> Result<()>
@@ -28,6 +31,15 @@ async fn main() -> Result<()>
 
         dog.woof();
     }
+
+    let food_factory = di_container
+        .get::<IFoodFactory>()
+        .await?
+        .threadsafe_factory()?;
+
+    let food = food_factory();
+
+    food.eat();
 
     spawn(async move {
         let human = di_container.get::<dyn IHuman>().await?.transient()?;
