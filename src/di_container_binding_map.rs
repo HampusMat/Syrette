@@ -27,18 +27,17 @@ where
         }
     }
 
-    pub fn get<Interface>(&self, name: Option<&'static str>) -> Option<&Provider>
+    #[allow(clippy::borrowed_box)]
+    pub fn get<Interface>(&self, name: Option<&'static str>) -> Option<&Box<Provider>>
     where
         Interface: 'static + ?Sized,
     {
         let interface_typeid = TypeId::of::<Interface>();
 
-        self.bindings
-            .get(&DIContainerBindingKey {
-                type_id: interface_typeid,
-                name,
-            })
-            .map(|provider| provider.as_ref())
+        self.bindings.get(&DIContainerBindingKey {
+            type_id: interface_typeid,
+            name,
+        })
     }
 
     pub fn set<Interface>(&mut self, name: Option<&'static str>, provider: Box<Provider>)

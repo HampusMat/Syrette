@@ -91,7 +91,7 @@ impl InjectableImpl
                 impl #generics syrette::interfaces::async_injectable::AsyncInjectable for #self_type
                 {
                     async fn resolve(
-                        #di_container_var: &syrette::async_di_container::AsyncDIContainer,
+                        #di_container_var: &std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,
                         mut #dependency_history_var: Vec<&'static str>,
                     ) -> Result<
                         syrette::ptr::TransientPtr<Self>,

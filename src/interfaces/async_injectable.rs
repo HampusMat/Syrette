@@ -2,6 +2,7 @@
 //!
 //! *This module is only available if Syrette is built with the "async" feature.*
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 
@@ -19,7 +20,7 @@ pub trait AsyncInjectable: CastFromSync
     /// # Errors
     /// Will return `Err` if resolving the dependencies fails.
     async fn resolve(
-        di_container: &AsyncDIContainer,
+        di_container: &Arc<AsyncDIContainer>,
         dependency_history: Vec<&'static str>,
     ) -> Result<TransientPtr<Self>, InjectableError>
     where

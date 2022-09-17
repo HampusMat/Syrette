@@ -1,5 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 
@@ -26,9 +27,19 @@ pub trait IAsyncProvider: Send + Sync
 {
     async fn provide(
         &self,
-        di_container: &AsyncDIContainer,
+        di_container: &Arc<AsyncDIContainer>,
         dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>;
+
+    fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+}
+
+impl Clone for Box<dyn IAsyncProvider>
+{
+    fn clone(&self) -> Self
+    {
+        self.do_clone()
+    }
 }
 
 pub struct AsyncTransientTypeProvider<InjectableType>
@@ -57,13 +68,30 @@ where
 {
     async fn provide(
         &self,
-        di_container: &AsyncDIContainer,
+        di_container: &Arc<AsyncDIContainer>,
         dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>
     {
         Ok(AsyncProvidable::Transient(
             InjectableType::resolve(di_container, dependency_history).await?,
         ))
+    }
+
+    fn do_clone(&self) -> Box<dyn IAsyncProvider>
+    {
+        Box::new(self.clone())
+    }
+}
+
+impl<InjectableType> Clone for AsyncTransientTypeProvider<InjectableType>
+where
+    InjectableType: AsyncInjectable,
+{
+    fn clone(&self) -> Self
+    {
+        Self {
+            injectable_phantom: self.injectable_phantom,
+        }
     }
 }
 
@@ -91,11 +119,28 @@ where
 {
     async fn provide(
         &self,
-        _di_container: &AsyncDIContainer,
+        _di_container: &Arc<AsyncDIContainer>,
         _dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>
     {
         Ok(AsyncProvidable::Singleton(self.singleton.clone()))
+    }
+
+    fn do_clone(&self) -> Box<dyn IAsyncProvider>
+    {
+        Box::new(self.clone())
+    }
+}
+
+impl<InjectableType> Clone for AsyncSingletonProvider<InjectableType>
+where
+    InjectableType: AsyncInjectable,
+{
+    fn clone(&self) -> Self
+    {
+        Self {
+            singleton: self.singleton.clone(),
+        }
     }
 }
 
@@ -126,10 +171,26 @@ impl IAsyncProvider for AsyncFactoryProvider
 {
     async fn provide(
         &self,
-        _di_container: &AsyncDIContainer,
+        _di_container: &Arc<AsyncDIContainer>,
         _dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>
     {
         Ok(AsyncProvidable::Factory(self.factory.clone()))
+    }
+
+    fn do_clone(&self) -> Box<dyn IAsyncProvider>
+    {
+        Box::new(self.clone())
+    }
+}
+
+#[cfg(feature = "factory")]
+impl Clone for AsyncFactoryProvider
+{
+    fn clone(&self) -> Self
+    {
+        Self {
+            factory: self.factory.clone(),
+        }
     }
 }

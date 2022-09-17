@@ -55,6 +55,9 @@
 //! *This module is only available if Syrette is built with the "async" feature.*
 use std::any::type_name;
 use std::marker::PhantomData;
+use std::sync::Arc;
+
+use tokio::sync::Mutex;
 
 #[cfg(feature = "factory")]
 use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
@@ -77,19 +80,19 @@ use crate::provider::r#async::{
 use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr};
 
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
-pub struct AsyncBindingWhenConfigurator<'di_container, Interface>
+pub struct AsyncBindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container mut AsyncDIContainer,
+    di_container: Arc<AsyncDIContainer>,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'di_container, Interface> AsyncBindingWhenConfigurator<'di_container, Interface>
+impl<Interface> AsyncBindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'di_container mut AsyncDIContainer) -> Self
+    fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
         Self {
             di_container,
@@ -101,50 +104,45 @@ where
     ///
     /// # Errors
     /// Will return Err if no binding for the interface already exists.
-    pub fn when_named(
-        &mut self,
+    pub async fn when_named(
+        &self,
         name: &'static str,
     ) -> Result<(), AsyncBindingWhenConfiguratorError>
     {
-        let binding = self
-            .di_container
-            .bindings
-            .remove::<Interface>(None)
-            .map_or_else(
-                || {
-                    Err(AsyncBindingWhenConfiguratorError::BindingNotFound(
-                        type_name::<Interface>(),
-                    ))
-                },
-                Ok,
-            )?;
+        let mut bindings_lock = self.di_container.bindings.lock().await;
 
-        self.di_container
-            .bindings
-            .set::<Interface>(Some(name), binding);
+        let binding = bindings_lock.remove::<Interface>(None).map_or_else(
+            || {
+                Err(AsyncBindingWhenConfiguratorError::BindingNotFound(
+                    type_name::<Interface>(),
+                ))
+            },
+            Ok,
+        )?;
+
+        bindings_lock.set::<Interface>(Some(name), binding);
 
         Ok(())
     }
 }
 
 /// Scope configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
-pub struct AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>
+pub struct AsyncBindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: AsyncInjectable,
 {
-    di_container: &'di_container mut AsyncDIContainer,
+    di_container: Arc<AsyncDIContainer>,
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<'di_container, Interface, Implementation>
-    AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>
+impl<Interface, Implementation> AsyncBindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: AsyncInjectable,
 {
-    fn new(di_container: &'di_container mut AsyncDIContainer) -> Self
+    fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
         Self {
             di_container,
@@ -156,14 +154,16 @@ where
     /// Configures the binding to be in a transient scope.
     ///
     /// This is the default.
-    pub fn in_transient_scope(&mut self) -> AsyncBindingWhenConfigurator<Interface>
+    pub async fn in_transient_scope(&self) -> AsyncBindingWhenConfigurator<Interface>
     {
-        self.di_container.bindings.set::<Interface>(
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        bindings_lock.set::<Interface>(
             None,
             Box::new(AsyncTransientTypeProvider::<Implementation>::new()),
         );
 
-        AsyncBindingWhenConfigurator::new(self.di_container)
+        AsyncBindingWhenConfigurator::new(self.di_container.clone())
     }
 
     /// Configures the binding to be in a singleton scope.
@@ -171,40 +171,41 @@ where
     /// # Errors
     /// Will return Err if resolving the implementation fails.
     pub async fn in_singleton_scope(
-        &mut self,
+        &self,
     ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingScopeConfiguratorError>
     {
         let singleton: ThreadsafeSingletonPtr<Implementation> =
             ThreadsafeSingletonPtr::from(
-                Implementation::resolve(self.di_container, Vec::new())
+                Implementation::resolve(&self.di_container, Vec::new())
                     .await
                     .map_err(
                         AsyncBindingScopeConfiguratorError::SingletonResolveFailed,
                     )?,
             );
 
-        self.di_container
-            .bindings
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        bindings_lock
             .set::<Interface>(None, Box::new(AsyncSingletonProvider::new(singleton)));
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
 
 /// Binding builder for type `Interface` inside a [`AsyncDIContainer`].
-pub struct AsyncBindingBuilder<'di_container, Interface>
+pub struct AsyncBindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container mut AsyncDIContainer,
+    di_container: Arc<AsyncDIContainer>,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'di_container, Interface> AsyncBindingBuilder<'di_container, Interface>
+impl<Interface> AsyncBindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'di_container mut AsyncDIContainer) -> Self
+    fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
         Self {
             di_container,
@@ -221,8 +222,8 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
-    pub fn to<Implementation>(
-        &mut self,
+    pub async fn to<Implementation>(
+        &self,
     ) -> Result<
         AsyncBindingScopeConfigurator<Interface, Implementation>,
         AsyncBindingBuilderError,
@@ -230,17 +231,21 @@ where
     where
         Implementation: AsyncInjectable,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
-            return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
-                Interface,
-            >(
-            )));
+        {
+            let bindings_lock = self.di_container.bindings.lock().await;
+
+            if bindings_lock.has::<Interface>(None) {
+                return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
+                    Interface,
+                >(
+                )));
+            }
         }
 
-        let mut binding_scope_configurator =
-            AsyncBindingScopeConfigurator::new(self.di_container);
+        let binding_scope_configurator =
+            AsyncBindingScopeConfigurator::new(self.di_container.clone());
 
-        binding_scope_configurator.in_transient_scope();
+        binding_scope_configurator.in_transient_scope().await;
 
         Ok(binding_scope_configurator)
     }
@@ -254,8 +259,8 @@ where
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
     #[cfg(feature = "factory")]
-    pub fn to_factory<Args, Return>(
-        &mut self,
+    pub async fn to_factory<Args, Return>(
+        &self,
         factory_func: &'static (dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>
                       + Send
                       + Sync),
@@ -265,7 +270,9 @@ where
         Return: 'static + ?Sized,
         Interface: crate::interfaces::factory::IFactory<Args, Return>,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        if bindings_lock.has::<Interface>(None) {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -274,14 +281,14 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container.bindings.set::<Interface>(
+        bindings_lock.set::<Interface>(
             None,
             Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                 crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
             )),
         );
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
@@ -293,8 +300,8 @@ where
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
     #[cfg(feature = "factory")]
-    pub fn to_default_factory<Return>(
-        &mut self,
+    pub async fn to_default_factory<Return>(
+        &self,
         factory_func: &'static (dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>
                       + Send
                       + Sync),
@@ -302,7 +309,9 @@ where
     where
         Return: 'static + ?Sized,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        if bindings_lock.has::<Interface>(None) {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -311,40 +320,40 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container.bindings.set::<Interface>(
+        bindings_lock.set::<Interface>(
             None,
             Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                 crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
             )),
         );
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
 
 /// Dependency injection container.
 pub struct AsyncDIContainer
 {
-    bindings: DIContainerBindingMap<dyn IAsyncProvider>,
+    bindings: Mutex<DIContainerBindingMap<dyn IAsyncProvider>>,
 }
 
 impl AsyncDIContainer
 {
     /// Returns a new `AsyncDIContainer`.
     #[must_use]
-    pub fn new() -> Self
+    pub fn new() -> Arc<Self>
     {
-        Self {
-            bindings: DIContainerBindingMap::new(),
-        }
+        Arc::new(Self {
+            bindings: Mutex::new(DIContainerBindingMap::new()),
+        })
     }
 
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
-    pub fn bind<Interface>(&mut self) -> AsyncBindingBuilder<Interface>
+    pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,
     {
-        AsyncBindingBuilder::<Interface>::new(self)
+        AsyncBindingBuilder::<Interface>::new(self.clone())
     }
 
     /// Returns the type bound with `Interface`.
@@ -355,7 +364,7 @@ impl AsyncDIContainer
     /// - Resolving the binding for fails
     /// - Casting the binding for fails
     pub async fn get<Interface>(
-        &self,
+        self: &Arc<Self>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -371,7 +380,7 @@ impl AsyncDIContainer
     /// - Resolving the binding fails
     /// - Casting the binding for fails
     pub async fn get_named<Interface>(
-        &self,
+        self: &Arc<Self>,
         name: &'static str,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
@@ -382,7 +391,7 @@ impl AsyncDIContainer
 
     #[doc(hidden)]
     pub async fn get_bound<Interface>(
-        &self,
+        self: &Arc<Self>,
         dependency_history: Vec<&'static str>,
         name: Option<&'static str>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
@@ -471,38 +480,39 @@ impl AsyncDIContainer
     }
 
     async fn get_binding_providable<Interface>(
-        &self,
+        self: &Arc<Self>,
         name: Option<&'static str>,
         dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized,
     {
-        self.bindings
-            .get::<Interface>(name)
-            .map_or_else(
-                || {
-                    Err(AsyncDIContainerError::BindingNotFound {
-                        interface: type_name::<Interface>(),
-                        name,
-                    })
-                },
-                Ok,
-            )?
+        let provider;
+
+        {
+            let bindings_lock = self.bindings.lock().await;
+
+            provider = bindings_lock
+                .get::<Interface>(name)
+                .map_or_else(
+                    || {
+                        Err(AsyncDIContainerError::BindingNotFound {
+                            interface: type_name::<Interface>(),
+                            name,
+                        })
+                    },
+                    Ok,
+                )?
+                .clone();
+        }
+
+        provider
             .provide(self, dependency_history)
             .await
             .map_err(|err| AsyncDIContainerError::BindingResolveFailed {
                 reason: err,
                 interface: type_name::<Interface>(),
             })
-    }
-}
-
-impl Default for AsyncDIContainer
-{
-    fn default() -> Self
-    {
-        Self::new()
     }
 }
 
@@ -523,6 +533,7 @@ mod tests
         //! Test subjects.
 
         use std::fmt::Debug;
+        use std::sync::Arc;
 
         use async_trait::async_trait;
         use syrette_macros::declare_interface;
@@ -569,7 +580,7 @@ mod tests
         impl AsyncInjectable for UserManager
         {
             async fn resolve(
-                _: &AsyncDIContainer,
+                _: &Arc<AsyncDIContainer>,
                 _dependency_history: Vec<&'static str>,
             ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
             where
@@ -634,7 +645,7 @@ mod tests
         impl AsyncInjectable for Number
         {
             async fn resolve(
-                _: &AsyncDIContainer,
+                _: &Arc<AsyncDIContainer>,
                 _dependency_history: Vec<&'static str>,
             ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
             where
@@ -645,53 +656,71 @@ mod tests
         }
     }
 
-    #[test]
-    fn can_bind_to() -> Result<(), Box<dyn Error>>
+    #[tokio::test]
+    async fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?;
+            .to::<subjects::UserManager>()
+            .await?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
 
         Ok(())
     }
 
-    #[test]
-    fn can_bind_to_transient() -> Result<(), Box<dyn Error>>
+    #[tokio::test]
+    async fn can_bind_to_transient() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
-            .in_transient_scope();
-
-        assert_eq!(di_container.bindings.count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_bind_to_transient_when_named() -> Result<(), Box<dyn Error>>
-    {
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
-
-        assert_eq!(di_container.bindings.count(), 0);
-
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
+            .to::<subjects::UserManager>()
+            .await?
             .in_transient_scope()
-            .when_named("regular")?;
+            .await;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_bind_to_transient_when_named() -> Result<(), Box<dyn Error>>
+    {
+        let mut di_container = AsyncDIContainer::new();
+
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
+
+        di_container
+            .bind::<dyn subjects::IUserManager>()
+            .to::<subjects::UserManager>()
+            .await?
+            .in_transient_scope()
+            .await
+            .when_named("regular")
+            .await?;
+
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
 
         Ok(())
     }
@@ -699,17 +728,22 @@ mod tests
     #[tokio::test]
     async fn can_bind_to_singleton() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
+            .to::<subjects::UserManager>()
+            .await?
             .in_singleton_scope()
             .await?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
 
         Ok(())
     }
@@ -717,55 +751,40 @@ mod tests
     #[tokio::test]
     async fn can_bind_to_singleton_when_named() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
 
         di_container
             .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
+            .to::<subjects::UserManager>()
+            .await?
             .in_singleton_scope()
             .await?
-            .when_named("cool")?;
+            .when_named("cool")
+            .await?;
 
-        assert_eq!(di_container.bindings.count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(feature = "factory")]
-    fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
-    {
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
-
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
-
-        assert_eq!(di_container.bindings.count(), 0);
-
-        di_container.bind::<IUserManagerFactory>().to_factory(&|| {
-            let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                TransientPtr::new(subjects::UserManager::new());
-
-            user_manager
-        })?;
-
-        assert_eq!(di_container.bindings.count(), 1);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
 
         Ok(())
     }
 
-    #[test]
+    #[tokio::test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_factory_when_named() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
     {
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
 
         di_container
             .bind::<IUserManagerFactory>()
@@ -774,10 +793,44 @@ mod tests
                     TransientPtr::new(subjects::UserManager::new());
 
                 user_manager
-            })?
-            .when_named("awesome")?;
+            })
+            .await?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "factory")]
+    async fn can_bind_to_factory_when_named() -> Result<(), Box<dyn Error>>
+    {
+        type IUserManagerFactory =
+            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+
+        let mut di_container = AsyncDIContainer::new();
+
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 0);
+        }
+
+        di_container
+            .bind::<IUserManagerFactory>()
+            .to_factory(&|| {
+                let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                    TransientPtr::new(subjects::UserManager::new());
+
+                user_manager
+            })
+            .await?
+            .when_named("awesome")
+            .await?;
+
+        {
+            assert_eq!(di_container.bindings.lock().await.count(), 1);
+        }
 
         Ok(())
     }
@@ -793,25 +846,37 @@ mod tests
             {
                 async fn provide(
                     &self,
-                    di_container: &AsyncDIContainer,
+                    di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<AsyncProvidable, InjectableError>;
+
+                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
             }
         }
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_, _| {
-            Ok(AsyncProvidable::Transient(TransientPtr::new(
-                subjects::UserManager::new(),
-            )))
+        mock_provider.expect_do_clone().returning(|| {
+            let mut inner_mock_provider = MockProvider::new();
+
+            inner_mock_provider.expect_provide().returning(|_, _| {
+                Ok(AsyncProvidable::Transient(TransientPtr::new(
+                    subjects::UserManager::new(),
+                )))
+            });
+
+            Box::new(inner_mock_provider)
         });
 
-        di_container
-            .bindings
-            .set::<dyn subjects::IUserManager>(None, Box::new(mock_provider));
+        {
+            di_container
+                .bindings
+                .lock()
+                .await
+                .set::<dyn subjects::IUserManager>(None, Box::new(mock_provider));
+        }
 
         di_container
             .get::<dyn subjects::IUserManager>()
@@ -832,25 +897,40 @@ mod tests
             {
                 async fn provide(
                     &self,
-                    di_container: &AsyncDIContainer,
+                    di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<AsyncProvidable, InjectableError>;
+
+                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
             }
         }
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
-        mock_provider.expect_provide().returning(|_, _| {
-            Ok(AsyncProvidable::Transient(TransientPtr::new(
-                subjects::UserManager::new(),
-            )))
+        mock_provider.expect_do_clone().returning(|| {
+            let mut inner_mock_provider = MockProvider::new();
+
+            inner_mock_provider.expect_provide().returning(|_, _| {
+                Ok(AsyncProvidable::Transient(TransientPtr::new(
+                    subjects::UserManager::new(),
+                )))
+            });
+
+            Box::new(inner_mock_provider)
         });
 
-        di_container
-            .bindings
-            .set::<dyn subjects::IUserManager>(Some("special"), Box::new(mock_provider));
+        {
+            di_container
+                .bindings
+                .lock()
+                .await
+                .set::<dyn subjects::IUserManager>(
+                    Some("special"),
+                    Box::new(mock_provider),
+                );
+        }
 
         di_container
             .get_named::<dyn subjects::IUserManager>("special")
@@ -871,13 +951,15 @@ mod tests
             {
                 async fn provide(
                     &self,
-                    di_container: &AsyncDIContainer,
+                    di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<AsyncProvidable, InjectableError>;
+
+                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
             }
         }
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -885,13 +967,25 @@ mod tests
 
         ThreadsafeSingletonPtr::get_mut(&mut singleton).unwrap().num = 2820;
 
-        mock_provider
-            .expect_provide()
-            .returning_st(move |_, _| Ok(AsyncProvidable::Singleton(singleton.clone())));
+        mock_provider.expect_do_clone().returning(move || {
+            let mut inner_mock_provider = MockProvider::new();
 
-        di_container
-            .bindings
-            .set::<dyn subjects::INumber>(None, Box::new(mock_provider));
+            let singleton_clone = singleton.clone();
+
+            inner_mock_provider.expect_provide().returning(move |_, _| {
+                Ok(AsyncProvidable::Singleton(singleton_clone.clone()))
+            });
+
+            Box::new(inner_mock_provider)
+        });
+
+        {
+            di_container
+                .bindings
+                .lock()
+                .await
+                .set::<dyn subjects::INumber>(None, Box::new(mock_provider));
+        }
 
         let first_number_rc = di_container
             .get::<dyn subjects::INumber>()
@@ -921,13 +1015,15 @@ mod tests
             {
                 async fn provide(
                     &self,
-                    di_container: &AsyncDIContainer,
+                    di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<AsyncProvidable, InjectableError>;
+
+                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
             }
         }
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -935,13 +1031,25 @@ mod tests
 
         ThreadsafeSingletonPtr::get_mut(&mut singleton).unwrap().num = 2820;
 
-        mock_provider
-            .expect_provide()
-            .returning_st(move |_, _| Ok(AsyncProvidable::Singleton(singleton.clone())));
+        mock_provider.expect_do_clone().returning(move || {
+            let mut inner_mock_provider = MockProvider::new();
 
-        di_container
-            .bindings
-            .set::<dyn subjects::INumber>(Some("cool"), Box::new(mock_provider));
+            let singleton_clone = singleton.clone();
+
+            inner_mock_provider.expect_provide().returning(move |_, _| {
+                Ok(AsyncProvidable::Singleton(singleton_clone.clone()))
+            });
+
+            Box::new(inner_mock_provider)
+        });
+
+        {
+            di_container
+                .bindings
+                .lock()
+                .await
+                .set::<dyn subjects::INumber>(Some("cool"), Box::new(mock_provider));
+        }
 
         let first_number_rc = di_container
             .get_named::<dyn subjects::INumber>("cool")
@@ -1014,13 +1122,15 @@ mod tests
             {
                 async fn provide(
                     &self,
-                    di_container: &AsyncDIContainer,
+                    di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<AsyncProvidable, InjectableError>;
+
+                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
             }
         }
 
-        let mut di_container: AsyncDIContainer = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -1037,9 +1147,13 @@ mod tests
             ))
         });
 
-        di_container
-            .bindings
-            .set::<IUserManagerFactory>(None, Box::new(mock_provider));
+        {
+            di_container
+                .bindings
+                .lock()
+                .await
+                .set::<IUserManagerFactory>(None, Box::new(mock_provider));
+        }
 
         di_container
             .get::<IUserManagerFactory>()

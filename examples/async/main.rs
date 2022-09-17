@@ -2,11 +2,8 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use tokio::spawn;
-use tokio::sync::Mutex;
 
 mod animals;
 mod bootstrap;
@@ -21,12 +18,10 @@ async fn main() -> Result<()>
 {
     println!("Hello, world!");
 
-    let di_container = Arc::new(Mutex::new(bootstrap().await?));
+    let di_container = bootstrap().await?;
 
     {
         let dog = di_container
-            .lock()
-            .await
             .get::<dyn IDog>()
             .await?
             .threadsafe_singleton()?;
@@ -35,12 +30,7 @@ async fn main() -> Result<()>
     }
 
     spawn(async move {
-        let human = di_container
-            .lock()
-            .await
-            .get::<dyn IHuman>()
-            .await?
-            .transient()?;
+        let human = di_container.get::<dyn IHuman>().await?.transient()?;
 
         human.make_pets_make_sounds();
 
