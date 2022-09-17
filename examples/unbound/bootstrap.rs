@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use anyhow::Result;
 use syrette::DIContainer;
 
@@ -11,9 +13,9 @@ use crate::interfaces::animal_store::IAnimalStore;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::human::IHuman;
 
-pub fn bootstrap() -> Result<DIContainer>
+pub fn bootstrap() -> Result<Rc<DIContainer>>
 {
-    let mut di_container: DIContainer = DIContainer::new();
+    let mut di_container = DIContainer::new();
 
     di_container
         .bind::<dyn IDog>()

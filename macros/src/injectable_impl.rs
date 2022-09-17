@@ -121,7 +121,7 @@ impl InjectableImpl
                 impl #generics syrette::interfaces::injectable::Injectable for #self_type
                 {
                     fn resolve(
-                        #di_container_var: &syrette::DIContainer,
+                        #di_container_var: &std::rc::Rc<syrette::DIContainer>,
                         mut #dependency_history_var: Vec<&'static str>,
                     ) -> Result<
                         syrette::ptr::TransientPtr<Self>,

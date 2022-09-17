@@ -1,5 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
@@ -19,7 +20,7 @@ pub trait IProvider
 {
     fn provide(
         &self,
-        di_container: &DIContainer,
+        di_container: &Rc<DIContainer>,
         dependency_history: Vec<&'static str>,
     ) -> Result<Providable, InjectableError>;
 }
@@ -49,7 +50,7 @@ where
 {
     fn provide(
         &self,
-        di_container: &DIContainer,
+        di_container: &Rc<DIContainer>,
         dependency_history: Vec<&'static str>,
     ) -> Result<Providable, InjectableError>
     {
@@ -83,7 +84,7 @@ where
 {
     fn provide(
         &self,
-        _di_container: &DIContainer,
+        _di_container: &Rc<DIContainer>,
         _dependency_history: Vec<&'static str>,
     ) -> Result<Providable, InjectableError>
     {
@@ -113,7 +114,7 @@ impl IProvider for FactoryProvider
 {
     fn provide(
         &self,
-        _di_container: &DIContainer,
+        _di_container: &Rc<DIContainer>,
         _dependency_history: Vec<&'static str>,
     ) -> Result<Providable, InjectableError>
     {

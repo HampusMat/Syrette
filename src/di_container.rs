@@ -50,7 +50,9 @@
 //! }
 //! ```
 use std::any::type_name;
+use std::cell::RefCell;
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 #[cfg(feature = "factory")]
 use crate::castable_factory::blocking::CastableFactory;
@@ -72,19 +74,19 @@ use crate::provider::blocking::{
 use crate::ptr::{SingletonPtr, SomePtr};
 
 /// When configurator for a binding for type 'Interface' inside a [`DIContainer`].
-pub struct BindingWhenConfigurator<'di_container, Interface>
+pub struct BindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container mut DIContainer,
+    di_container: Rc<DIContainer>,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'di_container, Interface> BindingWhenConfigurator<'di_container, Interface>
+impl<Interface> BindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'di_container mut DIContainer) -> Self
+    fn new(di_container: Rc<DIContainer>) -> Self
     {
         Self {
             di_container,
@@ -97,50 +99,45 @@ where
     /// # Errors
     /// Will return Err if no binding for the interface already exists.
     pub fn when_named(
-        &mut self,
+        &self,
         name: &'static str,
     ) -> Result<(), BindingWhenConfiguratorError>
     {
-        let binding = self
-            .di_container
-            .bindings
-            .remove::<Interface>(None)
-            .map_or_else(
-                || {
-                    Err(BindingWhenConfiguratorError::BindingNotFound(type_name::<
-                        Interface,
-                    >(
-                    )))
-                },
-                Ok,
-            )?;
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
-        self.di_container
-            .bindings
-            .set::<Interface>(Some(name), binding);
+        let binding = bindings_mut.remove::<Interface>(None).map_or_else(
+            || {
+                Err(BindingWhenConfiguratorError::BindingNotFound(type_name::<
+                    Interface,
+                >(
+                )))
+            },
+            Ok,
+        )?;
+
+        bindings_mut.set::<Interface>(Some(name), binding);
 
         Ok(())
     }
 }
 
 /// Scope configurator for a binding for type 'Interface' inside a [`DIContainer`].
-pub struct BindingScopeConfigurator<'di_container, Interface, Implementation>
+pub struct BindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: Injectable,
 {
-    di_container: &'di_container mut DIContainer,
+    di_container: Rc<DIContainer>,
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<'di_container, Interface, Implementation>
-    BindingScopeConfigurator<'di_container, Interface, Implementation>
+impl<Interface, Implementation> BindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: Injectable,
 {
-    fn new(di_container: &'di_container mut DIContainer) -> Self
+    fn new(di_container: Rc<DIContainer>) -> Self
     {
         Self {
             di_container,
@@ -152,14 +149,17 @@ where
     /// Configures the binding to be in a transient scope.
     ///
     /// This is the default.
-    pub fn in_transient_scope(&mut self) -> BindingWhenConfigurator<Interface>
+    #[allow(clippy::must_use_candidate)]
+    pub fn in_transient_scope(&self) -> BindingWhenConfigurator<Interface>
     {
-        self.di_container.bindings.set::<Interface>(
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
+
+        bindings_mut.set::<Interface>(
             None,
             Box::new(TransientTypeProvider::<Implementation>::new()),
         );
 
-        BindingWhenConfigurator::new(self.di_container)
+        BindingWhenConfigurator::new(self.di_container.clone())
     }
 
     /// Configures the binding to be in a singleton scope.
@@ -167,36 +167,36 @@ where
     /// # Errors
     /// Will return Err if resolving the implementation fails.
     pub fn in_singleton_scope(
-        &mut self,
+        &self,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingScopeConfiguratorError>
     {
         let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
-            Implementation::resolve(self.di_container, Vec::new())
+            Implementation::resolve(&self.di_container, Vec::new())
                 .map_err(BindingScopeConfiguratorError::SingletonResolveFailed)?,
         );
 
-        self.di_container
-            .bindings
-            .set::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
-        Ok(BindingWhenConfigurator::new(self.di_container))
+        bindings_mut.set::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
+
+        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
-pub struct BindingBuilder<'di_container, Interface>
+pub struct BindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container mut DIContainer,
+    di_container: Rc<DIContainer>,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<'di_container, Interface> BindingBuilder<'di_container, Interface>
+impl<Interface> BindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    fn new(di_container: &'di_container mut DIContainer) -> Self
+    fn new(di_container: Rc<DIContainer>) -> Self
     {
         Self {
             di_container,
@@ -214,19 +214,24 @@ where
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
     pub fn to<Implementation>(
-        &mut self,
+        &self,
     ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
     where
         Implementation: Injectable,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
-            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                Interface,
-            >()));
+        {
+            let bindings = self.di_container.bindings.borrow();
+
+            if bindings.has::<Interface>(None) {
+                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                    Interface,
+                >(
+                )));
+            }
         }
 
-        let mut binding_scope_configurator =
-            BindingScopeConfigurator::new(self.di_container);
+        let binding_scope_configurator =
+            BindingScopeConfigurator::new(self.di_container.clone());
 
         binding_scope_configurator.in_transient_scope();
 
@@ -243,7 +248,7 @@ where
     /// the interface.
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
-        &mut self,
+        &self,
         factory_func: &'static dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
@@ -251,7 +256,9 @@ where
         Return: 'static + ?Sized,
         Interface: crate::interfaces::factory::IFactory<Args, Return>,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
+
+        if bindings_mut.has::<Interface>(None) {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >()));
@@ -259,14 +266,14 @@ where
 
         let factory_impl = CastableFactory::new(factory_func);
 
-        self.di_container.bindings.set::<Interface>(
+        bindings_mut.set::<Interface>(
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
             )),
         );
 
-        Ok(BindingWhenConfigurator::new(self.di_container))
+        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
@@ -279,13 +286,15 @@ where
     /// the interface.
     #[cfg(feature = "factory")]
     pub fn to_default_factory<Return>(
-        &mut self,
+        &self,
         factory_func: &'static dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
     {
-        if self.di_container.bindings.has::<Interface>(None) {
+        let mut bindings_mut = self.di_container.bindings.borrow_mut();
+
+        if bindings_mut.has::<Interface>(None) {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >()));
@@ -293,40 +302,40 @@ where
 
         let factory_impl = CastableFactory::new(factory_func);
 
-        self.di_container.bindings.set::<Interface>(
+        bindings_mut.set::<Interface>(
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
             )),
         );
 
-        Ok(BindingWhenConfigurator::new(self.di_container))
+        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
 
 /// Dependency injection container.
 pub struct DIContainer
 {
-    bindings: DIContainerBindingMap<dyn IProvider>,
+    bindings: RefCell<DIContainerBindingMap<dyn IProvider>>,
 }
 
 impl DIContainer
 {
     /// Returns a new `DIContainer`.
     #[must_use]
-    pub fn new() -> Self
+    pub fn new() -> Rc<Self>
     {
-        Self {
-            bindings: DIContainerBindingMap::new(),
-        }
+        Rc::new(Self {
+            bindings: RefCell::new(DIContainerBindingMap::new()),
+        })
     }
 
     /// Returns a new [`BindingBuilder`] for the given interface.
-    pub fn bind<Interface>(&mut self) -> BindingBuilder<Interface>
+    pub fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,
     {
-        BindingBuilder::<Interface>::new(self)
+        BindingBuilder::<Interface>::new(self.clone())
     }
 
     /// Returns the type bound with `Interface`.
@@ -336,7 +345,7 @@ impl DIContainer
     /// - No binding for `Interface` exists
     /// - Resolving the binding for fails
     /// - Casting the binding for fails
-    pub fn get<Interface>(&self) -> Result<SomePtr<Interface>, DIContainerError>
+    pub fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -351,7 +360,7 @@ impl DIContainer
     /// - Resolving the binding fails
     /// - Casting the binding for fails
     pub fn get_named<Interface>(
-        &self,
+        self: &Rc<Self>,
         name: &'static str,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -362,7 +371,7 @@ impl DIContainer
 
     #[doc(hidden)]
     pub fn get_bound<Interface>(
-        &self,
+        self: &Rc<Self>,
         dependency_history: Vec<&'static str>,
         name: Option<&'static str>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
@@ -420,7 +429,7 @@ impl DIContainer
     }
 
     fn get_binding_providable<Interface>(
-        &self,
+        self: &Rc<Self>,
         name: Option<&'static str>,
         dependency_history: Vec<&'static str>,
     ) -> Result<Providable, DIContainerError>
@@ -428,6 +437,7 @@ impl DIContainer
         Interface: 'static + ?Sized,
     {
         self.bindings
+            .borrow()
             .get::<Interface>(name)
             .map_or_else(
                 || {
@@ -443,14 +453,6 @@ impl DIContainer
                 reason: err,
                 interface: type_name::<Interface>(),
             })
-    }
-}
-
-impl Default for DIContainer
-{
-    fn default() -> Self
-    {
-        Self::new()
     }
 }
 
@@ -471,6 +473,7 @@ mod tests
         //! Test subjects.
 
         use std::fmt::Debug;
+        use std::rc::Rc;
 
         use syrette_macros::declare_interface;
 
@@ -515,7 +518,7 @@ mod tests
         impl Injectable for UserManager
         {
             fn resolve(
-                _di_container: &DIContainer,
+                _di_container: &Rc<DIContainer>,
                 _dependency_history: Vec<&'static str>,
             ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
             where
@@ -579,7 +582,7 @@ mod tests
         impl Injectable for Number
         {
             fn resolve(
-                _di_container: &DIContainer,
+                _di_container: &Rc<DIContainer>,
                 _dependency_history: Vec<&'static str>,
             ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
             where
@@ -593,15 +596,15 @@ mod tests
     #[test]
     fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<dyn subjects::IUserManager>()
             .to::<subjects::UserManager>()?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -609,16 +612,16 @@ mod tests
     #[test]
     fn can_bind_to_transient() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<dyn subjects::IUserManager>()
             .to::<subjects::UserManager>()?
             .in_transient_scope();
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -626,9 +629,9 @@ mod tests
     #[test]
     fn can_bind_to_transient_when_named() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<dyn subjects::IUserManager>()
@@ -636,7 +639,7 @@ mod tests
             .in_transient_scope()
             .when_named("regular")?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -644,16 +647,16 @@ mod tests
     #[test]
     fn can_bind_to_singleton() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<dyn subjects::IUserManager>()
             .to::<subjects::UserManager>()?
             .in_singleton_scope()?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -661,9 +664,9 @@ mod tests
     #[test]
     fn can_bind_to_singleton_when_named() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<dyn subjects::IUserManager>()
@@ -671,7 +674,7 @@ mod tests
             .in_singleton_scope()?
             .when_named("cool")?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -683,9 +686,9 @@ mod tests
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container.bind::<IUserManagerFactory>().to_factory(&|| {
             let user_manager: TransientPtr<dyn subjects::IUserManager> =
@@ -694,7 +697,7 @@ mod tests
             user_manager
         })?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -706,9 +709,9 @@ mod tests
         type IUserManagerFactory =
             dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        assert_eq!(di_container.bindings.count(), 0);
+        assert_eq!(di_container.bindings.borrow().count(), 0);
 
         di_container
             .bind::<IUserManagerFactory>()
@@ -720,7 +723,7 @@ mod tests
             })?
             .when_named("awesome")?;
 
-        assert_eq!(di_container.bindings.count(), 1);
+        assert_eq!(di_container.bindings.borrow().count(), 1);
 
         Ok(())
     }
@@ -735,13 +738,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -753,6 +756,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<dyn subjects::IUserManager>(None, Box::new(mock_provider));
 
         di_container
@@ -772,13 +776,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -790,6 +794,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<dyn subjects::IUserManager>(Some("special"), Box::new(mock_provider));
 
         di_container
@@ -809,13 +814,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -829,6 +834,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<dyn subjects::INumber>(None, Box::new(mock_provider));
 
         let first_number_rc = di_container.get::<dyn subjects::INumber>()?.singleton()?;
@@ -853,13 +859,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -873,6 +879,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<dyn subjects::INumber>(Some("cool"), Box::new(mock_provider));
 
         let first_number_rc = di_container
@@ -943,13 +950,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -966,6 +973,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<IUserManagerFactory>(None, Box::new(mock_provider));
 
         di_container.get::<IUserManagerFactory>()?.factory()?;
@@ -1026,13 +1034,13 @@ mod tests
             {
                 fn provide(
                     &self,
-                    di_container: &DIContainer,
+                    di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
                 ) -> Result<Providable, InjectableError>;
             }
         }
 
-        let mut di_container: DIContainer = DIContainer::new();
+        let di_container = DIContainer::new();
 
         let mut mock_provider = MockProvider::new();
 
@@ -1049,6 +1057,7 @@ mod tests
 
         di_container
             .bindings
+            .borrow_mut()
             .set::<IUserManagerFactory>(Some("special"), Box::new(mock_provider));
 
         di_container

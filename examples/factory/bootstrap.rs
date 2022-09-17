@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::rc::Rc;
 
 use syrette::ptr::TransientPtr;
 use syrette::DIContainer;
@@ -11,9 +12,9 @@ use crate::interfaces::user_manager::IUserManager;
 use crate::user::User;
 use crate::user_manager::UserManager;
 
-pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
+pub fn bootstrap() -> Result<Rc<DIContainer>, Box<dyn Error>>
 {
-    let mut di_container: DIContainer = DIContainer::new();
+    let mut di_container = DIContainer::new();
 
     di_container
         .bind::<dyn IUserManager>()

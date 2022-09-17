@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use anyhow::Result;
 use syrette::DIContainer;
 
@@ -7,9 +9,9 @@ use crate::katana::Katana;
 use crate::ninja::Ninja;
 use crate::shuriken::Shuriken;
 
-pub fn bootstrap() -> Result<DIContainer>
+pub fn bootstrap() -> Result<Rc<DIContainer>>
 {
-    let mut di_container: DIContainer = DIContainer::new();
+    let mut di_container = DIContainer::new();
 
     di_container
         .bind::<dyn IWeapon>()
