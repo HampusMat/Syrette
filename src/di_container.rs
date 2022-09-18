@@ -972,6 +972,13 @@ mod tests
             }
         }
 
+        type FactoryFunc = dyn Fn<
+            (std::rc::Rc<DIContainer>,),
+            Output = Box<
+                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
+            >,
+        >;
+
         use crate as syrette;
 
         #[crate::factory]
@@ -992,12 +999,7 @@ mod tests
 
         let di_container = DIContainer::new();
 
-        let factory_func: &'static dyn Fn<
-            (std::rc::Rc<DIContainer>,),
-            Output = Box<
-                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
-            >,
-        > = &|_: Rc<DIContainer>| {
+        let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
             Box::new(move |users| {
                 let user_manager: TransientPtr<dyn IUserManager> =
                     TransientPtr::new(UserManager::new(users));
@@ -1066,6 +1068,13 @@ mod tests
             }
         }
 
+        type FactoryFunc = dyn Fn<
+            (std::rc::Rc<DIContainer>,),
+            Output = Box<
+                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
+            >,
+        >;
+
         use crate as syrette;
 
         #[crate::factory]
@@ -1086,12 +1095,7 @@ mod tests
 
         let di_container = DIContainer::new();
 
-        let factory_func: &'static dyn Fn<
-            (std::rc::Rc<DIContainer>,),
-            Output = Box<
-                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
-            >,
-        > = &|_: Rc<DIContainer>| {
+        let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
             Box::new(move |users| {
                 let user_manager: TransientPtr<dyn IUserManager> =
                     TransientPtr::new(UserManager::new(users));
