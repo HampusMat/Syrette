@@ -15,7 +15,7 @@ all-features = true
 default = ["prevent-circular"]
 factory = ["syrette_macros/factory"]
 prevent-circular = ["syrette_macros/prevent-circular"]
-async = ["async-trait"]
+async = ["dep:async-trait", "dep:tokio"]
 
 [[example]]
 name = "factory"
@@ -39,13 +39,13 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 paste = "1.0.8"
 async-trait = { version = "0.1.57", optional = true }
-tokio = "1.20.1"
+tokio = { version = "1.20.1", features = ["sync"], optional = true }
 
 [dev_dependencies]
 mockall = "0.11.1"
 anyhow = "1.0.62"
 third-party-lib = { path = "./examples/with-3rd-party/third-party-lib" }
-tokio = { version = "1.20.1", features = ["full"] }
+tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 
 [workspace]
 members = [
