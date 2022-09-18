@@ -261,7 +261,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 /// A default factory is a factory that doesn't take any arguments.
 ///
 /// The more tedious way to accomplish what this macro does would be by using
-/// the [`factory`] macro.
+/// the [`macro@factory`] macro.
 ///
 /// *This macro is only available if Syrette is built with the "factory" feature.*
 ///
