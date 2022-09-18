@@ -473,6 +473,7 @@ impl AsyncDIContainer
                     factory(self.clone()).into(),
                 ))
             }
+            #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(default_factory_binding) => {
                 use crate::interfaces::factory::IFactory;
 
