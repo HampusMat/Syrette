@@ -29,6 +29,10 @@ required-features = ["factory"]
 name = "async"
 required-features = ["async", "factory"]
 
+[[example]]
+name = "async-factory"
+required-features = ["async", "factory"]
+
 [dependencies]
 syrette_macros = { path = "./macros", version = "0.3.0" }
 linkme = "0.3.0"
