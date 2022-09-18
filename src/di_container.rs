@@ -982,7 +982,7 @@ mod tests
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
         mock! {
             Provider {}
@@ -1078,7 +1078,7 @@ mod tests
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
         mock! {
             Provider {}

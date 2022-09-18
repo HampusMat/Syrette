@@ -152,6 +152,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 
 /// Makes a type alias usable as a factory interface.
 ///
+/// The return type is automatically put inside of a [`TransientPtr`].
+///
 /// *This macro is only available if Syrette is built with the "factory" feature.*
 ///
 /// # Arguments
@@ -166,8 +168,6 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// # Examples
 /// ```
 /// # use syrette::factory;
-/// # use syrette::interfaces::factory::IFactory;
-/// # use syrette::ptr::TransientPtr;
 /// #
 /// # trait IConfigurator {}
 /// #
@@ -184,12 +184,15 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// # impl IConfigurator for Configurator {}
 /// #
 /// #[factory]
-/// type IConfiguratorFactory = dyn Fn(Vec<String>) -> TransientPtr<dyn IConfigurator>;
+/// type IConfiguratorFactory = dyn Fn(Vec<String>) -> dyn IConfigurator;
 /// ```
 #[proc_macro_attribute]
 #[cfg(feature = "factory")]
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
+    use quote::ToTokens;
+    use syn::Type;
+
     use crate::factory_macro_args::FactoryMacroArgs;
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
@@ -200,11 +203,23 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         .map_or(false, |flag| flag.is_on.value);
 
     let factory_type_alias::FactoryTypeAlias {
-        type_alias,
-        factory_interface,
+        mut type_alias,
+        mut factory_interface,
         arg_types: _,
         return_type: _,
     } = parse(type_alias_stream).unwrap();
+
+    let output = factory_interface.output.clone();
+
+    factory_interface.output = parse(
+        quote! {
+            syrette::ptr::TransientPtr<#output>
+        }
+        .into(),
+    )
+    .unwrap();
+
+    type_alias.ty = Box::new(Type::Verbatim(factory_interface.to_token_stream()));
 
     let decl_interfaces = if is_threadsafe {
         quote! {
