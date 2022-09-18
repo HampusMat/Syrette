@@ -5,7 +5,7 @@ use syn::Token;
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const FACTORY_MACRO_FLAGS: &[&str] = &["threadsafe"];
+pub const FACTORY_MACRO_FLAGS: &[&str] = &["threadsafe", "async"];
 
 pub struct FactoryMacroArgs
 {

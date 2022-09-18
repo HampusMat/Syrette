@@ -161,6 +161,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 ///
 /// # Flags
 /// - `threadsafe` - Mark as threadsafe.
+/// - `async` - Mark as async. Infers the `threadsafe` flag. The return type is
+///   automatically put inside of a pinned boxed future.
 ///
 /// # Panics
 /// If the attributed item is not a type alias.
@@ -197,10 +199,19 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
 
-    let is_threadsafe = flags
+    let mut is_threadsafe = flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
         .map_or(false, |flag| flag.is_on.value);
+
+    let is_async = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "async")
+        .map_or(false, |flag| flag.is_on.value);
+
+    if is_async {
+        is_threadsafe = true;
+    }
 
     let factory_type_alias::FactoryTypeAlias {
         mut type_alias,
@@ -212,8 +223,16 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
     let output = factory_interface.output.clone();
 
     factory_interface.output = parse(
-        quote! {
-            syrette::ptr::TransientPtr<#output>
+        if is_async {
+            quote! {
+                std::pin::Pin<Box<
+                    dyn std::future::Future<Output = syrette::ptr::TransientPtr<#output>>
+                >>
+            }
+        } else {
+            quote! {
+                syrette::ptr::TransientPtr<#output>
+            }
         }
         .into(),
     )
