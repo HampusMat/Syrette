@@ -22,6 +22,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 - Binding singletons
 - Injection of third-party structs & traits
 - Named bindings
+- Async factories
 
 ## Optional features
 - `factory`. Binding factories (Rust nightly required)

@@ -225,9 +225,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
     factory_interface.output = parse(
         if is_async {
             quote! {
-                std::pin::Pin<Box<
-                    dyn std::future::Future<Output = syrette::ptr::TransientPtr<#output>>
-                >>
+                syrette::future::BoxFuture<'static, syrette::ptr::TransientPtr<#output>>
             }
         } else {
             quote! {

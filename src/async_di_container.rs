@@ -294,6 +294,54 @@ where
         Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
     }
 
+    /// Creates a binding of factory type `Interface` to a async factory inside of the
+    /// associated [`AsyncDIContainer`].
+    ///
+    /// *This function is only available if Syrette is built with the "factory" and
+    /// "async" features.*
+    ///
+    /// # Errors
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
+    /// the interface.
+    #[cfg(all(feature = "factory", feature = "async"))]
+    pub async fn to_async_factory<Args, Return, FactoryFunc>(
+        &self,
+        factory_func: &'static FactoryFunc,
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    where
+        Args: 'static,
+        Return: 'static + ?Sized,
+        Interface: Fn<Args, Output = crate::future::BoxFuture<'static, Return>>,
+        FactoryFunc: Fn<
+                (Arc<AsyncDIContainer>,),
+                Output = Box<
+                    (dyn Fn<Args, Output = crate::future::BoxFuture<'static, Return>>),
+                >,
+            > + Send
+            + Sync,
+    {
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        if bindings_lock.has::<Interface>(None) {
+            return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >(
+            )));
+        }
+
+        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+
+        bindings_lock.set::<Interface>(
+            None,
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                false,
+            )),
+        );
+
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+    }
+
     /// Creates a binding of type `Interface` to a factory that takes no arguments
     /// inside of the associated [`AsyncDIContainer`].
     ///

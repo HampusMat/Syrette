@@ -16,6 +16,9 @@ pub mod ptr;
 pub mod async_di_container;
 
 #[cfg(feature = "async")]
+pub mod future;
+
+#[cfg(feature = "async")]
 pub use async_di_container::AsyncDIContainer;
 pub use di_container::DIContainer;
 pub use syrette_macros::*;
@@ -73,5 +76,53 @@ macro_rules! di_container_bind {
         $di_container.bind::<dyn $interface>().to::<$implementation>().unwrap();
 
         syrette::declare_interface!($implementation -> $interface);
+    };
+}
+
+/// Creates a async closure.
+///
+/// *This macro is only available if Syrette is built with the "async" feature.*
+///
+/// # Examples
+/// ```
+/// # use syrette::async_closure;
+/// #
+/// # async fn do_heavy_operation(timeout: u32, size: u32) -> String { String::new() }
+/// #
+/// # async fn do_other_heavy_operation(input: String) -> String { String::new() }
+/// #
+/// async_closure!(|timeout, size| {
+///     let value = do_heavy_operation(timeout, size).await;
+///
+///     let final_value = do_other_heavy_operation(value).await;
+///
+///     final_value
+/// });
+/// ```
+///
+/// expands to the following
+///
+/// ```rust
+/// # async fn do_heavy_operation(timeout: u32, size: u32) -> String { String::new() }
+/// #
+/// # async fn do_other_heavy_operation(input: String) -> String { String::new() }
+/// #
+/// Box::new(|timeout, size| {
+///     Box::pin(async move {
+///         let value = do_heavy_operation(timeout, size).await;
+///
+///         let final_value = do_other_heavy_operation(value).await;
+///
+///         final_value
+///     })
+/// });
+/// ```
+#[cfg(feature = "async")]
+#[macro_export]
+macro_rules! async_closure {
+    (|$($args: ident),*| { $($inner: stmt);* }) => {
+        Box::new(|$($args),*| {
+            Box::pin(async move { $($inner)* })
+        })
     };
 }
