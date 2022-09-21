@@ -1,6 +1,6 @@
 use syrette::factory;
 
-pub trait IFood
+pub trait IFood: Send + Sync
 {
     fn eat(&self);
 }
