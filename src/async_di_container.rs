@@ -7,7 +7,7 @@
 //!
 //! use syrette::{injectable, AsyncDIContainer};
 //!
-//! trait IDatabaseService
+//! trait IDatabaseService: Send + Sync
 //! {
 //!     fn get_all_records(&self, table_name: String) -> HashMap<String, String>;
 //! }
@@ -83,7 +83,7 @@ use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr};
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
 pub struct AsyncBindingWhenConfigurator<Interface>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
 {
     di_container: Arc<AsyncDIContainer>,
     interface_phantom: PhantomData<Interface>,
@@ -91,7 +91,7 @@ where
 
 impl<Interface> AsyncBindingWhenConfigurator<Interface>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
 {
     fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
@@ -130,7 +130,7 @@ where
 /// Scope configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
 pub struct AsyncBindingScopeConfigurator<Interface, Implementation>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
     Implementation: AsyncInjectable,
 {
     di_container: Arc<AsyncDIContainer>,
@@ -140,7 +140,7 @@ where
 
 impl<Interface, Implementation> AsyncBindingScopeConfigurator<Interface, Implementation>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
     Implementation: AsyncInjectable,
 {
     fn new(di_container: Arc<AsyncDIContainer>) -> Self
@@ -196,7 +196,7 @@ where
 /// Binding builder for type `Interface` inside a [`AsyncDIContainer`].
 pub struct AsyncBindingBuilder<Interface>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
 {
     di_container: Arc<AsyncDIContainer>,
     interface_phantom: PhantomData<Interface>,
@@ -204,7 +204,7 @@ where
 
 impl<Interface> AsyncBindingBuilder<Interface>
 where
-    Interface: 'static + ?Sized,
+    Interface: 'static + ?Sized + Send + Sync,
 {
     fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
@@ -267,9 +267,11 @@ where
     where
         Args: 'static,
         Return: 'static + ?Sized,
-        Interface: Fn<Args, Output = Return>,
-        FactoryFunc: Fn<(Arc<AsyncDIContainer>,), Output = Box<(dyn Fn<Args, Output = Return>)>>
-            + Send
+        Interface: Fn<Args, Output = Return> + Send + Sync,
+        FactoryFunc: Fn<
+                (Arc<AsyncDIContainer>,),
+                Output = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>,
+            > + Send
             + Sync,
     {
         let mut bindings_lock = self.di_container.bindings.lock().await;
@@ -315,7 +317,9 @@ where
         FactoryFunc: Fn<
                 (Arc<AsyncDIContainer>,),
                 Output = Box<
-                    (dyn Fn<Args, Output = crate::future::BoxFuture<'static, Return>>),
+                    (dyn Fn<Args, Output = crate::future::BoxFuture<'static, Return>>
+                         + Send
+                         + Sync),
                 >,
             > + Send
             + Sync,
@@ -405,7 +409,7 @@ impl AsyncDIContainer
     #[must_use]
     pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         AsyncBindingBuilder::<Interface>::new(self.clone())
     }
@@ -421,7 +425,7 @@ impl AsyncDIContainer
         self: &Arc<Self>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         self.get_bound::<Interface>(Vec::new(), None).await
     }
@@ -438,7 +442,7 @@ impl AsyncDIContainer
         name: &'static str,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         self.get_bound::<Interface>(Vec::new(), Some(name)).await
     }
@@ -450,7 +454,7 @@ impl AsyncDIContainer
         name: Option<&'static str>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         let binding_providable = self
             .get_binding_providable::<Interface>(name, dependency_history)
@@ -464,7 +468,7 @@ impl AsyncDIContainer
         binding_providable: AsyncProvidable,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         match binding_providable {
             AsyncProvidable::Transient(transient_binding) => {
@@ -553,7 +557,7 @@ impl AsyncDIContainer
         dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, AsyncDIContainerError>
     where
-        Interface: 'static + ?Sized,
+        Interface: 'static + ?Sized + Send + Sync,
     {
         let provider;
 
@@ -610,7 +614,7 @@ mod tests
         use crate::interfaces::async_injectable::AsyncInjectable;
         use crate::ptr::TransientPtr;
 
-        pub trait IUserManager
+        pub trait IUserManager: Send + Sync
         {
             fn add_user(&self, user_id: i128);
 
@@ -658,7 +662,7 @@ mod tests
             }
         }
 
-        pub trait INumber
+        pub trait INumber: Send + Sync
         {
             fn get(&self) -> i32;
 
@@ -845,8 +849,11 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
     {
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+        use crate as syrette;
+        use crate::factory;
+
+        #[factory(threadsafe = true)]
+        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
 
         let mut di_container = AsyncDIContainer::new();
 
@@ -877,8 +884,11 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_factory_when_named() -> Result<(), Box<dyn Error>>
     {
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+        use crate as syrette;
+        use crate::factory;
+
+        #[factory(threadsafe = true)]
+        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
 
         let mut di_container = AsyncDIContainer::new();
 
@@ -1144,7 +1154,7 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_get_factory() -> Result<(), Box<dyn Error>>
     {
-        trait IUserManager
+        trait IUserManager: Send + Sync
         {
             fn add_user(&mut self, user_id: i128);
 
@@ -1207,7 +1217,7 @@ mod tests
 
         mock_provider.expect_do_clone().returning(|| {
             type FactoryFunc = Box<
-                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>>)
+                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
             >;
 
             let mut inner_mock_provider = MockProvider::new();
@@ -1254,7 +1264,7 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_get_factory_named() -> Result<(), Box<dyn Error>>
     {
-        trait IUserManager
+        trait IUserManager: Send + Sync
         {
             fn add_user(&mut self, user_id: i128);
 
@@ -1317,7 +1327,7 @@ mod tests
 
         mock_provider.expect_do_clone().returning(|| {
             type FactoryFunc = Box<
-                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>>)
+                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
             >;
 
             let mut inner_mock_provider = MockProvider::new();

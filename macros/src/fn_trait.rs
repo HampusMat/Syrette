@@ -2,7 +2,7 @@ use quote::ToTokens;
 use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::token::Paren;
-use syn::{parenthesized, Ident, Token, Type};
+use syn::{parenthesized, parse_str, Ident, Token, TraitBound, Type};
 
 /// A function trait. `dyn Fn(u32) -> String`
 #[derive(Debug, Clone)]
@@ -14,6 +14,15 @@ pub struct FnTrait
     pub inputs: Punctuated<Type, Token![,]>,
     pub r_arrow_token: Token![->],
     pub output: Type,
+    pub trait_bounds: Punctuated<TraitBound, Token![+]>,
+}
+
+impl FnTrait
+{
+    pub fn add_trait_bound(&mut self, trait_bound: TraitBound)
+    {
+        self.trait_bounds.push(trait_bound);
+    }
 }
 
 impl Parse for FnTrait
@@ -45,6 +54,7 @@ impl Parse for FnTrait
             inputs,
             r_arrow_token,
             output,
+            trait_bounds: Punctuated::new(),
         })
     }
 }
@@ -64,5 +74,13 @@ impl ToTokens for FnTrait
         self.r_arrow_token.to_tokens(tokens);
 
         self.output.to_tokens(tokens);
+
+        if !self.trait_bounds.is_empty() {
+            let plus: Token![+] = parse_str("+").unwrap();
+
+            plus.to_tokens(tokens);
+
+            self.trait_bounds.to_tokens(tokens);
+        }
     }
 }

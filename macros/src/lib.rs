@@ -6,7 +6,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input};
+use syn::{parse, parse_macro_input, parse_str};
 
 mod decl_def_factory_args;
 mod declare_interface_args;
@@ -235,6 +235,11 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         .into(),
     )
     .unwrap();
+
+    if is_threadsafe {
+        factory_interface.add_trait_bound(parse_str("Send").unwrap());
+        factory_interface.add_trait_bound(parse_str("Sync").unwrap());
+    }
 
     type_alias.ty = Box::new(Type::Verbatim(factory_interface.to_token_stream()));
 
