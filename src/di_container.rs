@@ -349,6 +349,7 @@ impl DIContainer
     }
 
     /// Returns a new [`BindingBuilder`] for the given interface.
+    #[must_use]
     pub fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,

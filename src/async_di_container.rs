@@ -402,6 +402,7 @@ impl AsyncDIContainer
     }
 
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
+    #[must_use]
     pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,
