@@ -30,9 +30,11 @@ pub async fn bootstrap() -> Result<Arc<AsyncDIContainer>>
     di_container
         .bind::<dyn ICat>()
         .to_default_factory(&|_| {
-            let cat: TransientPtr<dyn ICat> = TransientPtr::new(Cat::new());
+            Box::new(|| {
+                let cat: TransientPtr<dyn ICat> = TransientPtr::new(Cat::new());
 
-            cat
+                cat
+            })
         })
         .await?;
 

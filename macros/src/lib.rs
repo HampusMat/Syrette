@@ -190,6 +190,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
     use quote::ToTokens;
     use syn::Type;
 
+    use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::macro_args::FactoryMacroArgs;
     use crate::factory::type_alias::FactoryTypeAlias;
 
@@ -239,47 +240,8 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 
     type_alias.ty = Box::new(Type::Verbatim(factory_interface.to_token_stream()));
 
-    let decl_interfaces = if is_threadsafe {
-        quote! {
-            syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #factory_interface
-                > -> syrette::interfaces::factory::IFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #factory_interface
-                >,
-                async = true
-            );
-
-            syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #factory_interface
-                > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
-                async = true
-            );
-        }
-    } else {
-        quote! {
-            syrette::declare_interface!(
-                syrette::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
-                    #factory_interface
-                > -> syrette::interfaces::factory::IFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
-                    #factory_interface
-                >
-            );
-
-            syrette::declare_interface!(
-                syrette::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
-                    #factory_interface
-                > -> syrette::interfaces::any_factory::AnyFactory
-            );
-        }
-    };
+    let decl_interfaces =
+        build_declare_factory_interfaces(&factory_interface, is_threadsafe);
 
     quote! {
         #type_alias
@@ -293,7 +255,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 ///
 /// A default factory is a factory that doesn't take any arguments.
 ///
-/// The more tedious way to accomplish what this macro does would be by using
+/// Another way to accomplish what this macro does would be by using
 /// the [`macro@factory`] macro.
 ///
 /// *This macro is only available if Syrette is built with the "factory" feature.*
@@ -323,7 +285,9 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 #[cfg(feature = "factory")]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
+    use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::declare_default_args::DeclareDefaultFactoryMacroArgs;
+    use crate::fn_trait::FnTrait;
 
     let DeclareDefaultFactoryMacroArgs { interface, flags } = parse(args_stream).unwrap();
 
@@ -332,49 +296,20 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
         .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
         .map_or(false, |flag| flag.is_on.value);
 
-    if is_threadsafe {
-        return quote! {
-            syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #interface,
-                > -> syrette::interfaces::factory::IFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #interface
-                >,
-                async = true
-            );
-
-            syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
-                    #interface,
-                > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
-                async = true
-            );
+    let mut factory_interface: FnTrait = parse(
+        quote! {
+            dyn Fn() -> syrette::ptr::TransientPtr<#interface>
         }
-        .into();
+        .into(),
+    )
+    .unwrap();
+
+    if is_threadsafe {
+        factory_interface.add_trait_bound(parse_str("Send").unwrap());
+        factory_interface.add_trait_bound(parse_str("Sync").unwrap());
     }
 
-    quote! {
-        syrette::declare_interface!(
-            syrette::castable_factory::blocking::CastableFactory<
-                (std::rc::Rc<syrette::di_container::DIContainer>,),
-                #interface,
-            > -> syrette::interfaces::factory::IFactory<
-                (std::rc::Rc<syrette::di_container::DIContainer>,),
-                #interface
-            >
-        );
-
-        syrette::declare_interface!(
-            syrette::castable_factory::blocking::CastableFactory<
-                (std::rc::Rc<syrette::di_container::DIContainer>,),
-                #interface,
-            > -> syrette::interfaces::any_factory::AnyFactory
-        );
-    }
-    .into()
+    build_declare_factory_interfaces(&factory_interface, is_threadsafe).into()
 }
 
 /// Declares the interface trait of a implementation.

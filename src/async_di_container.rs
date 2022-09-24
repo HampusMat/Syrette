@@ -78,7 +78,7 @@ use crate::provider::r#async::{
     AsyncTransientTypeProvider,
     IAsyncProvider,
 };
-use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr};
+use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr, TransientPtr};
 
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
 pub struct AsyncBindingWhenConfigurator<Interface>
@@ -361,8 +361,12 @@ where
     ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn<(Arc<AsyncDIContainer>,), Output = crate::ptr::TransientPtr<Return>>
-            + Send
+        FactoryFunc: Fn<
+                (Arc<AsyncDIContainer>,),
+                Output = Box<
+                    (dyn Fn<(), Output = crate::ptr::TransientPtr<Return>> + Send + Sync),
+                >,
+            > + Send
             + Sync,
     {
         let mut bindings_lock = self.di_container.bindings.lock().await;
@@ -531,7 +535,10 @@ impl AsyncDIContainer
                 use crate::interfaces::factory::IFactory;
 
                 let default_factory = default_factory_binding
-                    .cast::<dyn IFactory<(Arc<AsyncDIContainer>,), Interface>>()
+                    .cast::<dyn IFactory<
+                        (Arc<AsyncDIContainer>,),
+                        dyn Fn<(), Output = TransientPtr<Interface>> + Send + Sync,
+                    >>()
                     .map_err(|err| match err {
                         CastError::NotArcCastable(_) => {
                             AsyncDIContainerError::InterfaceNotAsync(
@@ -546,7 +553,7 @@ impl AsyncDIContainer
                         }
                     })?;
 
-                Ok(SomeThreadsafePtr::Transient(default_factory(self.clone())))
+                Ok(SomeThreadsafePtr::Transient(default_factory(self.clone())()))
             }
         }
     }

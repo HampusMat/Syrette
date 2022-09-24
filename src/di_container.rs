@@ -71,7 +71,7 @@ use crate::provider::blocking::{
     SingletonProvider,
     TransientTypeProvider,
 };
-use crate::ptr::{SingletonPtr, SomePtr};
+use crate::ptr::{SingletonPtr, SomePtr, TransientPtr};
 
 /// When configurator for a binding for type 'Interface' inside a [`DIContainer`].
 pub struct BindingWhenConfigurator<Interface>
@@ -294,15 +294,18 @@ where
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
     #[cfg(feature = "factory")]
-    pub fn to_default_factory<Return>(
+    pub fn to_default_factory<Return, FactoryFunc>(
         &self,
-        factory_func: &'static dyn Fn<
-            (Rc<DIContainer>,),
-            Output = crate::ptr::TransientPtr<Return>,
-        >,
+        factory_func: &'static FactoryFunc,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
+        FactoryFunc: Fn<
+            (Rc<DIContainer>,),
+            Output = crate::ptr::TransientPtr<
+                dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
+            >,
+        >,
     {
         {
             let bindings = self.di_container.bindings.borrow();
@@ -445,13 +448,16 @@ impl DIContainer
                 use crate::interfaces::factory::IFactory;
 
                 let default_factory = factory_binding
-                    .cast::<dyn IFactory<(Rc<DIContainer>,), Interface>>()
+                    .cast::<dyn IFactory<
+                        (Rc<DIContainer>,),
+                        dyn Fn<(), Output = TransientPtr<Interface>>,
+                    >>()
                     .map_err(|_| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "default factory",
                     })?;
 
-                Ok(SomePtr::Transient(default_factory(self.clone())))
+                Ok(SomePtr::Transient(default_factory(self.clone())()))
             }
         }
     }
