@@ -7,6 +7,7 @@ pub mod injectable;
 pub mod any_factory;
 
 #[cfg(feature = "factory")]
+#[doc(hidden)]
 pub mod factory;
 
 #[cfg(feature = "async")]
