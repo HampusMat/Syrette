@@ -6,15 +6,19 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input, parse_str};
+use syn::{parse, parse_macro_input};
 
 mod declare_interface_args;
-mod factory;
-mod fn_trait;
 mod injectable;
 mod libs;
 mod macro_flag;
 mod util;
+
+#[cfg(feature = "factory")]
+mod factory;
+
+#[cfg(feature = "factory")]
+mod fn_trait;
 
 use crate::declare_interface_args::DeclareInterfaceArgs;
 use crate::injectable::implementation::InjectableImpl;
@@ -188,7 +192,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
     use quote::ToTokens;
-    use syn::Type;
+    use syn::{parse_str, Type};
 
     use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::macro_args::FactoryMacroArgs;
@@ -266,6 +270,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 ///
 /// # Flags
 /// - `threadsafe` - Mark as threadsafe.
+/// - `async` - Mark as async. Infers the `threadsafe` flag.
 ///
 /// # Panics
 /// If the provided arguments are invalid.
@@ -285,20 +290,40 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 #[cfg(feature = "factory")]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
+    use syn::parse_str;
+
     use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::declare_default_args::DeclareDefaultFactoryMacroArgs;
     use crate::fn_trait::FnTrait;
 
     let DeclareDefaultFactoryMacroArgs { interface, flags } = parse(args_stream).unwrap();
 
-    let is_threadsafe = flags
+    let mut is_threadsafe = flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
         .map_or(false, |flag| flag.is_on.value);
 
+    let is_async = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "async")
+        .map_or(false, |flag| flag.is_on.value);
+
+    if is_async {
+        is_threadsafe = true;
+    }
+
     let mut factory_interface: FnTrait = parse(
-        quote! {
-            dyn Fn() -> syrette::ptr::TransientPtr<#interface>
+        if is_async {
+            quote! {
+                dyn Fn() -> syrette::future::BoxFuture<
+                    'static,
+                    syrette::ptr::TransientPtr<#interface>
+                >
+            }
+        } else {
+            quote! {
+                dyn Fn() -> syrette::ptr::TransientPtr<#interface>
+            }
         }
         .into(),
     )

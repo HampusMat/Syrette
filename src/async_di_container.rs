@@ -69,6 +69,7 @@ use crate::errors::async_di_container::{
     AsyncBindingWhenConfiguratorError,
     AsyncDIContainerError,
 };
+use crate::future::BoxFuture;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::libs::intertrait::cast::error::CastError;
 use crate::libs::intertrait::cast::{CastArc, CastBox};
@@ -274,6 +275,8 @@ where
             > + Send
             + Sync,
     {
+        use crate::provider::r#async::AsyncFactoryVariant;
+
         let mut bindings_lock = self.di_container.bindings.lock().await;
 
         if bindings_lock.has::<Interface>(None) {
@@ -289,7 +292,7 @@ where
             None,
             Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                 crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                false,
+                AsyncFactoryVariant::Normal,
             )),
         );
 
@@ -313,7 +316,8 @@ where
     where
         Args: 'static,
         Return: 'static + ?Sized,
-        Interface: Fn<Args, Output = crate::future::BoxFuture<'static, Return>>,
+        Interface:
+            Fn<Args, Output = crate::future::BoxFuture<'static, Return>> + Send + Sync,
         FactoryFunc: Fn<
                 (Arc<AsyncDIContainer>,),
                 Output = Box<
@@ -324,6 +328,8 @@ where
             > + Send
             + Sync,
     {
+        use crate::provider::r#async::AsyncFactoryVariant;
+
         let mut bindings_lock = self.di_container.bindings.lock().await;
 
         if bindings_lock.has::<Interface>(None) {
@@ -339,7 +345,7 @@ where
             None,
             Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                 crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                false,
+                AsyncFactoryVariant::Normal,
             )),
         );
 
@@ -369,6 +375,8 @@ where
             > + Send
             + Sync,
     {
+        use crate::provider::r#async::AsyncFactoryVariant;
+
         let mut bindings_lock = self.di_container.bindings.lock().await;
 
         if bindings_lock.has::<Interface>(None) {
@@ -384,7 +392,57 @@ where
             None,
             Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                 crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                true,
+                AsyncFactoryVariant::Default,
+            )),
+        );
+
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+    }
+
+    /// Creates a binding of factory type `Interface` to a async factory inside of the
+    /// associated [`AsyncDIContainer`].
+    ///
+    /// *This function is only available if Syrette is built with the "factory" and
+    /// "async" features.*
+    ///
+    /// # Errors
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
+    /// the interface.
+    #[cfg(all(feature = "factory", feature = "async"))]
+    pub async fn to_async_default_factory<Return, FactoryFunc>(
+        &self,
+        factory_func: &'static FactoryFunc,
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    where
+        Return: 'static + ?Sized,
+        FactoryFunc: Fn<
+                (Arc<AsyncDIContainer>,),
+                Output = Box<
+                    (dyn Fn<(), Output = crate::future::BoxFuture<'static, Return>>
+                         + Send
+                         + Sync),
+                >,
+            > + Send
+            + Sync,
+    {
+        use crate::provider::r#async::AsyncFactoryVariant;
+
+        let mut bindings_lock = self.di_container.bindings.lock().await;
+
+        if bindings_lock.has::<Interface>(None) {
+            return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >(
+            )));
+        }
+
+        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+
+        bindings_lock.set::<Interface>(
+            None,
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                AsyncFactoryVariant::AsyncDefault,
             )),
         );
 
@@ -464,10 +522,10 @@ impl AsyncDIContainer
             .get_binding_providable::<Interface>(name, dependency_history)
             .await?;
 
-        self.handle_binding_providable(binding_providable)
+        self.handle_binding_providable(binding_providable).await
     }
 
-    fn handle_binding_providable<Interface>(
+    async fn handle_binding_providable<Interface>(
         self: &Arc<Self>,
         binding_providable: AsyncProvidable,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
@@ -507,11 +565,10 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {
+                use crate::interfaces::factory::IThreadsafeFactory;
+
                 let factory = factory_binding
-                    .cast::<dyn crate::interfaces::factory::IFactory<
-                        (Arc<AsyncDIContainer>,),
-                        Interface,
-                    >>()
+                    .cast::<dyn IThreadsafeFactory<(Arc<AsyncDIContainer>,), Interface>>()
                     .map_err(|err| match err {
                         CastError::NotArcCastable(_) => {
                             AsyncDIContainerError::InterfaceNotAsync(
@@ -531,31 +588,57 @@ impl AsyncDIContainer
                 ))
             }
             #[cfg(feature = "factory")]
-            AsyncProvidable::DefaultFactory(default_factory_binding) => {
-                use crate::interfaces::factory::IFactory;
+            AsyncProvidable::DefaultFactory(binding) => {
+                use crate::interfaces::factory::IThreadsafeFactory;
 
-                let default_factory = default_factory_binding
-                    .cast::<dyn IFactory<
+                let default_factory = Self::cast_factory_binding::<
+                    dyn IThreadsafeFactory<
                         (Arc<AsyncDIContainer>,),
                         dyn Fn<(), Output = TransientPtr<Interface>> + Send + Sync,
-                    >>()
-                    .map_err(|err| match err {
-                        CastError::NotArcCastable(_) => {
-                            AsyncDIContainerError::InterfaceNotAsync(
-                                type_name::<Interface>(),
-                            )
-                        }
-                        CastError::CastFailed { from: _, to: _ } => {
-                            AsyncDIContainerError::CastFailed {
-                                interface: type_name::<Interface>(),
-                                binding_kind: "default factory",
-                            }
-                        }
-                    })?;
+                    >,
+                >(binding, "default factory")?;
 
                 Ok(SomeThreadsafePtr::Transient(default_factory(self.clone())()))
             }
+            #[cfg(feature = "factory")]
+            AsyncProvidable::AsyncDefaultFactory(binding) => {
+                use crate::interfaces::factory::IThreadsafeFactory;
+
+                let async_default_factory = Self::cast_factory_binding::<
+                    dyn IThreadsafeFactory<
+                        (Arc<AsyncDIContainer>,),
+                        dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
+                            + Send
+                            + Sync,
+                    >,
+                >(
+                    binding, "async default factory"
+                )?;
+
+                Ok(SomeThreadsafePtr::Transient(
+                    async_default_factory(self.clone())().await,
+                ))
+            }
         }
+    }
+
+    #[cfg(feature = "factory")]
+    fn cast_factory_binding<Type: 'static + ?Sized>(
+        factory_binding: Arc<dyn crate::interfaces::any_factory::AnyThreadsafeFactory>,
+        binding_kind: &'static str,
+    ) -> Result<Arc<Type>, AsyncDIContainerError>
+    {
+        factory_binding.cast::<Type>().map_err(|err| match err {
+            CastError::NotArcCastable(_) => {
+                AsyncDIContainerError::InterfaceNotAsync(type_name::<Type>())
+            }
+            CastError::CastFailed { from: _, to: _ } => {
+                AsyncDIContainerError::CastFailed {
+                    interface: type_name::<Type>(),
+                    binding_kind,
+                }
+            }
+        })
     }
 
     async fn get_binding_providable<Interface>(

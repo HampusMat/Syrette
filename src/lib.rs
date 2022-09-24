@@ -125,4 +125,9 @@ macro_rules! async_closure {
             Box::pin(async move { $($inner)* })
         })
     };
+    (|| { $($inner: stmt);* }) => {
+        Box::new(|| {
+            Box::pin(async move { $($inner)* })
+        })
+    };
 }

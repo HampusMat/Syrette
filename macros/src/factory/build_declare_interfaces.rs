@@ -14,7 +14,7 @@ pub fn build_declare_factory_interfaces(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
                     (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
                     #factory_interface
-                > -> syrette::interfaces::factory::IFactory<
+                > -> syrette::interfaces::factory::IThreadsafeFactory<
                     (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
                     #factory_interface
                 >,

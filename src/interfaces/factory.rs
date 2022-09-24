@@ -9,3 +9,12 @@ where
     ReturnInterface: 'static + ?Sized,
 {
 }
+
+/// Interface for a threadsafe factory.
+#[cfg(feature = "async")]
+pub trait IThreadsafeFactory<Args, ReturnInterface>:
+    Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::libs::intertrait::CastFromSync
+where
+    ReturnInterface: 'static + ?Sized,
+{
+}

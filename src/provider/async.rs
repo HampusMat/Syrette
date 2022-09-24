@@ -26,6 +26,12 @@ pub enum AsyncProvidable
             dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
         >,
     ),
+    #[cfg(feature = "factory")]
+    AsyncDefaultFactory(
+        crate::ptr::ThreadsafeFactoryPtr<
+            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+        >,
+    ),
 }
 
 #[async_trait]
@@ -150,13 +156,21 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum AsyncFactoryVariant
+{
+    Normal,
+    Default,
+    AsyncDefault,
+}
+
 #[cfg(feature = "factory")]
 pub struct AsyncFactoryProvider
 {
     factory: crate::ptr::ThreadsafeFactoryPtr<
         dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
     >,
-    is_default_factory: bool,
+    variant: AsyncFactoryVariant,
 }
 
 #[cfg(feature = "factory")]
@@ -166,13 +180,10 @@ impl AsyncFactoryProvider
         factory: crate::ptr::ThreadsafeFactoryPtr<
             dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
         >,
-        is_default_factory: bool,
+        variant: AsyncFactoryVariant,
     ) -> Self
     {
-        Self {
-            factory,
-            is_default_factory,
-        }
+        Self { factory, variant }
     }
 }
 
@@ -186,10 +197,14 @@ impl IAsyncProvider for AsyncFactoryProvider
         _dependency_history: Vec<&'static str>,
     ) -> Result<AsyncProvidable, InjectableError>
     {
-        Ok(if self.is_default_factory {
-            AsyncProvidable::DefaultFactory(self.factory.clone())
-        } else {
-            AsyncProvidable::Factory(self.factory.clone())
+        Ok(match self.variant {
+            AsyncFactoryVariant::Normal => AsyncProvidable::Factory(self.factory.clone()),
+            AsyncFactoryVariant::Default => {
+                AsyncProvidable::DefaultFactory(self.factory.clone())
+            }
+            AsyncFactoryVariant::AsyncDefault => {
+                AsyncProvidable::AsyncDefaultFactory(self.factory.clone())
+            }
         })
     }
 
@@ -206,7 +221,7 @@ impl Clone for AsyncFactoryProvider
     {
         Self {
             factory: self.factory.clone(),
-            is_default_factory: self.is_default_factory.clone(),
+            variant: self.variant,
         }
     }
 }

@@ -2,10 +2,14 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-use anyhow::Result;
-use syrette::{async_closure, factory, AsyncDIContainer};
+use std::time::Duration;
 
-trait IFoo
+use anyhow::Result;
+use syrette::ptr::TransientPtr;
+use syrette::{async_closure, declare_default_factory, factory, AsyncDIContainer};
+use tokio::time::sleep;
+
+trait IFoo: Send + Sync
 {
     fn bar(&self);
 }
@@ -36,6 +40,34 @@ impl IFoo for Foo
     }
 }
 
+trait IPerson: Send + Sync
+{
+    fn name(&self) -> String;
+}
+
+struct Person
+{
+    name: String,
+}
+
+impl Person
+{
+    fn new(name: String) -> Self
+    {
+        Self { name }
+    }
+}
+
+impl IPerson for Person
+{
+    fn name(&self) -> String
+    {
+        self.name.clone()
+    }
+}
+
+declare_default_factory!(dyn IPerson, async = true);
+
 #[tokio::main]
 async fn main() -> Result<()>
 {
@@ -45,9 +77,23 @@ async fn main() -> Result<()>
         .bind::<IFooFactory>()
         .to_async_factory(&|_| {
             async_closure!(|cnt| {
-                let foo = Box::new(Foo::new(cnt));
+                let foo_ptr = Box::new(Foo::new(cnt));
 
-                foo as Box<dyn IFoo>
+                foo_ptr as Box<dyn IFoo>
+            })
+        })
+        .await?;
+
+    di_container
+        .bind::<dyn IPerson>()
+        .to_async_default_factory(&|_| {
+            async_closure!(|| {
+                // Do some time demanding thing...
+                sleep(Duration::from_secs(1)).await;
+
+                let person = TransientPtr::new(Person::new("Bob".to_string()));
+
+                person as TransientPtr<dyn IPerson>
             })
         })
         .await?;
@@ -57,9 +103,13 @@ async fn main() -> Result<()>
         .await?
         .threadsafe_factory()?;
 
-    let foo = foo_factory(4).await;
+    let foo_ptr = foo_factory(4).await;
 
-    foo.bar();
+    foo_ptr.bar();
+
+    let person = di_container.get::<dyn IPerson>().await?.transient()?;
+
+    println!("Person name is {}", person.name());
 
     Ok(())
 }
