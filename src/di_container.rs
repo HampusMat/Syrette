@@ -71,7 +71,7 @@ use crate::provider::blocking::{
     SingletonProvider,
     TransientTypeProvider,
 };
-use crate::ptr::{SingletonPtr, SomePtr, TransientPtr};
+use crate::ptr::{SingletonPtr, SomePtr};
 
 /// When configurator for a binding for type 'Interface' inside a [`DIContainer`].
 pub struct BindingWhenConfigurator<Interface>
@@ -446,6 +446,7 @@ impl DIContainer
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
                 use crate::interfaces::factory::IFactory;
+                use crate::ptr::TransientPtr;
 
                 let default_factory = factory_binding
                     .cast::<dyn IFactory<
