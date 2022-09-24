@@ -4,7 +4,7 @@ use quote::{format_ident, quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::{parse_str, ExprMethodCall, FnArg, Generics, ItemImpl, Type};
 
-use crate::dependency::Dependency;
+use crate::injectable::dependency::Dependency;
 use crate::util::item_impl::find_impl_method_by_name_mut;
 use crate::util::string::camelcase_to_snakecase;
 use crate::util::syn_path::syn_path_to_string;

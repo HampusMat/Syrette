@@ -3,7 +3,7 @@ use std::error::Error;
 use proc_macro2::Ident;
 use syn::{parse2, FnArg, GenericArgument, LitStr, PathArguments, Type};
 
-use crate::named_attr_input::NamedAttrInput;
+use crate::injectable::named_attr_input::NamedAttrInput;
 use crate::util::syn_path::syn_path_to_string;
 
 pub struct Dependency

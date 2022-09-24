@@ -8,23 +8,18 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse, parse_macro_input, parse_str};
 
-mod decl_def_factory_args;
 mod declare_interface_args;
-mod dependency;
-mod factory_macro_args;
-mod factory_type_alias;
+mod factory;
 mod fn_trait;
-mod injectable_impl;
-mod injectable_macro_args;
+mod injectable;
 mod libs;
 mod macro_flag;
-mod named_attr_input;
 mod util;
 
-use declare_interface_args::DeclareInterfaceArgs;
-use injectable_impl::InjectableImpl;
-use injectable_macro_args::InjectableMacroArgs;
-use libs::intertrait_macros::gen_caster::generate_caster;
+use crate::declare_interface_args::DeclareInterfaceArgs;
+use crate::injectable::implementation::InjectableImpl;
+use crate::injectable::macro_args::InjectableMacroArgs;
+use crate::libs::intertrait_macros::gen_caster::generate_caster;
 
 /// Makes a struct injectable. Thereby usable with [`DIContainer`].
 ///
@@ -195,7 +190,8 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
     use quote::ToTokens;
     use syn::Type;
 
-    use crate::factory_macro_args::FactoryMacroArgs;
+    use crate::factory::macro_args::FactoryMacroArgs;
+    use crate::factory::type_alias::FactoryTypeAlias;
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
 
@@ -213,7 +209,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         is_threadsafe = true;
     }
 
-    let factory_type_alias::FactoryTypeAlias {
+    let FactoryTypeAlias {
         mut type_alias,
         mut factory_interface,
         arg_types: _,
@@ -327,7 +323,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 #[cfg(feature = "factory")]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
-    use crate::decl_def_factory_args::DeclareDefaultFactoryMacroArgs;
+    use crate::factory::declare_default_args::DeclareDefaultFactoryMacroArgs;
 
     let DeclareDefaultFactoryMacroArgs { interface, flags } = parse(args_stream).unwrap();
 
