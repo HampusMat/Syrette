@@ -1,11 +1,97 @@
 ## Unreleased
 
 
+## v0.4.0 - 2022-10-01
+### Bug Fixes
+- prevent problems caused by non send + sync traits
+- add missing semicolon in the factory macro
+
+### Build System/Dependency Changes
+- bump versions to 0.4.0
+- add required features for the async-factory example
+- improve async dependencies
+
+### Chores
+- remove repetition of allowing clippy::module_name_repetitions
+
+### Code Refactoring
+- remove unused import in DI container module
+- remove IFactory from public API
+- remove repetition of declaring factory interfaces
+- reorganize modules in the macros crate
+- make the async & non-async DI container bind methods must_use
+- add put factory return types in TransientPtr automatically
+- prevent look for default factory without factory feature
+- make async DI container be used inside of a Arc
+- make DI container be used inside of a Rc
+- improve DI container cast errors
+- remove braces from expected injectable macro input
+- rename the factory macro flag 'async' to 'threadsafe'
+- remove unused import of ItemTrait
+- improve async DI container cast errors
+- replace arc cast panic with an error
+- limit FactoryPtr & AnyFactory to the factory feature
+- make DI container have single get function
+- move specifying binding scope to a binding scope configurator
+- improve private method names & clean up InjectableImpl
+
+### Code Testing
+- move some factory function types to type aliases
+
+### Documentation Changes
+- improve item links in the injectable macro
+- fix unresolved link to TransientPtr
+- make IFood in async example Send + Sync
+- fix ambiguous link to the factory macro
+- add missing modules in the async example
+- add async support to readme
+- improve & add examples
+- use anyhow in the unbound example
+- correct the example in the readme
+- add CI shield to readme
+- update the DI container example
+- remove license shield from readme
+
+### Features
+- add bind async default factories to async DI container
+- add binding async factories to async DI container
+- add factory macro async flag
+- allow factories to access async DI container
+- allow factories access to DI container
+- add a threadsafe flag to the declare_default_factory macro
+- implement async functionality
+- implement named bindings
+
+### Style Improvements
+- add rustfmt config options
+
+### BREAKING CHANGE
+
+The to_default_factory method of the blocking and async DI containers now expect a function returning another function
+
+The to_factory & to_default_factory methods of AsyncBindingBuilder now expects a function returning a factory function
+
+The async DI container is to be used inside of a Arc & it also no longer implements Default
+
+Factory types should now be written with the Fn trait instead of the IFactory trait and the to_factory & to_default_factory methods of BindingBuilder now expect a function returning a factory function
+
+The DI container is to be used inside of a Rc & it also no longer implements Default
+
+The injectable macro no longer expects braces around it's flags
+
+FactoryPtr has been limited to the factory feature
+
+The DI container get_singleton & get_factory functions have been replaced by the get function now returning a enum
+
+Specifying the scope of a DI container binding is now done with a binding scope configurator
+
+
 ## v0.3.0 - 2022-08-21
 ### Bug Fixes
 - make DI container get_factory calls in the injectable macro valid
 
 ### Build System/Dependency Changes
+- bump versions to 0.3.0
 - change license in manifests to LGPL-2.1-only
 
 ### Chores
@@ -25,6 +111,7 @@
 - reduce repetition in DI container tests
 
 ### Documentation Changes
+- add v0.3.0 to changelog
 - change project descriptions to describe it as a framework
 - fix declare_default_factory example
 - add injection of 3rd-party structs & traits to features list
