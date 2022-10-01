@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 //! Smart pointer type aliases.
 use std::rc::Rc;
 use std::sync::Arc;

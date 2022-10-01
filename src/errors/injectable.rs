@@ -1,4 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
 //! Error types for structs that implement [`Injectable`].
 //!
 //! [`Injectable`]: crate::interfaces::injectable::Injectable

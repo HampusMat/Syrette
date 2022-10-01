@@ -1,4 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
 use std::marker::PhantomData;
 use std::rc::Rc;
 

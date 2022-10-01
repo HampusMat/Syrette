@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 #[must_use]
 pub fn create_dependency_trace(
     dependency_history: &[&'static str],

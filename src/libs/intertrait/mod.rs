@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 //! A library providing direct casting among trait objects implemented by a type.
 //!
 //! In Rust, an object of a sub-trait of [`Any`] can be downcast to a concrete type

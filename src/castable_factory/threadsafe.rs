@@ -1,4 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
 use crate::interfaces::any_factory::{AnyFactory, AnyThreadsafeFactory};
 use crate::interfaces::factory::IThreadsafeFactory;
 use crate::ptr::TransientPtr;

@@ -1,4 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
 use quote::ToTokens;
 use syn::punctuated::Pair;
 
