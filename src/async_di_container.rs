@@ -81,6 +81,9 @@ use crate::provider::r#async::{
 };
 use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr, TransientPtr};
 
+/// Alias for a threadsafe boxed function.
+pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>;
+
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
 pub struct AsyncBindingWhenConfigurator<Interface>
 where
@@ -269,11 +272,8 @@ where
         Args: 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = Return> + Send + Sync,
-        FactoryFunc: Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>,
-            > + Send
-            + Sync,
+        FactoryFunc:
+            Fn<(Arc<AsyncDIContainer>,), Output = BoxFn<Args, Return>> + Send + Sync,
     {
         use crate::provider::r#async::AsyncFactoryVariant;
 
@@ -320,11 +320,7 @@ where
             Fn<Args, Output = crate::future::BoxFuture<'static, Return>> + Send + Sync,
         FactoryFunc: Fn<
                 (Arc<AsyncDIContainer>,),
-                Output = Box<
-                    (dyn Fn<Args, Output = crate::future::BoxFuture<'static, Return>>
-                         + Send
-                         + Sync),
-                >,
+                Output = BoxFn<Args, crate::future::BoxFuture<'static, Return>>,
             > + Send
             + Sync,
     {
@@ -369,9 +365,7 @@ where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
                 (Arc<AsyncDIContainer>,),
-                Output = Box<
-                    (dyn Fn<(), Output = crate::ptr::TransientPtr<Return>> + Send + Sync),
-                >,
+                Output = BoxFn<(), crate::ptr::TransientPtr<Return>>,
             > + Send
             + Sync,
     {
@@ -417,11 +411,7 @@ where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
                 (Arc<AsyncDIContainer>,),
-                Output = Box<
-                    (dyn Fn<(), Output = crate::future::BoxFuture<'static, Return>>
-                         + Send
-                         + Sync),
-                >,
+                Output = BoxFn<(), crate::future::BoxFuture<'static, Return>>,
             > + Send
             + Sync,
     {
