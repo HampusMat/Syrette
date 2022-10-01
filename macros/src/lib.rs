@@ -187,6 +187,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// #[factory]
 /// type IConfiguratorFactory = dyn Fn(Vec<String>) -> dyn IConfigurator;
 /// ```
+///
+/// [`TransientPtr`]: https://docs.rs/syrette/latest/syrette/ptr/type.TransientPtr.html
 #[proc_macro_attribute]
 #[cfg(feature = "factory")]
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
