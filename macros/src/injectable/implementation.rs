@@ -87,27 +87,37 @@ impl InjectableImpl
 
             quote! {
                 #maybe_doc_hidden
-                #[syrette::libs::async_trait::async_trait]
                 impl #generics syrette::interfaces::async_injectable::AsyncInjectable for #self_type
                 {
-                    async fn resolve(
-                        #di_container_var: &std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,
+                    fn resolve<'di_container, 'fut>(
+                        #di_container_var: &'di_container std::sync::Arc<
+                            syrette::async_di_container::AsyncDIContainer
+                        >,
                         mut #dependency_history_var: Vec<&'static str>,
-                    ) -> Result<
-                        syrette::ptr::TransientPtr<Self>,
-                        syrette::errors::injectable::InjectableError>
+                    ) -> syrette::future::BoxFuture<
+                        'fut,
+                        Result<
+                            syrette::ptr::TransientPtr<Self>,
+                            syrette::errors::injectable::InjectableError
+                        >
+                    >
+                    where
+                        Self: Sized + 'fut,
+                        'di_container: 'fut
                     {
-                        use std::any::type_name;
+                        Box::pin(async move {
+                            use std::any::type_name;
 
-                        use syrette::errors::injectable::InjectableError;
+                            use syrette::errors::injectable::InjectableError;
 
-                        let self_type_name = type_name::<#self_type>();
+                            let self_type_name = type_name::<#self_type>();
 
-                        #maybe_prevent_circular_deps
+                            #maybe_prevent_circular_deps
 
-                        return Ok(syrette::ptr::TransientPtr::new(Self::new(
-                            #(#async_get_dep_method_calls),*
-                        )));
+                            Ok(syrette::ptr::TransientPtr::new(Self::new(
+                                #(#async_get_dep_method_calls),*
+                            )))
+                        })
                     }
                 }
 

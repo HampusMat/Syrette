@@ -4,27 +4,26 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
 use crate::async_di_container::AsyncDIContainer;
 use crate::errors::injectable::InjectableError;
+use crate::future::BoxFuture;
 use crate::libs::intertrait::CastFromSync;
 use crate::ptr::TransientPtr;
 
 /// Interface for structs that can be injected into or be injected to.
-#[async_trait]
 pub trait AsyncInjectable: CastFromSync
 {
     /// Resolves the dependencies of the injectable.
     ///
     /// # Errors
     /// Will return `Err` if resolving the dependencies fails.
-    async fn resolve(
-        di_container: &Arc<AsyncDIContainer>,
+    fn resolve<'di_container, 'fut>(
+        di_container: &'di_container Arc<AsyncDIContainer>,
         dependency_history: Vec<&'static str>,
-    ) -> Result<TransientPtr<Self>, InjectableError>
+    ) -> BoxFuture<'fut, Result<TransientPtr<Self>, InjectableError>>
     where
-        Self: Sized;
+        Self: Sized + 'fut,
+        'di_container: 'fut;
 }
 
 impl Debug for dyn AsyncInjectable
