@@ -1,6 +1,6 @@
 [package]
 name = "syrette"
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "The convenient dependency injection framework"
@@ -34,7 +34,7 @@ name = "async-factory"
 required-features = ["async", "factory"]
 
 [dependencies]
-syrette_macros = { path = "./macros", version = "0.3.0" }
+syrette_macros = { path = "./macros", version = "0.4.0" }
 linkme = "0.3.0"
 once_cell = "1.4"
 ahash = "0.7.6"
