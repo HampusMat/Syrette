@@ -302,8 +302,7 @@ where
     /// Creates a binding of factory type `Interface` to a async factory inside of the
     /// associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" and
-    /// "async" features.*
+    /// *This function is only available if Syrette is built with the "factory" feature.*
     ///
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
@@ -396,8 +395,7 @@ where
     /// Creates a binding of factory type `Interface` to a async factory inside of the
     /// associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" and
-    /// "async" features.*
+    /// *This function is only available if Syrette is built with the "factory" feature.*
     ///
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
