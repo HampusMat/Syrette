@@ -227,6 +227,37 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # trait Foo: Send + Sync {}
+    /// #
+    /// # struct Bar {}
+    /// #
+    /// # #[injectable(Foo, async = true)]
+    /// # impl Bar {
+    /// #   fn new() -> Self
+    /// #   {
+    /// #       Self {}
+    /// #   }
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = AsyncDIContainer::new();
+    /// #
+    /// di_container.bind::<dyn Foo>().to::<Bar>().await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn to<Implementation>(
         &self,
     ) -> Result<
@@ -263,6 +294,46 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::{AsyncDIContainer, factory};
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait Foo: Send + Sync {}
+    /// #
+    /// # struct Bar
+    /// # {
+    /// #   num: i32,
+    /// #   some_str: String
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # #[factory(threadsafe = true)]
+    /// # type FooFactory = dyn Fn(i32, String) -> dyn Foo;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = AsyncDIContainer::new();
+    /// #
+    /// di_container
+    ///     .bind::<FooFactory>()
+    ///     .to_factory(&|_| {
+    ///         Box::new(|num, some_str| {
+    ///             let bar = TransientPtr::new(Bar { num, some_str });
+    ///
+    ///             bar as TransientPtr<dyn Foo>
+    ///         })
+    ///     })
+    ///     .await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "factory")]
     pub async fn to_factory<Args, Return, FactoryFunc>(
         &self,
@@ -307,6 +378,49 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// # use std::time::Duration;
+    /// #
+    /// # use syrette::{AsyncDIContainer, factory, async_closure};
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait Foo: Send + Sync {}
+    /// #
+    /// # struct Bar
+    /// # {
+    /// #   num: i32,
+    /// #   some_str: String
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # #[factory(async = true)]
+    /// # type FooFactory = dyn Fn(i32, String) -> dyn Foo;
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = AsyncDIContainer::new();
+    /// #
+    /// di_container
+    ///     .bind::<FooFactory>()
+    ///     .to_async_factory(&|_| {
+    ///         async_closure!(|num, some_str| {
+    ///             let bar = TransientPtr::new(Bar { num, some_str });
+    ///
+    ///             tokio::time::sleep(Duration::from_secs(2)).await;
+    ///
+    ///             bar as TransientPtr<dyn Foo>
+    ///         })
+    ///     })
+    ///     .await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(all(feature = "factory", feature = "async"))]
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
         &self,
@@ -355,6 +469,46 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::AsyncDIContainer;
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait Foo: Send + Sync {}
+    /// #
+    /// # struct Bar
+    /// # {
+    /// #   num: i32,
+    /// #   some_str: String
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = AsyncDIContainer::new();
+    /// #
+    /// di_container
+    ///     .bind::<dyn Foo>()
+    ///     .to_default_factory(&|_| {
+    ///         Box::new(|| {
+    ///             let bar = TransientPtr::new(Bar {
+    ///                 num: 42,
+    ///                 some_str: "hello".to_string(),
+    ///             });
+    ///
+    ///             bar as TransientPtr<dyn Foo>
+    ///         })
+    ///     })
+    ///     .await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "factory")]
     pub async fn to_default_factory<Return, FactoryFunc>(
         &self,
@@ -400,6 +554,49 @@ where
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// # use std::time::Duration;
+    /// #
+    /// # use syrette::{AsyncDIContainer, async_closure};
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait Foo: Send + Sync {}
+    /// #
+    /// # struct Bar
+    /// # {
+    /// #   num: i32,
+    /// #   some_str: String
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = AsyncDIContainer::new();
+    /// #
+    /// di_container
+    ///     .bind::<dyn Foo>()
+    ///     .to_async_default_factory(&|_| {
+    ///         async_closure!(|| {
+    ///             let bar = TransientPtr::new(Bar {
+    ///                 num: 42,
+    ///                 some_str: "hello".to_string(),
+    ///             });
+    ///
+    ///             tokio::time::sleep(Duration::from_secs(1)).await;
+    ///
+    ///             bar as TransientPtr<dyn Foo>
+    ///         })
+    ///     })
+    ///     .await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(all(feature = "factory", feature = "async"))]
     pub async fn to_async_default_factory<Return, FactoryFunc>(
         &self,
