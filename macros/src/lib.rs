@@ -25,7 +25,8 @@ use crate::injectable::implementation::InjectableImpl;
 use crate::injectable::macro_args::InjectableMacroArgs;
 use crate::libs::intertrait_macros::gen_caster::generate_caster;
 
-/// Makes a struct injectable. Thereby usable with [`DIContainer`].
+/// Makes a struct injectable. Thereby usable with [`DIContainer`] or
+/// [`AsyncDIContainer`].
 ///
 /// # Arguments
 /// * (Optional) A interface trait the struct implements.
@@ -103,9 +104,10 @@ use crate::libs::intertrait_macros::gen_caster::generate_caster;
 /// }
 /// ```
 ///
-/// [`DIContainer`]: ../syrette/di_container/struct.DIContainer.html
-/// [`Injectable`]: ../syrette/interfaces/injectable/trait.Injectable.html
-/// [`di_container_bind`]: ../syrette/macro.di_container_bind.html
+/// [`DIContainer`]: https://docs.rs/syrette/latest/syrette/di_container/struct.DIContainer.html
+/// [`AsyncDIContainer`]: https://docs.rs/syrette/latest/syrette/async_di_container/struct.AsyncDIContainer.html
+/// [`Injectable`]: https://docs.rs/syrette/latest/syrette/interfaces/injectable/trait.Injectable.html
+/// [`di_container_bind`]: https://docs.rs/syrette/latest/syrette/macro.di_container_bind.html
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
