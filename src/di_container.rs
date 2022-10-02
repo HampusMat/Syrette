@@ -334,17 +334,15 @@ where
     /// # }
     /// ```
     #[feature_specific("factory")]
-    pub fn to_factory<Args, Return>(
+    pub fn to_factory<Args, Return, Func>(
         &self,
-        factory_func: &'static dyn Fn<
-            (std::rc::Rc<DIContainer>,),
-            Output = Box<dyn Fn<Args, Output = crate::ptr::TransientPtr<Return>>>,
-        >,
+        factory_func: &'static Func,
     ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Args: 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
+        Func: Fn<(std::rc::Rc<DIContainer>,), Output = Box<Interface>>,
     {
         {
             let bindings = self.di_container.bindings.borrow();
