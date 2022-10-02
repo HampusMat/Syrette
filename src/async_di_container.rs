@@ -656,8 +656,8 @@ impl AsyncDIContainer
     /// # Errors
     /// Will return `Err` if:
     /// - No binding for `Interface` exists
-    /// - Resolving the binding for fails
-    /// - Casting the binding for fails
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
     pub async fn get<Interface>(
         self: &Arc<Self>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
@@ -672,8 +672,8 @@ impl AsyncDIContainer
     /// # Errors
     /// Will return `Err` if:
     /// - No binding for `Interface` with name `name` exists
-    /// - Resolving the binding fails
-    /// - Casting the binding for fails
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
     pub async fn get_named<Interface>(
         self: &Arc<Self>,
         name: &'static str,

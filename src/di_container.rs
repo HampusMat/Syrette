@@ -494,8 +494,8 @@ impl DIContainer
     /// # Errors
     /// Will return `Err` if:
     /// - No binding for `Interface` exists
-    /// - Resolving the binding for fails
-    /// - Casting the binding for fails
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
     pub fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -508,8 +508,8 @@ impl DIContainer
     /// # Errors
     /// Will return `Err` if:
     /// - No binding for `Interface` with name `name` exists
-    /// - Resolving the binding fails
-    /// - Casting the binding for fails
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
     pub fn get_named<Interface>(
         self: &Rc<Self>,
         name: &'static str,
