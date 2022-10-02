@@ -213,6 +213,36 @@ where
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::{DIContainer, injectable};
+    /// #
+    /// # trait Foo {}
+    /// #
+    /// # struct Bar {}
+    /// #
+    /// # #[injectable(Foo)]
+    /// # impl Bar {
+    /// #   fn new() -> Self
+    /// #   {
+    /// #       Self {}
+    /// #   }
+    /// # }
+    /// #
+    /// # impl Foo for Bar {}
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = DIContainer::new();
+    /// #
+    /// di_container.bind::<dyn Foo>().to::<Bar>();
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn to<Implementation>(
         &self,
     ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
@@ -246,6 +276,63 @@ where
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::{DIContainer, factory};
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait ICustomerID {}
+    /// # trait ICustomer {}
+    /// #
+    /// # struct Customer
+    /// # {
+    /// #   name: String,
+    /// #   id: TransientPtr<dyn ICustomerID>
+    /// # }
+    /// #
+    /// # impl Customer {
+    /// #   fn new(name: String, id: TransientPtr<dyn ICustomerID>) -> Self
+    /// #   {
+    /// #       Self { name, id }
+    /// #   }
+    /// # }
+    /// #
+    /// # impl ICustomer for Customer {}
+    /// #
+    /// # #[factory]
+    /// # type ICustomerFactory = dyn Fn(String, u32) -> dyn ICustomer;
+    /// #
+    /// # #[factory]
+    /// # type ICustomerIDFactory = dyn Fn(u32) -> dyn ICustomerID;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = DIContainer::new();
+    /// #
+    /// di_container
+    ///     .bind::<ICustomerFactory>()
+    ///     .to_factory(&|context| {
+    ///         Box::new(move |name, id| {
+    ///             let customer_id_factory = context
+    ///                 .get::<ICustomerIDFactory>()
+    ///                 .unwrap()
+    ///                 .factory()
+    ///                 .unwrap();
+    ///
+    ///             let customer_id = customer_id_factory(id);
+    ///
+    ///             let customer = TransientPtr::new(Customer::new(name, customer_id));
+    ///
+    ///             customer as TransientPtr<dyn ICustomer>
+    ///         })
+    ///     });
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "factory")]
     pub fn to_factory<Args, Return>(
         &self,
@@ -293,6 +380,50 @@ where
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::error::Error;
+    /// #
+    /// # use syrette::{DIContainer, factory};
+    /// # use syrette::ptr::TransientPtr;
+    /// #
+    /// # trait IBuffer {}
+    /// #
+    /// # struct Buffer<const SIZE: usize>
+    /// # {
+    /// #   buf: [u8; SIZE]
+    /// # }
+    /// #
+    /// # impl<const SIZE: usize> Buffer<SIZE>
+    /// # {
+    /// #   fn new() -> Self
+    /// #   {
+    /// #       Self {
+    /// #           buf: [0; SIZE]
+    /// #       }
+    /// #   }
+    /// # }
+    /// #
+    /// # impl<const SIZE: usize> IBuffer for Buffer<SIZE> {}
+    /// #
+    /// # const BUFFER_SIZE: usize = 12;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>>
+    /// # {
+    /// # let mut di_container = DIContainer::new();
+    /// #
+    /// di_container.bind::<dyn IBuffer>().to_default_factory(&|_| {
+    ///     Box::new(|| {
+    ///         let buffer = TransientPtr::new(Buffer::<BUFFER_SIZE>::new());
+    ///
+    ///         buffer as TransientPtr<dyn IBuffer>
+    ///     })
+    /// });
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "factory")]
     pub fn to_default_factory<Return, FactoryFunc>(
         &self,
