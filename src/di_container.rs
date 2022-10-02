@@ -54,6 +54,8 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use feature_macros::feature_specific;
+
 #[cfg(feature = "factory")]
 use crate::castable_factory::blocking::CastableFactory;
 use crate::di_container_binding_map::DIContainerBindingMap;
@@ -271,8 +273,6 @@ where
     /// Creates a binding of factory type `Interface` to a factory inside of the
     /// associated [`DIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
@@ -333,7 +333,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
+    #[feature_specific("factory")]
     pub fn to_factory<Args, Return>(
         &self,
         factory_func: &'static dyn Fn<
@@ -374,8 +374,6 @@ where
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
     /// inside of the associated [`DIContainer`].
-    ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
     ///
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
@@ -424,7 +422,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
+    #[feature_specific("factory")]
     pub fn to_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,

@@ -1,6 +1,4 @@
 //! Interface for structs that can be injected into or be injected to.
-//!
-//! *This module is only available if Syrette is built with the "async" feature.*
 use std::fmt::Debug;
 use std::sync::Arc;
 

@@ -2,6 +2,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
+use feature_macros::feature_specific;
 use paste::paste;
 
 use crate::errors::ptr::{SomePtrError, SomeThreadsafePtrError};
@@ -16,15 +17,19 @@ pub type SingletonPtr<Interface> = Rc<Interface>;
 pub type ThreadsafeSingletonPtr<Interface> = Arc<Interface>;
 
 /// A smart pointer to a factory.
-#[cfg(feature = "factory")]
+#[feature_specific("factory")]
 pub type FactoryPtr<FactoryInterface> = Rc<FactoryInterface>;
 
 /// A threadsafe smart pointer to a factory.
-#[cfg(feature = "factory")]
+#[feature_specific("factory")]
 pub type ThreadsafeFactoryPtr<FactoryInterface> = Arc<FactoryInterface>;
 
 macro_rules! create_as_variant_fn {
     ($enum: ident, $variant: ident) => {
+        create_as_variant_fn!($enum, $variant,);
+    };
+
+    ($enum: ident, $variant: ident, $($attrs: meta),*) => {
         paste! {
             #[doc =
                 "Returns as the `" [<$variant>] "` variant.\n"
@@ -32,12 +37,12 @@ macro_rules! create_as_variant_fn {
                 "# Errors\n"
                 "Will return Err if it's not the `" [<$variant>] "` variant."
             ]
+            $(#[$attrs]),*
             pub fn [<$variant:snake>](self) -> Result<[<$variant Ptr>]<Interface>, [<$enum Error>]>
             {
                 if let $enum::$variant(ptr) = self {
                     return Ok(ptr);
                 }
-
 
                 Err([<$enum Error>]::WrongPtrType {
                     expected: stringify!($variant),
@@ -62,6 +67,7 @@ where
 
     /// A smart pointer to a factory.
     #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     Factory(FactoryPtr<Interface>),
 }
 
@@ -73,8 +79,7 @@ where
 
     create_as_variant_fn!(SomePtr, Singleton);
 
-    #[cfg(feature = "factory")]
-    create_as_variant_fn!(SomePtr, Factory);
+    create_as_variant_fn!(SomePtr, Factory, feature_specific("factory"));
 }
 
 /// Some threadsafe smart pointer.
@@ -91,6 +96,7 @@ where
 
     /// A smart pointer to a factory.
     #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     ThreadsafeFactory(ThreadsafeFactoryPtr<Interface>),
 }
 
@@ -102,6 +108,9 @@ where
 
     create_as_variant_fn!(SomeThreadsafePtr, ThreadsafeSingleton);
 
-    #[cfg(feature = "factory")]
-    create_as_variant_fn!(SomeThreadsafePtr, ThreadsafeFactory);
+    create_as_variant_fn!(
+        SomeThreadsafePtr,
+        ThreadsafeFactory,
+        feature_specific("factory")
+    );
 }

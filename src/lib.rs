@@ -1,4 +1,6 @@
 #![cfg_attr(feature = "factory", feature(unboxed_closures, fn_traits))]
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![feature(proc_macro_hygiene)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
@@ -8,21 +10,25 @@
 //!
 //! Syrette is a collection of utilities useful for performing dependency injection.
 
+use feature_macros::feature_specific;
+
 pub mod di_container;
 pub mod errors;
 pub mod interfaces;
 pub mod ptr;
 
-#[cfg(feature = "async")]
+#[feature_specific("async")]
 pub mod async_di_container;
 
-#[cfg(feature = "async")]
+#[feature_specific("async")]
 pub mod future;
 
-#[cfg(feature = "async")]
+#[feature_specific("async")]
 pub use async_di_container::AsyncDIContainer;
 pub use di_container::DIContainer;
-pub use syrette_macros::*;
+#[feature_specific("factory")]
+pub use syrette_macros::{declare_default_factory, factory};
+pub use syrette_macros::{declare_interface, injectable, named};
 
 #[cfg(feature = "factory")]
 #[doc(hidden)]
@@ -82,8 +88,6 @@ macro_rules! di_container_bind {
 
 /// Creates a async closure.
 ///
-/// *This macro is only available if Syrette is built with the "async" feature.*
-///
 /// # Examples
 /// ```
 /// # use syrette::async_closure;
@@ -118,7 +122,7 @@ macro_rules! di_container_bind {
 ///     })
 /// });
 /// ```
-#[cfg(feature = "async")]
+#[feature_specific("async")]
 #[macro_export]
 macro_rules! async_closure {
     (|$($args: ident),*| { $($inner: stmt);* }) => {

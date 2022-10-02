@@ -50,14 +50,11 @@
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ---
-//!
-//! *This module is only available if Syrette is built with the "async" feature.*
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use feature_macros::feature_specific;
 use tokio::sync::Mutex;
 
 #[cfg(feature = "factory")]
@@ -82,6 +79,7 @@ use crate::provider::r#async::{
 use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr, TransientPtr};
 
 /// Alias for a threadsafe boxed function.
+#[feature_specific("factory")]
 pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>;
 
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
@@ -289,11 +287,9 @@ where
     /// Creates a binding of factory type `Interface` to a factory inside of the
     /// associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
     /// # Errors
-    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
-    /// the interface.
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
+    /// for the interface.
     ///
     /// # Examples
     /// ```
@@ -334,7 +330,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
+    #[feature_specific("factory")]
     pub async fn to_factory<Args, Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -373,11 +369,9 @@ where
     /// Creates a binding of factory type `Interface` to a async factory inside of the
     /// associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
     /// # Errors
-    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
-    /// the interface.
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
+    /// for the interface.
     ///
     /// # Examples
     /// ```
@@ -421,7 +415,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(all(feature = "factory", feature = "async"))]
+    #[feature_specific("factory")]
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -464,11 +458,9 @@ where
     /// Creates a binding of type `Interface` to a factory that takes no arguments
     /// inside of the associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
     /// # Errors
-    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
-    /// the interface.
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
+    /// for the interface.
     ///
     /// # Examples
     /// ```
@@ -509,7 +501,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
+    #[feature_specific("factory")]
     pub async fn to_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -549,11 +541,9 @@ where
     /// Creates a binding of factory type `Interface` to a async factory inside of the
     /// associated [`AsyncDIContainer`].
     ///
-    /// *This function is only available if Syrette is built with the "factory" feature.*
-    ///
     /// # Errors
-    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
-    /// the interface.
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
+    /// for the interface.
     ///
     /// # Examples
     /// ```
@@ -597,7 +587,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(all(feature = "factory", feature = "async"))]
+    #[feature_specific("factory")]
     pub async fn to_async_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,

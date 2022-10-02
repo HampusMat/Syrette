@@ -1,9 +1,5 @@
 //! Error types for [`AsyncDIContainer`] and it's related structs.
 //!
-//! ---
-//!
-//! *This module is only available if Syrette is built with the "async" feature.*
-//!
 //! [`AsyncDIContainer`]: crate::async_di_container::AsyncDIContainer
 
 use crate::errors::injectable::InjectableError;
