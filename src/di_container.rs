@@ -845,8 +845,11 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
     {
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+        use crate as syrette;
+        use crate::factory;
+
+        #[factory]
+        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
 
         let mut di_container = DIContainer::new();
 
@@ -872,8 +875,11 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_bind_to_factory_when_named() -> Result<(), Box<dyn Error>>
     {
-        type IUserManagerFactory =
-            dyn crate::interfaces::factory::IFactory<(), dyn subjects::IUserManager>;
+        use crate as syrette;
+        use crate::factory;
+
+        #[factory]
+        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
 
         let mut di_container = DIContainer::new();
 
