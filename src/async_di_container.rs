@@ -54,7 +54,6 @@ use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use feature_macros::feature_specific;
 use tokio::sync::Mutex;
 
 #[cfg(feature = "factory")]
@@ -79,7 +78,8 @@ use crate::provider::r#async::{
 use crate::ptr::{SomeThreadsafePtr, ThreadsafeSingletonPtr, TransientPtr};
 
 /// Alias for a threadsafe boxed function.
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>;
 
 /// When configurator for a binding for type 'Interface' inside a [`AsyncDIContainer`].
@@ -330,7 +330,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_factory<Args, Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -415,7 +416,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -501,7 +503,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
@@ -587,7 +590,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,

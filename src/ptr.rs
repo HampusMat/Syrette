@@ -2,7 +2,6 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use feature_macros::feature_specific;
 use paste::paste;
 
 use crate::errors::ptr::{SomePtrError, SomeThreadsafePtrError};
@@ -17,11 +16,13 @@ pub type SingletonPtr<Interface> = Rc<Interface>;
 pub type ThreadsafeSingletonPtr<Interface> = Arc<Interface>;
 
 /// A smart pointer to a factory.
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub type FactoryPtr<FactoryInterface> = Rc<FactoryInterface>;
 
 /// A threadsafe smart pointer to a factory.
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub type ThreadsafeFactoryPtr<FactoryInterface> = Arc<FactoryInterface>;
 
 macro_rules! create_as_variant_fn {
@@ -37,7 +38,7 @@ macro_rules! create_as_variant_fn {
                 "# Errors\n"
                 "Will return Err if it's not the `" [<$variant>] "` variant."
             ]
-            $(#[$attrs]),*
+            $(#[$attrs])*
             pub fn [<$variant:snake>](self) -> Result<[<$variant Ptr>]<Interface>, [<$enum Error>]>
             {
                 if let $enum::$variant(ptr) = self {
@@ -79,7 +80,12 @@ where
 
     create_as_variant_fn!(SomePtr, Singleton);
 
-    create_as_variant_fn!(SomePtr, Factory, feature_specific("factory"));
+    create_as_variant_fn!(
+        SomePtr,
+        Factory,
+        cfg(feature = "factory"),
+        cfg_attr(doc_cfg, doc(cfg(feature = "factory")))
+    );
 }
 
 /// Some threadsafe smart pointer.
@@ -111,6 +117,7 @@ where
     create_as_variant_fn!(
         SomeThreadsafePtr,
         ThreadsafeFactory,
-        feature_specific("factory")
+        cfg(feature = "factory"),
+        cfg_attr(doc_cfg, doc(cfg(feature = "factory")))
     );
 }

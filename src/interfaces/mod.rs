@@ -1,7 +1,5 @@
 //! Various useful interfaces.
 
-use feature_macros::feature_specific;
-
 pub mod injectable;
 
 #[cfg(feature = "factory")]
@@ -12,5 +10,6 @@ pub mod any_factory;
 #[doc(hidden)]
 pub mod factory;
 
-#[feature_specific("async")]
+#[cfg(feature = "async")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
 pub mod async_injectable;

@@ -1,5 +1,4 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![feature(proc_macro_hygiene)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
@@ -7,7 +6,6 @@
 
 //! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
-use feature_macros::feature_specific;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse, parse_macro_input};
@@ -18,10 +16,12 @@ mod libs;
 mod macro_flag;
 mod util;
 
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 mod factory;
 
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 mod fn_trait;
 
 use crate::declare_interface_args::DeclareInterfaceArgs;
@@ -193,7 +193,8 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// ```
 ///
 /// [`TransientPtr`]: https://docs.rs/syrette/latest/syrette/ptr/type.TransientPtr.html
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 #[proc_macro_attribute]
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
@@ -291,7 +292,8 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 /// declare_default_factory!(dyn IParser);
 /// ```
 #[proc_macro]
-#[feature_specific("factory")]
+#[cfg(feature = "factory")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
     use syn::parse_str;

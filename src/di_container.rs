@@ -54,8 +54,6 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use feature_macros::feature_specific;
-
 #[cfg(feature = "factory")]
 use crate::castable_factory::blocking::CastableFactory;
 use crate::di_container_binding_map::DIContainerBindingMap;
@@ -333,7 +331,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_factory<Args, Return, Func>(
         &self,
         factory_func: &'static Func,
@@ -420,7 +419,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[feature_specific("factory")]
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
