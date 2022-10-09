@@ -12,10 +12,10 @@ pub fn build_declare_factory_interfaces(
         quote! {
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 > -> syrette::interfaces::factory::IThreadsafeFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 >,
                 async = true
@@ -23,7 +23,7 @@ pub fn build_declare_factory_interfaces(
 
             syrette::declare_interface!(
                 syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::async_di_container::AsyncDIContainer>,),
+                    (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
                 async = true
@@ -33,17 +33,17 @@ pub fn build_declare_factory_interfaces(
         quote! {
             syrette::declare_interface!(
                 syrette::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
                 > -> syrette::interfaces::factory::IFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
                 >
             );
 
             syrette::declare_interface!(
                 syrette::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::di_container::DIContainer>,),
+                    (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
                 > -> syrette::interfaces::any_factory::AnyFactory
             );

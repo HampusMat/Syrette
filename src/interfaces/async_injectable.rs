@@ -2,11 +2,11 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::async_di_container::AsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::future::BoxFuture;
 use crate::libs::intertrait::CastFromSync;
 use crate::ptr::TransientPtr;
+use crate::AsyncDIContainer;
 
 /// Interface for structs that can be injected into or be injected to.
 pub trait AsyncInjectable: CastFromSync

@@ -91,7 +91,7 @@ impl InjectableImpl
                 {
                     fn resolve<'di_container, 'fut>(
                         #di_container_var: &'di_container std::sync::Arc<
-                            syrette::async_di_container::AsyncDIContainer
+                            syrette::AsyncDIContainer
                         >,
                         mut #dependency_history_var: Vec<&'static str>,
                     ) -> syrette::future::BoxFuture<

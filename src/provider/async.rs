@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::async_di_container::AsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
+use crate::AsyncDIContainer;
 
 #[derive(strum_macros::Display, Debug)]
 pub enum AsyncProvidable

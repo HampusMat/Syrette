@@ -16,16 +16,12 @@ pub mod ptr;
 
 #[cfg(feature = "async")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
-pub mod async_di_container;
-
-#[cfg(feature = "async")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
 pub mod future;
 
 #[cfg(feature = "async")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
-pub use async_di_container::AsyncDIContainer;
-pub use di_container::DIContainer;
+pub use di_container::asynchronous::AsyncDIContainer;
+pub use di_container::blocking::DIContainer;
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub use syrette_macros::{declare_default_factory, factory};
@@ -42,8 +38,10 @@ pub mod dependency_trace;
 pub mod libs;
 
 // Private
-mod di_container_binding_map;
 mod provider;
+
+#[cfg(test)]
+mod test_utils;
 
 /// Shortcut for creating a DI container binding for a injectable without a declared
 /// interface.
