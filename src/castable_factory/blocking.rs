@@ -72,3 +72,26 @@ where
     ReturnInterface: 'static + ?Sized,
 {
 }
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    #[test]
+    fn can_call()
+    {
+        #[derive(Debug, PartialEq, Eq)]
+        struct Bacon
+        {
+            heal_amount: u32,
+        }
+
+        let castable_factory =
+            CastableFactory::new(&|heal_amount| TransientPtr::new(Bacon { heal_amount }));
+
+        let output = castable_factory(27);
+
+        assert_eq!(output, Box::new(Bacon { heal_amount: 27 }));
+    }
+}

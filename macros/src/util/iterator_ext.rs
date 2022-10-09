@@ -9,7 +9,7 @@ pub trait IteratorExt<Item>
 impl<Iter> IteratorExt<Iter::Item> for Iter
 where
     Iter: Iterator,
-    Iter::Item: Eq + Hash + Copy,
+    Iter::Item: Eq + Hash + Clone,
 {
     fn find_duplicate(&mut self) -> Option<Iter::Item>
     {
@@ -24,5 +24,60 @@ where
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+
+    #[test]
+    fn can_find_duplicate()
+    {
+        #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+        struct Fruit
+        {
+            name: String,
+        }
+
+        assert_eq!(
+            vec![
+                Fruit {
+                    name: "Apple".to_string(),
+                },
+                Fruit {
+                    name: "Banana".to_string(),
+                },
+                Fruit {
+                    name: "Apple".to_string(),
+                },
+                Fruit {
+                    name: "Orange".to_string(),
+                },
+            ]
+            .iter()
+            .find_duplicate(),
+            Some(&Fruit {
+                name: "Apple".to_string()
+            })
+        );
+
+        assert_eq!(
+            vec![
+                Fruit {
+                    name: "Banana".to_string(),
+                },
+                Fruit {
+                    name: "Apple".to_string(),
+                },
+                Fruit {
+                    name: "Orange".to_string(),
+                },
+            ]
+            .iter()
+            .find_duplicate(),
+            None
+        );
     }
 }

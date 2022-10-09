@@ -1,5 +1,7 @@
 #![cfg_attr(feature = "factory", feature(unboxed_closures, fn_traits))]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(test, feature(register_tool))]
+#![cfg_attr(test, register_tool(tarpaulin))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
@@ -41,6 +43,7 @@ pub mod libs;
 mod provider;
 
 #[cfg(test)]
+#[tarpaulin::skip]
 mod test_utils;
 
 /// Shortcut for creating a DI container binding for a injectable without a declared
