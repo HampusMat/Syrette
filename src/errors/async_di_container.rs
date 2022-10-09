@@ -1,12 +1,12 @@
 //! Error types for [`AsyncDIContainer`] and it's related structs.
 //!
-//! [`AsyncDIContainer`]: crate::async_di_container::AsyncDIContainer
+//! [`AsyncDIContainer`]: crate::di_container::asynchronous::AsyncDIContainer
 
 use crate::errors::injectable::InjectableError;
 
 /// Error type for [`AsyncDIContainer`].
 ///
-/// [`AsyncDIContainer`]: crate::async_di_container::AsyncDIContainer
+/// [`AsyncDIContainer`]: crate::di_container::asynchronous::AsyncDIContainer
 #[derive(thiserror::Error, Debug)]
 pub enum AsyncDIContainerError
 {
@@ -56,7 +56,7 @@ pub enum AsyncDIContainerError
 
 /// Error type for [`AsyncBindingBuilder`].
 ///
-/// [`AsyncBindingBuilder`]: crate::async_di_container::AsyncBindingBuilder
+/// [`AsyncBindingBuilder`]: crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder
 #[derive(thiserror::Error, Debug)]
 pub enum AsyncBindingBuilderError
 {
@@ -67,7 +67,7 @@ pub enum AsyncBindingBuilderError
 
 /// Error type for [`AsyncBindingScopeConfigurator`].
 ///
-/// [`AsyncBindingScopeConfigurator`]: crate::async_di_container::AsyncBindingScopeConfigurator
+/// [`AsyncBindingScopeConfigurator`]: crate::di_container::asynchronous::binding::scope_configurator::AsyncBindingScopeConfigurator
 #[derive(thiserror::Error, Debug)]
 pub enum AsyncBindingScopeConfiguratorError
 {
@@ -78,7 +78,7 @@ pub enum AsyncBindingScopeConfiguratorError
 
 /// Error type for [`AsyncBindingWhenConfigurator`].
 ///
-/// [`AsyncBindingWhenConfigurator`]: crate::async_di_container::AsyncBindingWhenConfigurator
+/// [`AsyncBindingWhenConfigurator`]: crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator
 #[derive(thiserror::Error, Debug)]
 pub enum AsyncBindingWhenConfiguratorError
 {

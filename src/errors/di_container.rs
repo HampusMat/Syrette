@@ -1,12 +1,12 @@
 //! Error types for [`DIContainer`] and it's related structs.
 //!
-//! [`DIContainer`]: crate::di_container::DIContainer
+//! [`DIContainer`]: crate::di_container::blocking::DIContainer
 
 use crate::errors::injectable::InjectableError;
 
 /// Error type for [`DIContainer`].
 ///
-/// [`DIContainer`]: crate::di_container::DIContainer
+/// [`DIContainer`]: crate::di_container::blocking::DIContainer
 #[derive(thiserror::Error, Debug)]
 pub enum DIContainerError
 {
@@ -52,7 +52,7 @@ pub enum DIContainerError
 
 /// Error type for [`BindingBuilder`].
 ///
-/// [`BindingBuilder`]: crate::di_container::BindingBuilder
+/// [`BindingBuilder`]: crate::di_container::blocking::binding::builder::BindingBuilder
 #[derive(thiserror::Error, Debug)]
 pub enum BindingBuilderError
 {
@@ -63,7 +63,7 @@ pub enum BindingBuilderError
 
 /// Error type for [`BindingScopeConfigurator`].
 ///
-/// [`BindingScopeConfigurator`]: crate::di_container::BindingScopeConfigurator
+/// [`BindingScopeConfigurator`]: crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator
 #[derive(thiserror::Error, Debug)]
 pub enum BindingScopeConfiguratorError
 {
@@ -74,7 +74,7 @@ pub enum BindingScopeConfiguratorError
 
 /// Error type for [`BindingWhenConfigurator`].
 ///
-/// [`BindingWhenConfigurator`]: crate::di_container::BindingWhenConfigurator
+/// [`BindingWhenConfigurator`]: crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator
 #[derive(thiserror::Error, Debug)]
 pub enum BindingWhenConfiguratorError
 {
