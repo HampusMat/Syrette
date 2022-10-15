@@ -1,7 +1,5 @@
 #![cfg_attr(feature = "factory", feature(unboxed_closures, fn_traits))]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![cfg_attr(test, feature(register_tool))]
-#![cfg_attr(test, register_tool(tarpaulin))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
@@ -43,7 +41,7 @@ pub mod libs;
 mod provider;
 
 #[cfg(test)]
-#[tarpaulin::skip]
+#[cfg(not(tarpaulin_include))]
 mod test_utils;
 
 /// Shortcut for creating a DI container binding for a injectable without a declared
@@ -79,6 +77,7 @@ mod test_utils;
 ///
 /// di_container_bind!(INinja => Ninja, di_container);
 /// ```
+#[cfg(not(tarpaulin_include))]
 #[macro_export]
 macro_rules! di_container_bind {
     ($interface: path => $implementation: ty, $di_container: ident) => {
@@ -126,6 +125,7 @@ macro_rules! di_container_bind {
 /// ```
 #[cfg(feature = "async")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
+#[cfg(not(tarpaulin_include))]
 #[macro_export]
 macro_rules! async_closure {
     (|$($args: ident),*| { $($inner: stmt);* }) => {

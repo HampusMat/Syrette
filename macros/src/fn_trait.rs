@@ -92,22 +92,10 @@ mod tests
 
     use quote::{format_ident, quote};
     use syn::token::{Dyn, RArrow};
-    use syn::{parse2, Path, PathSegment, TypePath};
+    use syn::{parse2, PathSegment};
 
     use super::*;
-
-    fn create_path(segments: &[PathSegment]) -> Path
-    {
-        Path {
-            leading_colon: None,
-            segments: segments.iter().cloned().collect(),
-        }
-    }
-
-    fn create_type(path: Path) -> Type
-    {
-        Type::Path(TypePath { qself: None, path })
-    }
+    use crate::test_utils;
 
     #[test]
     fn can_parse_fn_trait() -> Result<(), Box<dyn Error>>
@@ -121,15 +109,17 @@ mod tests
                 trait_ident: format_ident!("Fn"),
                 paren_token: Paren::default(),
                 inputs: Punctuated::from_iter(vec![
-                    create_type(create_path(&[PathSegment::from(format_ident!(
-                        "String"
-                    ))])),
-                    create_type(create_path(&[PathSegment::from(format_ident!("u32"))]))
+                    test_utils::create_type(test_utils::create_path(&[
+                        PathSegment::from(format_ident!("String"))
+                    ])),
+                    test_utils::create_type(test_utils::create_path(&[
+                        PathSegment::from(format_ident!("u32"))
+                    ]))
                 ]),
                 r_arrow_token: RArrow::default(),
-                output: create_type(create_path(&[PathSegment::from(format_ident!(
-                    "Handle"
-                ))])),
+                output: test_utils::create_type(test_utils::create_path(&[
+                    PathSegment::from(format_ident!("Handle"))
+                ])),
                 trait_bounds: Punctuated::new()
             }
         );
@@ -151,20 +141,20 @@ mod tests
                 trait_ident: format_ident!("Fn"),
                 paren_token: Paren::default(),
                 inputs: Punctuated::from_iter(vec![
-                    create_type(create_path(&[PathSegment::from(format_ident!(
-                        "Bread"
-                    ))])),
-                    create_type(create_path(&[PathSegment::from(format_ident!(
-                        "Cheese"
-                    ))])),
-                    create_type(create_path(&[PathSegment::from(format_ident!(
-                        "Tomatoes"
-                    ))]))
+                    test_utils::create_type(test_utils::create_path(&[
+                        PathSegment::from(format_ident!("Bread"))
+                    ])),
+                    test_utils::create_type(test_utils::create_path(&[
+                        PathSegment::from(format_ident!("Cheese"))
+                    ])),
+                    test_utils::create_type(test_utils::create_path(&[
+                        PathSegment::from(format_ident!("Tomatoes"))
+                    ]))
                 ]),
                 r_arrow_token: RArrow::default(),
-                output: create_type(create_path(&[PathSegment::from(format_ident!(
-                    "Taco"
-                ))])),
+                output: test_utils::create_type(test_utils::create_path(&[
+                    PathSegment::from(format_ident!("Taco"))
+                ])),
                 trait_bounds: Punctuated::new()
             }
             .into_token_stream()

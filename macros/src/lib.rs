@@ -1,4 +1,5 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(test, feature(is_some_with))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
@@ -24,7 +25,11 @@ mod factory;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 mod fn_trait;
 
+#[cfg(test)]
+mod test_utils;
+
 use crate::declare_interface_args::DeclareInterfaceArgs;
+use crate::injectable::dependency::Dependency;
 use crate::injectable::implementation::InjectableImpl;
 use crate::injectable::macro_args::InjectableMacroArgs;
 use crate::libs::intertrait_macros::gen_caster::generate_caster;
@@ -112,6 +117,7 @@ use crate::libs::intertrait_macros::gen_caster::generate_caster;
 /// [`AsyncDIContainer`]: https://docs.rs/syrette/latest/syrette/async_di_container/struct.AsyncDIContainer.html
 /// [`Injectable`]: https://docs.rs/syrette/latest/syrette/interfaces/injectable/trait.Injectable.html
 /// [`di_container_bind`]: https://docs.rs/syrette/latest/syrette/macro.di_container_bind.html
+#[cfg(not(tarpaulin_include))]
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
 {
@@ -127,7 +133,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
         .find(|flag| flag.flag.to_string().as_str() == "async")
         .map_or(false, |flag| flag.is_on.value);
 
-    let injectable_impl: InjectableImpl = parse(impl_stream).unwrap();
+    let injectable_impl: InjectableImpl<Dependency> = parse(impl_stream).unwrap();
 
     let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
@@ -195,6 +201,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 /// [`TransientPtr`]: https://docs.rs/syrette/latest/syrette/ptr/type.TransientPtr.html
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
+#[cfg(not(tarpaulin_include))]
 #[proc_macro_attribute]
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
@@ -291,9 +298,10 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 ///
 /// declare_default_factory!(dyn IParser);
 /// ```
-#[proc_macro]
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
+#[cfg(not(tarpaulin_include))]
+#[proc_macro]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
     use syn::parse_str;
@@ -364,6 +372,7 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 /// #
 /// declare_interface!(Ninja -> INinja);
 /// ```
+#[cfg(not(tarpaulin_include))]
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
 {
@@ -423,6 +432,7 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
 /// #
 /// # impl INinja for Ninja {}
 /// ```
+#[cfg(not(tarpaulin_include))]
 #[proc_macro_attribute]
 pub fn named(_: TokenStream, _: TokenStream) -> TokenStream
 {
