@@ -519,26 +519,129 @@ mod tests
         Ok(())
     }
 
-    /*
     #[tokio::test]
     #[cfg(feature = "factory")]
     async fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
     {
         use crate as syrette;
         use crate::factory;
+        use crate::ptr::TransientPtr;
 
         #[factory(threadsafe = true)]
-        type IUserManagerFactory = dyn Fn() -> dyn subjects_async::IUserManager;
+        type IUserManagerFactory = dyn Fn(
+            String,
+            i32,
+            subjects_async::Number,
+        ) -> dyn subjects_async::IUserManager;
 
-        let mut di_container = AsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
-        {
-            assert_eq!(di_container.bindings.lock().await.count(), 0);
-        }
+        di_container_mock
+            .expect_has_binding::<IUserManagerFactory>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
 
-        di_container
-            .bind::<IUserManagerFactory>()
+        di_container_mock
+            .expect_set_binding::<IUserManagerFactory>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_builder = AsyncBindingBuilder::<
+            IUserManagerFactory,
+            MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        binding_builder
             .to_factory(&|_| {
+                Box::new(|_text, _num, _number| {
+                    let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
+                        TransientPtr::new(subjects_async::UserManager::new());
+
+                    user_manager
+                })
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "factory")]
+    async fn can_bind_to_async_factory() -> Result<(), Box<dyn Error>>
+    {
+        use crate::ptr::TransientPtr;
+        use crate::{self as syrette, async_closure, factory};
+
+        #[factory(async = true)]
+        type IUserManagerFactory = dyn Fn(String) -> dyn subjects_async::IUserManager;
+
+        let mut di_container_mock = MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_has_binding::<IUserManagerFactory>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
+
+        di_container_mock
+            .expect_set_binding::<IUserManagerFactory>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_builder = AsyncBindingBuilder::<
+            IUserManagerFactory,
+            MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        binding_builder
+            .to_async_factory(&|_| {
+                async_closure!(|_text| {
+                    let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
+                        TransientPtr::new(subjects_async::UserManager::new());
+
+                    user_manager
+                })
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "factory")]
+    async fn can_bind_to_default_factory() -> Result<(), Box<dyn Error>>
+    {
+        use syrette_macros::declare_default_factory;
+
+        use crate as syrette;
+        use crate::ptr::TransientPtr;
+
+        declare_default_factory!(dyn subjects_async::IUserManager);
+
+        let mut di_container_mock = MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_has_binding::<dyn subjects_async::IUserManager>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects_async::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_builder = AsyncBindingBuilder::<
+            dyn subjects_async::IUserManager,
+            MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        binding_builder
+            .to_default_factory(&|_| {
                 Box::new(|| {
                     let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
                         TransientPtr::new(subjects_async::UserManager::new());
@@ -548,11 +651,50 @@ mod tests
             })
             .await?;
 
-        {
-            assert_eq!(di_container.bindings.lock().await.count(), 1);
-        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "factory")]
+    async fn can_bind_to_async_default_factory() -> Result<(), Box<dyn Error>>
+    {
+        use syrette_macros::declare_default_factory;
+
+        use crate::ptr::TransientPtr;
+        use crate::{self as syrette, async_closure};
+
+        declare_default_factory!(dyn subjects_async::IUserManager, async = true);
+
+        let mut di_container_mock = MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_has_binding::<dyn subjects_async::IUserManager>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects_async::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_builder = AsyncBindingBuilder::<
+            dyn subjects_async::IUserManager,
+            MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        binding_builder
+            .to_async_default_factory(&|_| {
+                async_closure!(|| {
+                    let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
+                        TransientPtr::new(subjects_async::UserManager::new());
+
+                    user_manager
+                })
+            })
+            .await?;
 
         Ok(())
     }
-    */
 }
