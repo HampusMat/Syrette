@@ -12,6 +12,7 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --workspace --all-features
+
   coverage:
     machine: true
     steps:
@@ -29,7 +30,9 @@ jobs:
                 --workspace \
                 --all-features \
                 --ciserver circle-ci \
-                --coveralls $COVERALLS_REPO_TOKEN
+                --out Xml
+                # --coveralls $COVERALLS_REPO_TOKEN
+            bash <(curl -s https://codecov.io/bash)
 
 workflows:
   test:
