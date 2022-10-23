@@ -1,5 +1,4 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![cfg_attr(test, feature(is_some_with))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
