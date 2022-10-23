@@ -17,7 +17,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Coverage with docker
+          name: Code Coverage
           command: |
             docker run \
               --security-opt seccomp=unconfined \
