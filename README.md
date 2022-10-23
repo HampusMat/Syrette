@@ -42,7 +42,8 @@ The goal of Syrette is to be a simple, useful, convenient and familiar DI librar
 ```rust
 use std::error::Error;
 
-use syrette::{injectable, DIContainer};
+use syrette::injectable;
+use syrette::di_container::blocking::prelude::*;
 use syrette::ptr::TransientPtr;
 
 trait IWeapon
