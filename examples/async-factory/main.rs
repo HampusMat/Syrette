@@ -5,8 +5,9 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use syrette::di_container::asynchronous::prelude::*;
 use syrette::ptr::TransientPtr;
-use syrette::{async_closure, declare_default_factory, factory, AsyncDIContainer};
+use syrette::{async_closure, declare_default_factory, factory};
 use tokio::time::sleep;
 
 trait IFoo: Send + Sync

@@ -4,8 +4,10 @@ mod printer;
 
 use std::error::Error;
 
-use bootstrap::bootstrap;
-use interfaces::printer::IPrinter;
+use syrette::di_container::blocking::prelude::*;
+
+use crate::bootstrap::bootstrap;
+use crate::interfaces::printer::IPrinter;
 
 fn main() -> Result<(), Box<dyn Error>>
 {

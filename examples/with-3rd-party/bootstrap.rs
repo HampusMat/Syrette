@@ -1,8 +1,9 @@
 use std::error::Error;
 use std::rc::Rc;
 
+use syrette::declare_default_factory;
+use syrette::di_container::blocking::prelude::*;
 use syrette::ptr::TransientPtr;
-use syrette::{declare_default_factory, DIContainer};
 use third_party_lib::Shuriken;
 
 use crate::interfaces::ninja::INinja;

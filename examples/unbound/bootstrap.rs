@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use anyhow::Result;
-use syrette::DIContainer;
+use syrette::di_container::blocking::prelude::*;
 
 use crate::animal_store::AnimalStore;
 use crate::animals::dog::Dog;

@@ -1,31 +1,38 @@
-//! Scope configurator for a binding for types inside of a [`DIContainer`].
+//! Scope configurator for a binding for types inside of a [`IDIContainer`].
+//!
+//! [`IDIContainer`]: crate::di_container::blocking::IDIContainer
 use std::marker::PhantomData;
 use std::rc::Rc;
 
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
-use crate::di_container::blocking::DIContainer;
+use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingScopeConfiguratorError;
 use crate::interfaces::injectable::Injectable;
 use crate::provider::blocking::{SingletonProvider, TransientTypeProvider};
 use crate::ptr::SingletonPtr;
 
-/// Scope configurator for a binding for type 'Interface' inside a [`DIContainer`].
-pub struct BindingScopeConfigurator<Interface, Implementation>
+/// Scope configurator for a binding for type 'Interface' inside a [`IDIContainer`].
+///
+/// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+pub struct BindingScopeConfigurator<Interface, Implementation, DIContainerType>
 where
     Interface: 'static + ?Sized,
-    Implementation: Injectable,
+    Implementation: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
-    di_container: Rc<DIContainer>,
+    di_container: Rc<DIContainerType>,
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation> BindingScopeConfigurator<Interface, Implementation>
+impl<Interface, Implementation, DIContainerType>
+    BindingScopeConfigurator<Interface, Implementation, DIContainerType>
 where
     Interface: 'static + ?Sized,
-    Implementation: Injectable,
+    Implementation: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
-    pub(crate) fn new(di_container: Rc<DIContainer>) -> Self
+    pub(crate) fn new(di_container: Rc<DIContainerType>) -> Self
     {
         Self {
             di_container,
@@ -38,13 +45,13 @@ where
     ///
     /// This is the default.
     #[allow(clippy::must_use_candidate)]
-    pub fn in_transient_scope(&self) -> BindingWhenConfigurator<Interface>
+    pub fn in_transient_scope(
+        &self,
+    ) -> BindingWhenConfigurator<Interface, DIContainerType>
     {
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
-
-        bindings_mut.set::<Interface>(
+        self.di_container.set_binding::<Interface>(
             None,
-            Box::new(TransientTypeProvider::<Implementation>::new()),
+            Box::new(TransientTypeProvider::<Implementation, DIContainerType>::new()),
         );
 
         BindingWhenConfigurator::new(self.di_container.clone())
@@ -56,16 +63,18 @@ where
     /// Will return Err if resolving the implementation fails.
     pub fn in_singleton_scope(
         &self,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingScopeConfiguratorError>
+    ) -> Result<
+        BindingWhenConfigurator<Interface, DIContainerType>,
+        BindingScopeConfiguratorError,
+    >
     {
         let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
             Implementation::resolve(&self.di_container, Vec::new())
                 .map_err(BindingScopeConfiguratorError::SingletonResolveFailed)?,
         );
 
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
-
-        bindings_mut.set::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
+        self.di_container
+            .set_binding::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
 
         Ok(BindingWhenConfigurator::new(self.di_container.clone()))
     }

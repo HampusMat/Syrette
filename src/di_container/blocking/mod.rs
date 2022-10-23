@@ -5,6 +5,7 @@
 //! use std::collections::HashMap;
 //! use std::error::Error;
 //!
+//! use syrette::di_container::blocking::IDIContainer;
 //! use syrette::{injectable, DIContainer};
 //!
 //! trait IDatabaseService
@@ -61,11 +62,55 @@ use crate::provider::blocking::{IProvider, Providable};
 use crate::ptr::SomePtr;
 
 pub mod binding;
+pub mod prelude;
 
-/// Dependency injection container.
+/// Blocking dependency injection container interface.
+pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
+{
+    /// Returns a new [`BindingBuilder`] for the given interface.
+    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
+    where
+        Interface: 'static + ?Sized;
+
+    /// Returns the type bound with `Interface`.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
+    where
+        Interface: 'static + ?Sized;
+
+    /// Returns the type bound with `Interface` and the specified name.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` with name `name` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    fn get_named<Interface>(
+        self: &Rc<Self>,
+        name: &'static str,
+    ) -> Result<SomePtr<Interface>, DIContainerError>
+    where
+        Interface: 'static + ?Sized;
+
+    #[doc(hidden)]
+    fn get_bound<Interface>(
+        self: &Rc<Self>,
+        dependency_history: Vec<&'static str>,
+        name: Option<&'static str>,
+    ) -> Result<SomePtr<Interface>, DIContainerError>
+    where
+        Interface: 'static + ?Sized;
+}
+
+/// Blocking dependency injection container.
 pub struct DIContainer
 {
-    bindings: RefCell<DIContainerBindingMap<dyn IProvider>>,
+    bindings: RefCell<DIContainerBindingMap<dyn IProvider<Self>>>,
 }
 
 impl DIContainer
@@ -78,38 +123,26 @@ impl DIContainer
             bindings: RefCell::new(DIContainerBindingMap::new()),
         })
     }
+}
 
-    /// Returns a new [`BindingBuilder`] for the given interface.
+impl IDIContainer for DIContainer
+{
     #[must_use]
-    pub fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface>
+    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized,
     {
-        BindingBuilder::<Interface>::new(self.clone())
+        BindingBuilder::<Interface, Self>::new(self.clone())
     }
 
-    /// Returns the type bound with `Interface`.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    pub fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
+    fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
         self.get_bound::<Interface>(Vec::new(), None)
     }
 
-    /// Returns the type bound with `Interface` and the specified name.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` with name `name` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    pub fn get_named<Interface>(
+    fn get_named<Interface>(
         self: &Rc<Self>,
         name: &'static str,
     ) -> Result<SomePtr<Interface>, DIContainerError>
@@ -120,7 +153,7 @@ impl DIContainer
     }
 
     #[doc(hidden)]
-    pub fn get_bound<Interface>(
+    fn get_bound<Interface>(
         self: &Rc<Self>,
         dependency_history: Vec<&'static str>,
         name: Option<&'static str>,
@@ -133,10 +166,43 @@ impl DIContainer
 
         self.handle_binding_providable(binding_providable)
     }
+}
 
+impl details::DIContainerInternals for DIContainer
+{
+    fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
+    where
+        Interface: ?Sized + 'static,
+    {
+        self.bindings.borrow().has::<Interface>(name)
+    }
+
+    fn set_binding<Interface>(
+        self: &Rc<Self>,
+        name: Option<&'static str>,
+        provider: Box<dyn IProvider<Self>>,
+    ) where
+        Interface: 'static + ?Sized,
+    {
+        self.bindings.borrow_mut().set::<Interface>(name, provider);
+    }
+
+    fn remove_binding<Interface>(
+        self: &Rc<Self>,
+        name: Option<&'static str>,
+    ) -> Option<Box<dyn IProvider<Self>>>
+    where
+        Interface: 'static + ?Sized,
+    {
+        self.bindings.borrow_mut().remove::<Interface>(name)
+    }
+}
+
+impl DIContainer
+{
     fn handle_binding_providable<Interface>(
         self: &Rc<Self>,
-        binding_providable: Providable,
+        binding_providable: Providable<Self>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -195,7 +261,7 @@ impl DIContainer
         self: &Rc<Self>,
         name: Option<&'static str>,
         dependency_history: Vec<&'static str>,
-    ) -> Result<Providable, DIContainerError>
+    ) -> Result<Providable<Self>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -219,6 +285,34 @@ impl DIContainer
     }
 }
 
+pub(crate) mod details
+{
+    use std::rc::Rc;
+
+    use crate::provider::blocking::IProvider;
+
+    pub trait DIContainerInternals
+    {
+        fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
+        where
+            Interface: ?Sized + 'static;
+
+        fn set_binding<Interface>(
+            self: &Rc<Self>,
+            name: Option<&'static str>,
+            provider: Box<dyn IProvider<Self>>,
+        ) where
+            Interface: 'static + ?Sized;
+
+        fn remove_binding<Interface>(
+            self: &Rc<Self>,
+            name: Option<&'static str>,
+        ) -> Option<Box<dyn IProvider<Self>>>
+        where
+            Interface: 'static + ?Sized;
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
@@ -238,13 +332,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 
@@ -276,13 +370,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 
@@ -314,13 +408,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 
@@ -359,13 +453,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 
@@ -459,13 +553,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 
@@ -556,13 +650,13 @@ mod tests
         mock! {
             Provider {}
 
-            impl IProvider for Provider
+            impl IProvider<DIContainer> for Provider
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<Providable, InjectableError>;
+                ) -> Result<Providable<DIContainer>, InjectableError>;
             }
         }
 

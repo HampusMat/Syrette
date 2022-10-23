@@ -81,13 +81,6 @@ where
             name,
         })
     }
-
-    /// Only used by tests in the `di_container` module.
-    #[cfg(test)]
-    pub fn count(&self) -> usize
-    {
-        self.bindings.len()
-    }
 }
 
 #[cfg(test)]

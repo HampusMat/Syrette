@@ -9,6 +9,7 @@ mod ninja;
 mod shuriken;
 
 use anyhow::Result;
+use syrette::di_container::blocking::prelude::*;
 
 use crate::bootstrap::bootstrap;
 use crate::interfaces::ninja::INinja;

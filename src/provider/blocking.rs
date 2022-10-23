@@ -1,16 +1,18 @@
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{SingletonPtr, TransientPtr};
-use crate::DIContainer;
 
 #[derive(strum_macros::Display, Debug)]
-pub enum Providable
+pub enum Providable<DIContainerType>
+where
+    DIContainerType: IDIContainer,
 {
-    Transient(TransientPtr<dyn Injectable>),
-    Singleton(SingletonPtr<dyn Injectable>),
+    Transient(TransientPtr<dyn Injectable<DIContainerType>>),
+    Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
     #[cfg(feature = "factory")]
     Factory(crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>),
     #[cfg(feature = "factory")]
@@ -19,43 +21,52 @@ pub enum Providable
     ),
 }
 
-pub trait IProvider
+pub trait IProvider<DIContainerType>
+where
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
-        di_container: &Rc<DIContainer>,
+        di_container: &Rc<DIContainerType>,
         dependency_history: Vec<&'static str>,
-    ) -> Result<Providable, InjectableError>;
+    ) -> Result<Providable<DIContainerType>, InjectableError>;
 }
 
-pub struct TransientTypeProvider<InjectableType>
+pub struct TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     injectable_phantom: PhantomData<InjectableType>,
+    di_container_phantom: PhantomData<DIContainerType>,
 }
 
-impl<InjectableType> TransientTypeProvider<InjectableType>
+impl<InjectableType, DIContainerType>
+    TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     pub fn new() -> Self
     {
         Self {
             injectable_phantom: PhantomData,
+            di_container_phantom: PhantomData,
         }
     }
 }
 
-impl<InjectableType> IProvider for TransientTypeProvider<InjectableType>
+impl<InjectableType, DIContainerType> IProvider<DIContainerType>
+    for TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
-        di_container: &Rc<DIContainer>,
+        di_container: &Rc<DIContainerType>,
         dependency_history: Vec<&'static str>,
-    ) -> Result<Providable, InjectableError>
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(Providable::Transient(InjectableType::resolve(
             di_container,
@@ -64,32 +75,40 @@ where
     }
 }
 
-pub struct SingletonProvider<InjectableType>
+pub struct SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     singleton: SingletonPtr<InjectableType>,
+    di_container_phantom: PhantomData<DIContainerType>,
 }
 
-impl<InjectableType> SingletonProvider<InjectableType>
+impl<InjectableType, DIContainerType> SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     pub fn new(singleton: SingletonPtr<InjectableType>) -> Self
     {
-        Self { singleton }
+        Self {
+            singleton,
+            di_container_phantom: PhantomData,
+        }
     }
 }
 
-impl<InjectableType> IProvider for SingletonProvider<InjectableType>
+impl<InjectableType, DIContainerType> IProvider<DIContainerType>
+    for SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
-        _di_container: &Rc<DIContainer>,
+        _di_container: &Rc<DIContainerType>,
         _dependency_history: Vec<&'static str>,
-    ) -> Result<Providable, InjectableError>
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(Providable::Singleton(self.singleton.clone()))
     }
@@ -118,13 +137,15 @@ impl FactoryProvider
 }
 
 #[cfg(feature = "factory")]
-impl IProvider for FactoryProvider
+impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
+where
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
-        _di_container: &Rc<DIContainer>,
+        _di_container: &Rc<DIContainerType>,
         _dependency_history: Vec<&'static str>,
-    ) -> Result<Providable, InjectableError>
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(if self.is_default_factory {
             Providable::DefaultFactory(self.factory.clone())

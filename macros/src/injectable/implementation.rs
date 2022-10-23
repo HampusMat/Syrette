@@ -132,11 +132,13 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         quote! {
             #maybe_doc_hidden
-            impl #generics syrette::interfaces::async_injectable::AsyncInjectable for #self_type
+            impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
+                syrette::di_container::asynchronous::AsyncDIContainer
+            > for #self_type
             {
                 fn resolve<'di_container, 'fut>(
                     #di_container_var: &'di_container std::sync::Arc<
-                        syrette::AsyncDIContainer
+                        syrette::di_container::asynchronous::AsyncDIContainer
                     >,
                     mut #dependency_history_var: Vec<&'static str>,
                 ) -> syrette::future::BoxFuture<
@@ -153,6 +155,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                     Box::pin(async move {
                         use std::any::type_name;
 
+                        use syrette::di_container::asynchronous::IAsyncDIContainer;
                         use syrette::errors::injectable::InjectableError;
 
                         let self_type_name = type_name::<#self_type>();
@@ -183,10 +186,14 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         quote! {
             #maybe_doc_hidden
-            impl #generics syrette::interfaces::injectable::Injectable for #self_type
+            impl #generics syrette::interfaces::injectable::Injectable<
+                syrette::di_container::blocking::DIContainer
+            > for #self_type
             {
                 fn resolve(
-                    #di_container_var: &std::rc::Rc<syrette::DIContainer>,
+                    #di_container_var: &std::rc::Rc<
+                        syrette::di_container::blocking::DIContainer
+                    >,
                     mut #dependency_history_var: Vec<&'static str>,
                 ) -> Result<
                     syrette::ptr::TransientPtr<Self>,
@@ -194,6 +201,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                 {
                     use std::any::type_name;
 
+                    use syrette::di_container::blocking::IDIContainer;
                     use syrette::errors::injectable::InjectableError;
 
                     let self_type_name = type_name::<#self_type>();

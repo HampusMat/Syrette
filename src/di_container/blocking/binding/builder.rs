@@ -1,4 +1,6 @@
-//! Binding builder for types inside of a [`DIContainer`].
+//! Binding builder for types inside of a [`IDIContainer`].
+//!
+//! [`IDIContainer`]: crate::di_container::blocking::IDIContainer
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -6,24 +8,28 @@ use std::rc::Rc;
 use crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator;
 #[cfg(feature = "factory")]
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
-use crate::di_container::blocking::DIContainer;
+use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
 
-/// Binding builder for type `Interface` inside a [`DIContainer`].
-pub struct BindingBuilder<Interface>
+/// Binding builder for type `Interface` inside a [`IDIContainer`].
+///
+/// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+pub struct BindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized,
+    DIContainerType: IDIContainer,
 {
-    di_container: Rc<DIContainer>,
+    di_container: Rc<DIContainerType>,
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface> BindingBuilder<Interface>
+impl<Interface, DIContainerType> BindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized,
+    DIContainerType: IDIContainer,
 {
-    pub(crate) fn new(di_container: Rc<DIContainer>) -> Self
+    pub(crate) fn new(di_container: Rc<DIContainerType>) -> Self
     {
         Self {
             di_container,
@@ -32,13 +38,13 @@ where
     }
 
     /// Creates a binding of type `Interface` to type `Implementation` inside of the
-    /// associated [`DIContainer`].
+    /// associated [`IDIContainer`].
     ///
     /// The scope of the binding is transient. But that can be changed by using the
     /// returned [`BindingScopeConfigurator`]
     ///
     /// # Errors
-    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// Will return Err if the associated [`IDIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -46,6 +52,7 @@ where
     /// # use std::error::Error;
     /// #
     /// # use syrette::{DIContainer, injectable};
+    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait Foo {}
     /// #
@@ -70,16 +77,19 @@ where
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     pub fn to<Implementation>(
         &self,
-    ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
+    ) -> Result<
+        BindingScopeConfigurator<Interface, Implementation, DIContainerType>,
+        BindingBuilderError,
+    >
     where
-        Implementation: Injectable,
+        Implementation: Injectable<DIContainerType>,
     {
         {
-            let bindings = self.di_container.bindings.borrow();
-
-            if bindings.has::<Interface>(None) {
+            if self.di_container.has_binding::<Interface>(None) {
                 return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                     Interface,
                 >(
@@ -96,10 +106,10 @@ where
     }
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
-    /// associated [`DIContainer`].
+    /// associated [`IDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// Will return Err if the associated [`IDIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -108,6 +118,7 @@ where
     /// #
     /// # use syrette::{DIContainer, factory};
     /// # use syrette::ptr::TransientPtr;
+    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait ICustomerID {}
     /// # trait ICustomer {}
@@ -158,36 +169,31 @@ where
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_factory<Args, Return, Func>(
         &self,
         factory_func: &'static Func,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
     where
         Args: 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
-        Func: Fn<(std::rc::Rc<DIContainer>,), Output = Box<Interface>>,
+        Func: Fn<(std::rc::Rc<DIContainerType>,), Output = Box<Interface>>,
     {
         use crate::castable_factory::blocking::CastableFactory;
 
-        {
-            let bindings = self.di_container.bindings.borrow();
-
-            if bindings.has::<Interface>(None) {
-                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                    Interface,
-                >(
-                )));
-            }
+        if self.di_container.has_binding::<Interface>(None) {
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
         }
-
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
         let factory_impl = CastableFactory::new(factory_func);
 
-        bindings_mut.set::<Interface>(
+        self.di_container.set_binding::<Interface>(
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
@@ -199,10 +205,10 @@ where
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
-    /// inside of the associated [`DIContainer`].
+    /// inside of the associated [`IDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`DIContainer`] already have a binding for
+    /// Will return Err if the associated [`IDIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -211,6 +217,7 @@ where
     /// #
     /// # use syrette::{DIContainer, factory};
     /// # use syrette::ptr::TransientPtr;
+    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait IBuffer {}
     /// #
@@ -248,16 +255,18 @@ where
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_default_factory<Return, FactoryFunc>(
         &self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
-            (Rc<DIContainer>,),
+            (Rc<DIContainerType>,),
             Output = crate::ptr::TransientPtr<
                 dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
             >,
@@ -265,22 +274,15 @@ where
     {
         use crate::castable_factory::blocking::CastableFactory;
 
-        {
-            let bindings = self.di_container.bindings.borrow();
-
-            if bindings.has::<Interface>(None) {
-                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                    Interface,
-                >(
-                )));
-            }
+        if self.di_container.has_binding::<Interface>(None) {
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
         }
-
-        let mut bindings_mut = self.di_container.bindings.borrow_mut();
 
         let factory_impl = CastableFactory::new(factory_func);
 
-        bindings_mut.set::<Interface>(
+        self.di_container.set_binding::<Interface>(
             None,
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
@@ -297,92 +299,34 @@ mod tests
 {
     use std::error::Error;
 
+    use mockall::predicate::eq;
+
     use super::*;
-    use crate::ptr::TransientPtr;
-    use crate::test_utils::subjects;
+    use crate::test_utils::{mocks, subjects};
 
     #[test]
     fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container = DIContainer::new();
+        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
 
-        assert_eq!(di_container.bindings.borrow().count(), 0);
+        mock_di_container
+            .expect_has_binding::<dyn subjects::INumber>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
 
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?;
+        mock_di_container
+            .expect_set_binding::<dyn subjects::INumber>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
 
-        assert_eq!(di_container.bindings.borrow().count(), 1);
+        let binding_builder = BindingBuilder::<
+            dyn subjects::INumber,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(mock_di_container));
 
-        Ok(())
-    }
-
-    #[test]
-    fn can_bind_to_transient() -> Result<(), Box<dyn Error>>
-    {
-        let mut di_container = DIContainer::new();
-
-        assert_eq!(di_container.bindings.borrow().count(), 0);
-
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
-            .in_transient_scope();
-
-        assert_eq!(di_container.bindings.borrow().count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_bind_to_transient_when_named() -> Result<(), Box<dyn Error>>
-    {
-        let mut di_container = DIContainer::new();
-
-        assert_eq!(di_container.bindings.borrow().count(), 0);
-
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
-            .in_transient_scope()
-            .when_named("regular")?;
-
-        assert_eq!(di_container.bindings.borrow().count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_bind_to_singleton() -> Result<(), Box<dyn Error>>
-    {
-        let mut di_container = DIContainer::new();
-
-        assert_eq!(di_container.bindings.borrow().count(), 0);
-
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
-            .in_singleton_scope()?;
-
-        assert_eq!(di_container.bindings.borrow().count(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_bind_to_singleton_when_named() -> Result<(), Box<dyn Error>>
-    {
-        let mut di_container = DIContainer::new();
-
-        assert_eq!(di_container.bindings.borrow().count(), 0);
-
-        di_container
-            .bind::<dyn subjects::IUserManager>()
-            .to::<subjects::UserManager>()?
-            .in_singleton_scope()?
-            .when_named("cool")?;
-
-        assert_eq!(di_container.bindings.borrow().count(), 1);
+        binding_builder.to::<subjects::Number>()?;
 
         Ok(())
     }
@@ -393,57 +337,80 @@ mod tests
     {
         use crate as syrette;
         use crate::factory;
+        use crate::ptr::TransientPtr;
 
         #[factory]
-        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
+        type IUserManagerFactory = dyn Fn(i32, String) -> dyn subjects::IUserManager;
 
-        let mut di_container = DIContainer::new();
+        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
 
-        assert_eq!(di_container.bindings.borrow().count(), 0);
+        mock_di_container
+            .expect_has_binding::<IUserManagerFactory>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
 
-        di_container
-            .bind::<IUserManagerFactory>()
-            .to_factory(&|_| {
-                Box::new(move || {
-                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                        TransientPtr::new(subjects::UserManager::new());
+        mock_di_container
+            .expect_set_binding::<IUserManagerFactory>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
 
-                    user_manager
-                })
-            })?;
+        let binding_builder = BindingBuilder::<
+            IUserManagerFactory,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(mock_di_container));
 
-        assert_eq!(di_container.bindings.borrow().count(), 1);
+        binding_builder.to_factory(&|_| {
+            Box::new(move |_num, _text| {
+                let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                    TransientPtr::new(subjects::UserManager::new());
+
+                user_manager
+            })
+        })?;
 
         Ok(())
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_factory_when_named() -> Result<(), Box<dyn Error>>
+    fn can_bind_to_default_factory() -> Result<(), Box<dyn Error>>
     {
+        use syrette_macros::declare_default_factory;
+
         use crate as syrette;
-        use crate::factory;
+        use crate::ptr::TransientPtr;
 
-        #[factory]
-        type IUserManagerFactory = dyn Fn() -> dyn subjects::IUserManager;
+        declare_default_factory!(dyn subjects::IUserManager);
 
-        let mut di_container = DIContainer::new();
+        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
 
-        assert_eq!(di_container.bindings.borrow().count(), 0);
+        mock_di_container
+            .expect_has_binding::<dyn subjects::IUserManager>()
+            .with(eq(None))
+            .return_once(|_name| false)
+            .once();
 
-        di_container
-            .bind::<IUserManagerFactory>()
-            .to_factory(&|_| {
-                Box::new(move || {
-                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                        TransientPtr::new(subjects::UserManager::new());
+        mock_di_container
+            .expect_set_binding::<dyn subjects::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
 
-                    user_manager
-                })
-            })?
-            .when_named("awesome")?;
+        let binding_builder = BindingBuilder::<
+            dyn subjects::IUserManager,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(mock_di_container));
 
-        assert_eq!(di_container.bindings.borrow().count(), 1);
+        binding_builder.to_default_factory(&|_| {
+            Box::new(move || {
+                let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                    TransientPtr::new(subjects::UserManager::new());
+
+                user_manager
+            })
+        })?;
 
         Ok(())
     }

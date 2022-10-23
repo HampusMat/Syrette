@@ -47,7 +47,7 @@ async-trait = { version = "0.1.57", optional = true }
 tokio = { version = "1.20.1", features = ["sync"], optional = true }
 
 [dev_dependencies]
-mockall = "0.11.1"
+mockall = { git = "https://github.com/HampusMat/mockall" }
 anyhow = "1.0.62"
 third-party-lib = { path = "./examples/with-3rd-party/third-party-lib" }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }

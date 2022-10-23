@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use syrette::{di_container_bind, DIContainer};
+use syrette::di_container::blocking::prelude::*;
+use syrette::di_container_bind;
 
 use crate::interfaces::printer::IPrinter;
 use crate::printer::Printer;

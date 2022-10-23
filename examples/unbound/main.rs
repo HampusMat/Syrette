@@ -2,16 +2,17 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-use anyhow::Result;
-
 mod animal_store;
 mod animals;
 mod bootstrap;
 mod interfaces;
 
-use bootstrap::bootstrap;
-use interfaces::dog::IDog;
-use interfaces::human::IHuman;
+use anyhow::Result;
+use syrette::di_container::blocking::prelude::*;
+
+use crate::bootstrap::bootstrap;
+use crate::interfaces::dog::IDog;
+use crate::interfaces::human::IHuman;
 
 fn main() -> Result<()>
 {

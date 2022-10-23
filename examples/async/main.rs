@@ -2,19 +2,19 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-use anyhow::Result;
-use tokio::spawn;
-
 mod animals;
 mod bootstrap;
 mod food;
 mod interfaces;
 
-use bootstrap::bootstrap;
-use interfaces::dog::IDog;
-use interfaces::human::IHuman;
+use anyhow::Result;
+use syrette::di_container::asynchronous::prelude::*;
+use tokio::spawn;
 
+use crate::bootstrap::bootstrap;
+use crate::interfaces::dog::IDog;
 use crate::interfaces::food::IFoodFactory;
+use crate::interfaces::human::IHuman;
 
 #[tokio::main]
 async fn main() -> Result<()>

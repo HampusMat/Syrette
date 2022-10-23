@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::rc::Rc;
 
+use syrette::di_container::blocking::prelude::*;
 use syrette::ptr::TransientPtr;
-use syrette::DIContainer;
 
 use crate::interfaces::user::{IUser, IUserFactory};
 use crate::interfaces::user_manager::IUserManager;

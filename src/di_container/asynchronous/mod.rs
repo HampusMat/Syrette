@@ -5,7 +5,8 @@
 //! use std::collections::HashMap;
 //! use std::error::Error;
 //!
-//! use syrette::{injectable, AsyncDIContainer};
+//! use syrette::di_container::asynchronous::prelude::*;
+//! use syrette::injectable;
 //!
 //! trait IDatabaseService: Send + Sync
 //! {
@@ -53,6 +54,7 @@
 use std::any::type_name;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use tokio::sync::Mutex;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
@@ -65,11 +67,64 @@ use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
 use crate::ptr::{SomeThreadsafePtr, TransientPtr};
 
 pub mod binding;
+pub mod prelude;
+
+/// Dependency injection container interface.
+#[async_trait]
+pub trait IAsyncDIContainer:
+    Sized + 'static + Send + Sync + details::DIContainerInternals
+{
+    /// Returns a new [`AsyncBindingBuilder`] for the given interface.
+    #[must_use]
+    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
+    where
+        Interface: 'static + ?Sized + Send + Sync;
+
+    /// Returns the type bound with `Interface`.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    fn get<'a, 'b, Interface>(
+        self: &'a Arc<Self>,
+    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    where
+        Interface: 'static + 'b + ?Sized + Send + Sync,
+        'a: 'b,
+        Self: 'b;
+
+    /// Returns the type bound with `Interface` and the specified name.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` with name `name` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    fn get_named<'a, 'b, Interface>(
+        self: &'a Arc<Self>,
+        name: &'static str,
+    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    where
+        Interface: 'static + 'b + ?Sized + Send + Sync,
+        'a: 'b,
+        Self: 'b;
+
+    #[doc(hidden)]
+    async fn get_bound<Interface>(
+        self: &Arc<Self>,
+        dependency_history: Vec<&'static str>,
+        name: Option<&'static str>,
+    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    where
+        Interface: 'static + ?Sized + Send + Sync;
+}
 
 /// Dependency injection container.
 pub struct AsyncDIContainer
 {
-    bindings: Mutex<DIContainerBindingMap<dyn IAsyncProvider>>,
+    bindings: Mutex<DIContainerBindingMap<dyn IAsyncProvider<Self>>>,
 }
 
 impl AsyncDIContainer
@@ -82,51 +137,43 @@ impl AsyncDIContainer
             bindings: Mutex::new(DIContainerBindingMap::new()),
         })
     }
+}
 
-    /// Returns a new [`AsyncBindingBuilder`] for the given interface.
+#[async_trait]
+impl IAsyncDIContainer for AsyncDIContainer
+{
     #[must_use]
-    pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
+    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
-        AsyncBindingBuilder::<Interface>::new(self.clone())
+        AsyncBindingBuilder::new(self.clone())
     }
 
-    /// Returns the type bound with `Interface`.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    pub async fn get<Interface>(
-        self: &Arc<Self>,
-    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    fn get<'a, 'b, Interface>(
+        self: &'a Arc<Self>,
+    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
     where
-        Interface: 'static + ?Sized + Send + Sync,
+        Interface: 'static + 'b + ?Sized + Send + Sync,
+        'a: 'b,
+        Self: 'b,
     {
-        self.get_bound::<Interface>(Vec::new(), None).await
+        Box::pin(async { self.get_bound::<Interface>(Vec::new(), None).await })
     }
 
-    /// Returns the type bound with `Interface` and the specified name.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` with name `name` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    pub async fn get_named<Interface>(
-        self: &Arc<Self>,
+    fn get_named<'a, 'b, Interface>(
+        self: &'a Arc<Self>,
         name: &'static str,
-    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
     where
-        Interface: 'static + ?Sized + Send + Sync,
+        Interface: 'static + 'b + ?Sized + Send + Sync,
+        'a: 'b,
+        Self: 'b,
     {
-        self.get_bound::<Interface>(Vec::new(), Some(name)).await
+        Box::pin(async { self.get_bound::<Interface>(Vec::new(), Some(name)).await })
     }
 
-    #[doc(hidden)]
-    pub async fn get_bound<Interface>(
+    async fn get_bound<Interface>(
         self: &Arc<Self>,
         dependency_history: Vec<&'static str>,
         name: Option<&'static str>,
@@ -140,10 +187,44 @@ impl AsyncDIContainer
 
         self.handle_binding_providable(binding_providable).await
     }
+}
 
+#[async_trait]
+impl details::DIContainerInternals for AsyncDIContainer
+{
+    async fn has_binding<Interface>(self: &Arc<Self>, name: Option<&'static str>) -> bool
+    where
+        Interface: ?Sized + 'static,
+    {
+        self.bindings.lock().await.has::<Interface>(name)
+    }
+
+    async fn set_binding<Interface>(
+        self: &Arc<Self>,
+        name: Option<&'static str>,
+        provider: Box<dyn IAsyncProvider<Self>>,
+    ) where
+        Interface: 'static + ?Sized,
+    {
+        self.bindings.lock().await.set::<Interface>(name, provider);
+    }
+
+    async fn remove_binding<Interface>(
+        self: &Arc<Self>,
+        name: Option<&'static str>,
+    ) -> Option<Box<dyn IAsyncProvider<Self>>>
+    where
+        Interface: 'static + ?Sized,
+    {
+        self.bindings.lock().await.remove::<Interface>(name)
+    }
+}
+
+impl AsyncDIContainer
+{
     async fn handle_binding_providable<Interface>(
         self: &Arc<Self>,
-        binding_providable: AsyncProvidable,
+        binding_providable: AsyncProvidable<Self>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
@@ -261,7 +342,7 @@ impl AsyncDIContainer
         self: &Arc<Self>,
         name: Option<&'static str>,
         dependency_history: Vec<&'static str>,
-    ) -> Result<AsyncProvidable, AsyncDIContainerError>
+    ) -> Result<AsyncProvidable<Self>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -294,6 +375,40 @@ impl AsyncDIContainer
     }
 }
 
+pub(crate) mod details
+{
+    use std::sync::Arc;
+
+    use async_trait::async_trait;
+
+    use crate::provider::r#async::IAsyncProvider;
+
+    #[async_trait]
+    pub trait DIContainerInternals
+    {
+        async fn has_binding<Interface>(
+            self: &Arc<Self>,
+            name: Option<&'static str>,
+        ) -> bool
+        where
+            Interface: ?Sized + 'static;
+
+        async fn set_binding<Interface>(
+            self: &Arc<Self>,
+            name: Option<&'static str>,
+            provider: Box<dyn IAsyncProvider<Self>>,
+        ) where
+            Interface: 'static + ?Sized;
+
+        async fn remove_binding<Interface>(
+            self: &Arc<Self>,
+            name: Option<&'static str>,
+        ) -> Option<Box<dyn IAsyncProvider<Self>>>
+        where
+            Interface: 'static + ?Sized;
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
@@ -314,15 +429,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
@@ -365,15 +480,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
@@ -419,15 +534,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
@@ -483,15 +598,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
@@ -593,15 +708,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
@@ -704,15 +819,15 @@ mod tests
             Provider {}
 
             #[async_trait]
-            impl IAsyncProvider for Provider
+            impl IAsyncProvider<AsyncDIContainer> for Provider
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<AsyncDIContainer>,
                     dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable, InjectableError>;
+                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
 
-                fn do_clone(&self) -> Box<dyn IAsyncProvider>;
+                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
             }
         }
 
