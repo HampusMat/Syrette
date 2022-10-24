@@ -154,3 +154,91 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use std::error::Error;
+
+    use super::*;
+    use crate::test_utils::{mocks, subjects};
+
+    #[test]
+    fn transient_type_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        let transient_type_provider = TransientTypeProvider::<
+            subjects::UserManager,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new();
+
+        let di_container = mocks::blocking_di_container::MockDIContainer::new();
+
+        assert!(
+            matches!(
+                transient_type_provider.provide(&Rc::new(di_container), vec![])?,
+                Providable::Transient(_)
+            ),
+            "The provided type is not transient"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn singleton_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        let singleton_provider =
+            SingletonProvider::<
+                subjects::UserManager,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(SingletonPtr::new(subjects::UserManager {}));
+
+        let di_container = mocks::blocking_di_container::MockDIContainer::new();
+
+        assert!(
+            matches!(
+                singleton_provider.provide(&Rc::new(di_container), vec![])?,
+                Providable::Singleton(_)
+            ),
+            "The provided type is not a singleton"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(feature = "factory")]
+    fn factory_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        use crate::interfaces::any_factory::AnyFactory;
+        use crate::ptr::FactoryPtr;
+
+        struct FooFactory;
+
+        impl AnyFactory for FooFactory {}
+
+        let factory_provider = FactoryProvider::new(FactoryPtr::new(FooFactory), false);
+        let default_factory_provider =
+            FactoryProvider::new(FactoryPtr::new(FooFactory), true);
+
+        let di_container = Rc::new(mocks::blocking_di_container::MockDIContainer::new());
+
+        assert!(
+            matches!(
+                factory_provider.provide(&di_container, vec![])?,
+                Providable::Factory(_)
+            ),
+            "The provided type is not a factory"
+        );
+
+        assert!(
+            matches!(
+                default_factory_provider.provide(&di_container, vec![])?,
+                Providable::DefaultFactory(_)
+            ),
+            "The provided type is not a default factory"
+        );
+
+        Ok(())
+    }
+}

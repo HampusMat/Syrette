@@ -255,3 +255,120 @@ impl Clone for AsyncFactoryProvider
         }
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use std::error::Error;
+
+    use super::*;
+    use crate::test_utils::{mocks, subjects_async};
+
+    #[tokio::test]
+    async fn async_transient_type_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        let transient_type_provider = AsyncTransientTypeProvider::<
+            subjects_async::UserManager,
+            mocks::async_di_container::MockAsyncDIContainer,
+        >::new();
+
+        let di_container = mocks::async_di_container::MockAsyncDIContainer::new();
+
+        assert!(
+            matches!(
+                transient_type_provider
+                    .provide(&Arc::new(di_container), vec![])
+                    .await?,
+                AsyncProvidable::Transient(_)
+            ),
+            "The provided type is not transient"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn async_singleton_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        let singleton_provider = AsyncSingletonProvider::<
+            subjects_async::UserManager,
+            mocks::async_di_container::MockAsyncDIContainer,
+        >::new(ThreadsafeSingletonPtr::new(
+            subjects_async::UserManager {},
+        ));
+
+        let di_container = mocks::async_di_container::MockAsyncDIContainer::new();
+
+        assert!(
+            matches!(
+                singleton_provider
+                    .provide(&Arc::new(di_container), vec![])
+                    .await?,
+                AsyncProvidable::Singleton(_)
+            ),
+            "The provided type is not a singleton"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "factory")]
+    async fn async_factory_provider_works() -> Result<(), Box<dyn Error>>
+    {
+        use crate::interfaces::any_factory::AnyThreadsafeFactory;
+        use crate::ptr::ThreadsafeFactoryPtr;
+
+        struct FooFactory;
+
+        impl AnyThreadsafeFactory for FooFactory {}
+
+        let factory_provider = AsyncFactoryProvider::new(
+            ThreadsafeFactoryPtr::new(FooFactory),
+            AsyncFactoryVariant::Normal,
+        );
+
+        let default_factory_provider = AsyncFactoryProvider::new(
+            ThreadsafeFactoryPtr::new(FooFactory),
+            AsyncFactoryVariant::Default,
+        );
+
+        let async_default_factory_provider = AsyncFactoryProvider::new(
+            ThreadsafeFactoryPtr::new(FooFactory),
+            AsyncFactoryVariant::AsyncDefault,
+        );
+
+        let di_container =
+            Arc::new(mocks::async_di_container::MockAsyncDIContainer::new());
+
+        assert!(
+            matches!(
+                factory_provider.provide(&di_container, vec![]).await?,
+                AsyncProvidable::Factory(_)
+            ),
+            "The provided type is not a factory"
+        );
+
+        assert!(
+            matches!(
+                default_factory_provider
+                    .provide(&di_container, vec![])
+                    .await?,
+                AsyncProvidable::DefaultFactory(_)
+            ),
+            "The provided type is not a default factory"
+        );
+
+        assert!(
+            matches!(
+                async_default_factory_provider
+                    .provide(&di_container, vec![])
+                    .await?,
+                AsyncProvidable::AsyncDefaultFactory(_)
+            ),
+            "The provided type is not a async default factory"
+        );
+
+        Ok(())
+    }
+}
