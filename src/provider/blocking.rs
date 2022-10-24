@@ -21,6 +21,7 @@ where
     ),
 }
 
+#[cfg_attr(test, mockall::automock, allow(dead_code))]
 pub trait IProvider<DIContainerType>
 where
     DIContainerType: IDIContainer,

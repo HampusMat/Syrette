@@ -90,3 +90,55 @@ where
         Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use crate::test_utils::{mocks, subjects_async};
+
+    #[tokio::test]
+    async fn in_transient_scope_works()
+    {
+        let mut di_container_mock =
+            mocks::async_di_container::MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects_async::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_scope_configurator = AsyncBindingScopeConfigurator::<
+            dyn subjects_async::IUserManager,
+            subjects_async::UserManager,
+            mocks::async_di_container::MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        binding_scope_configurator.in_transient_scope().await;
+    }
+
+    #[tokio::test]
+    async fn in_singleton_scope_works()
+    {
+        let mut di_container_mock =
+            mocks::async_di_container::MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects_async::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_scope_configurator = AsyncBindingScopeConfigurator::<
+            dyn subjects_async::IUserManager,
+            subjects_async::UserManager,
+            mocks::async_di_container::MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        assert!(matches!(
+            binding_scope_configurator.in_singleton_scope().await,
+            Ok(_)
+        ));
+    }
+}

@@ -79,3 +79,53 @@ where
         Ok(BindingWhenConfigurator::new(self.di_container.clone()))
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use crate::test_utils::{mocks, subjects};
+
+    #[test]
+    fn in_transient_scope_works()
+    {
+        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_scope_configurator = BindingScopeConfigurator::<
+            dyn subjects::IUserManager,
+            subjects::UserManager,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(di_container_mock));
+
+        binding_scope_configurator.in_transient_scope();
+    }
+
+    #[test]
+    fn in_singleton_scope_works()
+    {
+        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects::IUserManager>()
+            .withf(|name, _provider| name.is_none())
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_scope_configurator = BindingScopeConfigurator::<
+            dyn subjects::IUserManager,
+            subjects::UserManager,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(di_container_mock));
+
+        assert!(matches!(
+            binding_scope_configurator.in_singleton_scope(),
+            Ok(_)
+        ));
+    }
+}

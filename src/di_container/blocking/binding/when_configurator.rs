@@ -61,3 +61,41 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use mockall::predicate::eq;
+
+    use super::*;
+    use crate::provider::blocking::MockIProvider;
+    use crate::test_utils::{mocks, subjects};
+
+    #[test]
+    fn when_named_works()
+    {
+        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+
+        di_container_mock
+            .expect_remove_binding::<dyn subjects::INumber>()
+            .with(eq(None))
+            .return_once(|_name| Some(Box::new(MockIProvider::new())))
+            .once();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects::INumber>()
+            .withf(|name, _provider| name == &Some("cool"))
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_when_configurator = BindingWhenConfigurator::<
+            dyn subjects::INumber,
+            mocks::blocking_di_container::MockDIContainer,
+        >::new(Rc::new(di_container_mock));
+
+        assert!(matches!(
+            binding_when_configurator.when_named("cool"),
+            Ok(_)
+        ));
+    }
+}

@@ -36,6 +36,7 @@ where
 }
 
 #[async_trait]
+#[cfg_attr(test, mockall::automock, allow(dead_code))]
 pub trait IAsyncProvider<DIContainerType>: Send + Sync
 where
     DIContainerType: IAsyncDIContainer,

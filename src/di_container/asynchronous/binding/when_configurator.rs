@@ -62,3 +62,42 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests
+{
+    use mockall::predicate::eq;
+
+    use super::*;
+    use crate::provider::r#async::MockIAsyncProvider;
+    use crate::test_utils::{mocks, subjects_async};
+
+    #[tokio::test]
+    async fn when_named_works()
+    {
+        let mut di_container_mock =
+            mocks::async_di_container::MockAsyncDIContainer::new();
+
+        di_container_mock
+            .expect_remove_binding::<dyn subjects_async::INumber>()
+            .with(eq(None))
+            .return_once(|_name| Some(Box::new(MockIAsyncProvider::new())))
+            .once();
+
+        di_container_mock
+            .expect_set_binding::<dyn subjects_async::INumber>()
+            .withf(|name, _provider| name == &Some("awesome"))
+            .return_once(|_name, _provider| ())
+            .once();
+
+        let binding_when_configurator = AsyncBindingWhenConfigurator::<
+            dyn subjects_async::INumber,
+            mocks::async_di_container::MockAsyncDIContainer,
+        >::new(Arc::new(di_container_mock));
+
+        assert!(matches!(
+            binding_when_configurator.when_named("awesome").await,
+            Ok(_)
+        ));
+    }
+}
