@@ -6,4 +6,5 @@ pub mod asynchronous;
 
 pub mod blocking;
 
-pub(crate) mod binding_map;
+// Private.
+pub(crate) mod binding_storage;

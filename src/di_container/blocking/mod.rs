@@ -54,7 +54,7 @@ use std::any::type_name;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::di_container::binding_map::DIContainerBindingMap;
+use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::errors::di_container::DIContainerError;
 use crate::libs::intertrait::cast::{CastBox, CastRc};
@@ -110,7 +110,7 @@ pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
 /// Blocking dependency injection container.
 pub struct DIContainer
 {
-    bindings: RefCell<DIContainerBindingMap<dyn IProvider<Self>>>,
+    binding_storage: RefCell<DIContainerBindingStorage<dyn IProvider<Self>>>,
 }
 
 impl DIContainer
@@ -120,7 +120,7 @@ impl DIContainer
     pub fn new() -> Rc<Self>
     {
         Rc::new(Self {
-            bindings: RefCell::new(DIContainerBindingMap::new()),
+            binding_storage: RefCell::new(DIContainerBindingStorage::new()),
         })
     }
 }
@@ -174,7 +174,7 @@ impl details::DIContainerInternals for DIContainer
     where
         Interface: ?Sized + 'static,
     {
-        self.bindings.borrow().has::<Interface>(name)
+        self.binding_storage.borrow().has::<Interface>(name)
     }
 
     fn set_binding<Interface>(
@@ -184,7 +184,9 @@ impl details::DIContainerInternals for DIContainer
     ) where
         Interface: 'static + ?Sized,
     {
-        self.bindings.borrow_mut().set::<Interface>(name, provider);
+        self.binding_storage
+            .borrow_mut()
+            .set::<Interface>(name, provider);
     }
 
     fn remove_binding<Interface>(
@@ -194,7 +196,7 @@ impl details::DIContainerInternals for DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.bindings.borrow_mut().remove::<Interface>(name)
+        self.binding_storage.borrow_mut().remove::<Interface>(name)
     }
 }
 
@@ -265,7 +267,7 @@ impl DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.bindings
+        self.binding_storage
             .borrow()
             .get::<Interface>(name)
             .map_or_else(
@@ -353,7 +355,7 @@ mod tests
         });
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<dyn subjects::IUserManager>(None, Box::new(mock_provider));
 
@@ -391,7 +393,7 @@ mod tests
         });
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<dyn subjects::IUserManager>(Some("special"), Box::new(mock_provider));
 
@@ -431,7 +433,7 @@ mod tests
             .returning_st(move |_, _| Ok(Providable::Singleton(singleton.clone())));
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<dyn subjects::INumber>(None, Box::new(mock_provider));
 
@@ -476,7 +478,7 @@ mod tests
             .returning_st(move |_, _| Ok(Providable::Singleton(singleton.clone())));
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<dyn subjects::INumber>(Some("cool"), Box::new(mock_provider));
 
@@ -583,7 +585,7 @@ mod tests
         });
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<IUserManagerFactory>(None, Box::new(mock_provider));
 
@@ -680,7 +682,7 @@ mod tests
         });
 
         di_container
-            .bindings
+            .binding_storage
             .borrow_mut()
             .set::<IUserManagerFactory>(Some("special"), Box::new(mock_provider));
 

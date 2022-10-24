@@ -58,7 +58,7 @@ use async_trait::async_trait;
 use tokio::sync::Mutex;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
-use crate::di_container::binding_map::DIContainerBindingMap;
+use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::errors::async_di_container::AsyncDIContainerError;
 use crate::future::BoxFuture;
 use crate::libs::intertrait::cast::error::CastError;
@@ -124,7 +124,7 @@ pub trait IAsyncDIContainer:
 /// Dependency injection container.
 pub struct AsyncDIContainer
 {
-    bindings: Mutex<DIContainerBindingMap<dyn IAsyncProvider<Self>>>,
+    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
 }
 
 impl AsyncDIContainer
@@ -134,7 +134,7 @@ impl AsyncDIContainer
     pub fn new() -> Arc<Self>
     {
         Arc::new(Self {
-            bindings: Mutex::new(DIContainerBindingMap::new()),
+            binding_storage: Mutex::new(DIContainerBindingStorage::new()),
         })
     }
 }
@@ -196,7 +196,7 @@ impl details::DIContainerInternals for AsyncDIContainer
     where
         Interface: ?Sized + 'static,
     {
-        self.bindings.lock().await.has::<Interface>(name)
+        self.binding_storage.lock().await.has::<Interface>(name)
     }
 
     async fn set_binding<Interface>(
@@ -206,7 +206,10 @@ impl details::DIContainerInternals for AsyncDIContainer
     ) where
         Interface: 'static + ?Sized,
     {
-        self.bindings.lock().await.set::<Interface>(name, provider);
+        self.binding_storage
+            .lock()
+            .await
+            .set::<Interface>(name, provider);
     }
 
     async fn remove_binding<Interface>(
@@ -216,7 +219,7 @@ impl details::DIContainerInternals for AsyncDIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.bindings.lock().await.remove::<Interface>(name)
+        self.binding_storage.lock().await.remove::<Interface>(name)
     }
 }
 
@@ -349,7 +352,7 @@ impl AsyncDIContainer
         let provider;
 
         {
-            let bindings_lock = self.bindings.lock().await;
+            let bindings_lock = self.binding_storage.lock().await;
 
             provider = bindings_lock
                 .get::<Interface>(name)
@@ -459,7 +462,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<dyn subjects_async::IUserManager>(None, Box::new(mock_provider));
@@ -510,7 +513,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<dyn subjects_async::IUserManager>(
@@ -568,7 +571,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<dyn subjects_async::INumber>(None, Box::new(mock_provider));
@@ -632,7 +635,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<dyn subjects_async::INumber>(
@@ -755,7 +758,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<IUserManagerFactory>(None, Box::new(mock_provider));
@@ -866,7 +869,7 @@ mod tests
 
         {
             di_container
-                .bindings
+                .binding_storage
                 .lock()
                 .await
                 .set::<IUserManagerFactory>(Some("special"), Box::new(mock_provider));
