@@ -78,20 +78,42 @@ mod tests
 {
     use super::*;
 
+    #[derive(Debug, PartialEq, Eq)]
+    struct Bacon
+    {
+        heal_amount: u32,
+    }
+
     #[test]
     fn can_call()
     {
-        #[derive(Debug, PartialEq, Eq)]
-        struct Bacon
-        {
-            heal_amount: u32,
-        }
-
         let castable_factory =
             CastableFactory::new(&|heal_amount| TransientPtr::new(Bacon { heal_amount }));
 
-        let output = castable_factory(27);
+        let output = castable_factory.call((27,));
 
-        assert_eq!(output, Box::new(Bacon { heal_amount: 27 }));
+        assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 27 }));
+    }
+
+    #[test]
+    fn can_call_mut()
+    {
+        let mut castable_factory =
+            CastableFactory::new(&|heal_amount| TransientPtr::new(Bacon { heal_amount }));
+
+        let output = castable_factory.call_mut((103,));
+
+        assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 103 }));
+    }
+
+    #[test]
+    fn can_call_once()
+    {
+        let castable_factory =
+            CastableFactory::new(&|heal_amount| TransientPtr::new(Bacon { heal_amount }));
+
+        let output = castable_factory.call_once((19,));
+
+        assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 19 }));
     }
 }
