@@ -320,6 +320,7 @@ mod tests
         use crate::interfaces::any_factory::AnyThreadsafeFactory;
         use crate::ptr::ThreadsafeFactoryPtr;
 
+        #[derive(Debug)]
         struct FooFactory;
 
         impl AnyThreadsafeFactory for FooFactory {}

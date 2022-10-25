@@ -214,6 +214,7 @@ mod tests
         use crate::interfaces::any_factory::AnyFactory;
         use crate::ptr::FactoryPtr;
 
+        #[derive(Debug)]
         struct FooFactory;
 
         impl AnyFactory for FooFactory {}

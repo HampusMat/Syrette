@@ -1,3 +1,6 @@
+use std::any::type_name;
+use std::fmt::Debug;
+
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::factory::IFactory;
 use crate::ptr::TransientPtr;
@@ -71,6 +74,36 @@ where
     Args: 'static,
     ReturnInterface: 'static + ?Sized,
 {
+}
+
+impl<Args, ReturnInterface> Debug for CastableFactory<Args, ReturnInterface>
+where
+    Args: 'static,
+    ReturnInterface: 'static + ?Sized,
+{
+    #[cfg(not(tarpaulin_include))]
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        let mut args = type_name::<Args>();
+
+        if args.len() < 2 {
+            return Err(std::fmt::Error::default());
+        }
+
+        args = args
+            .get(1..args.len() - 1)
+            .map_or_else(|| Err(std::fmt::Error::default()), Ok)?;
+
+        if args.ends_with(',') {
+            args = args
+                .get(..args.len() - 1)
+                .map_or_else(|| Err(std::fmt::Error), Ok)?;
+        }
+
+        let ret = type_name::<TransientPtr<ReturnInterface>>();
+
+        formatter.write_fmt(format_args!("CastableFactory ({}) -> {}", args, ret))
+    }
 }
 
 #[cfg(test)]
