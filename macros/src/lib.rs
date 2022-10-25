@@ -132,7 +132,12 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
         .find(|flag| flag.flag.to_string().as_str() == "async")
         .map_or(false, |flag| flag.is_on.value);
 
-    let injectable_impl: InjectableImpl<Dependency> = parse(impl_stream).unwrap();
+    let injectable_impl: InjectableImpl<Dependency> = match parse(impl_stream) {
+        Ok(injectable_impl) => injectable_impl,
+        Err(err) => {
+            panic!("{err}");
+        }
+    };
 
     let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
