@@ -9,6 +9,7 @@
 //!
 //! Syrette is a collection of utilities useful for performing dependency injection.
 
+pub mod dependency_history;
 pub mod di_container;
 pub mod errors;
 pub mod interfaces;
@@ -30,9 +31,6 @@ pub use syrette_macros::{declare_interface, injectable, named};
 #[cfg(feature = "factory")]
 #[doc(hidden)]
 pub mod castable_factory;
-
-#[doc(hidden)]
-pub mod dependency_trace;
 
 #[doc(hidden)]
 pub mod libs;

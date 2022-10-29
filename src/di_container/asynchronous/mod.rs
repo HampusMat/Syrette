@@ -57,6 +57,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 
+use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::errors::async_di_container::AsyncDIContainerError;
@@ -71,12 +72,16 @@ pub mod prelude;
 
 /// Dependency injection container interface.
 #[async_trait]
-pub trait IAsyncDIContainer:
-    Sized + 'static + Send + Sync + details::DIContainerInternals
+pub trait IAsyncDIContainer<DependencyHistoryType>:
+    Sized + 'static + Send + Sync + details::DIContainerInternals<DependencyHistoryType>
+where
+    DependencyHistoryType: IDependencyHistory + Send + Sync,
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
     #[must_use]
-    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
+    fn bind<Interface>(
+        self: &mut Arc<Self>,
+    ) -> AsyncBindingBuilder<Interface, Self, DependencyHistoryType>
     where
         Interface: 'static + ?Sized + Send + Sync;
 
@@ -114,7 +119,7 @@ pub trait IAsyncDIContainer:
     #[doc(hidden)]
     async fn get_bound<Interface>(
         self: &Arc<Self>,
-        dependency_history: Vec<&'static str>,
+        dependency_history: DependencyHistoryType,
         name: Option<&'static str>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
@@ -124,7 +129,8 @@ pub trait IAsyncDIContainer:
 /// Dependency injection container.
 pub struct AsyncDIContainer
 {
-    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
+    binding_storage:
+        Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self, DependencyHistory>>>,
 }
 
 impl AsyncDIContainer
@@ -140,14 +146,16 @@ impl AsyncDIContainer
 }
 
 #[async_trait]
-impl IAsyncDIContainer for AsyncDIContainer
+impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
 {
     #[must_use]
-    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
+    fn bind<Interface>(
+        self: &mut Arc<Self>,
+    ) -> AsyncBindingBuilder<Interface, Self, DependencyHistory>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
-        AsyncBindingBuilder::new(self.clone())
+        AsyncBindingBuilder::new(self.clone(), DependencyHistory::new)
     }
 
     fn get<'a, 'b, Interface>(
@@ -158,7 +166,10 @@ impl IAsyncDIContainer for AsyncDIContainer
         'a: 'b,
         Self: 'b,
     {
-        Box::pin(async { self.get_bound::<Interface>(Vec::new(), None).await })
+        Box::pin(async {
+            self.get_bound::<Interface>(DependencyHistory::new(), None)
+                .await
+        })
     }
 
     fn get_named<'a, 'b, Interface>(
@@ -170,12 +181,15 @@ impl IAsyncDIContainer for AsyncDIContainer
         'a: 'b,
         Self: 'b,
     {
-        Box::pin(async { self.get_bound::<Interface>(Vec::new(), Some(name)).await })
+        Box::pin(async {
+            self.get_bound::<Interface>(DependencyHistory::new(), Some(name))
+                .await
+        })
     }
 
     async fn get_bound<Interface>(
         self: &Arc<Self>,
-        dependency_history: Vec<&'static str>,
+        dependency_history: DependencyHistory,
         name: Option<&'static str>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
@@ -190,7 +204,7 @@ impl IAsyncDIContainer for AsyncDIContainer
 }
 
 #[async_trait]
-impl details::DIContainerInternals for AsyncDIContainer
+impl details::DIContainerInternals<DependencyHistory> for AsyncDIContainer
 {
     async fn has_binding<Interface>(self: &Arc<Self>, name: Option<&'static str>) -> bool
     where
@@ -202,7 +216,7 @@ impl details::DIContainerInternals for AsyncDIContainer
     async fn set_binding<Interface>(
         self: &Arc<Self>,
         name: Option<&'static str>,
-        provider: Box<dyn IAsyncProvider<Self>>,
+        provider: Box<dyn IAsyncProvider<Self, DependencyHistory>>,
     ) where
         Interface: 'static + ?Sized,
     {
@@ -215,7 +229,7 @@ impl details::DIContainerInternals for AsyncDIContainer
     async fn remove_binding<Interface>(
         self: &Arc<Self>,
         name: Option<&'static str>,
-    ) -> Option<Box<dyn IAsyncProvider<Self>>>
+    ) -> Option<Box<dyn IAsyncProvider<Self, DependencyHistory>>>
     where
         Interface: 'static + ?Sized,
     {
@@ -227,7 +241,7 @@ impl AsyncDIContainer
 {
     async fn handle_binding_providable<Interface>(
         self: &Arc<Self>,
-        binding_providable: AsyncProvidable<Self>,
+        binding_providable: AsyncProvidable<Self, DependencyHistory>,
     ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
@@ -344,8 +358,8 @@ impl AsyncDIContainer
     async fn get_binding_providable<Interface>(
         self: &Arc<Self>,
         name: Option<&'static str>,
-        dependency_history: Vec<&'static str>,
-    ) -> Result<AsyncProvidable<Self>, AsyncDIContainerError>
+        dependency_history: DependencyHistory,
+    ) -> Result<AsyncProvidable<Self, DependencyHistory>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -384,10 +398,13 @@ pub(crate) mod details
 
     use async_trait::async_trait;
 
+    use crate::dependency_history::IDependencyHistory;
     use crate::provider::r#async::IAsyncProvider;
 
     #[async_trait]
-    pub trait DIContainerInternals
+    pub trait DIContainerInternals<DependencyHistoryType>
+    where
+        DependencyHistoryType: IDependencyHistory,
     {
         async fn has_binding<Interface>(
             self: &Arc<Self>,
@@ -399,14 +416,14 @@ pub(crate) mod details
         async fn set_binding<Interface>(
             self: &Arc<Self>,
             name: Option<&'static str>,
-            provider: Box<dyn IAsyncProvider<Self>>,
+            provider: Box<dyn IAsyncProvider<Self, DependencyHistoryType>>,
         ) where
             Interface: 'static + ?Sized;
 
         async fn remove_binding<Interface>(
             self: &Arc<Self>,
             name: Option<&'static str>,
-        ) -> Option<Box<dyn IAsyncProvider<Self>>>
+        ) -> Option<Box<dyn IAsyncProvider<Self, DependencyHistoryType>>>
         where
             Interface: 'static + ?Sized;
     }
@@ -417,39 +434,20 @@ mod tests
 {
     use std::error::Error;
 
-    use async_trait::async_trait;
-    use mockall::mock;
-
     use super::*;
-    use crate::errors::injectable::InjectableError;
     use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
+    use crate::test_utils::mocks::async_provider::MockAsyncProvider;
     use crate::test_utils::subjects_async;
 
     #[tokio::test]
     async fn can_get() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             inner_mock_provider.expect_provide().returning(|_, _| {
                 Ok(AsyncProvidable::Transient(TransientPtr::new(
@@ -479,28 +477,12 @@ mod tests
     #[tokio::test]
     async fn can_get_named() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             inner_mock_provider.expect_provide().returning(|_, _| {
                 Ok(AsyncProvidable::Transient(TransientPtr::new(
@@ -533,32 +515,16 @@ mod tests
     #[tokio::test]
     async fn can_get_singleton() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         let mut singleton = ThreadsafeSingletonPtr::new(subjects_async::Number::new());
 
         ThreadsafeSingletonPtr::get_mut(&mut singleton).unwrap().num = 2820;
 
         mock_provider.expect_do_clone().returning(move || {
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             let singleton_clone = singleton.clone();
 
@@ -597,32 +563,16 @@ mod tests
     #[tokio::test]
     async fn can_get_singleton_named() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         let mut singleton = ThreadsafeSingletonPtr::new(subjects_async::Number::new());
 
         ThreadsafeSingletonPtr::get_mut(&mut singleton).unwrap().num = 2820;
 
         mock_provider.expect_do_clone().returning(move || {
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             let singleton_clone = singleton.clone();
 
@@ -707,32 +657,16 @@ mod tests
         #[crate::factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
             type FactoryFunc = Box<
                 (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
             >;
 
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             let factory_func: &'static (dyn Fn<
                 (Arc<AsyncDIContainer>,),
@@ -818,32 +752,16 @@ mod tests
         #[crate::factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
-        mock! {
-            Provider {}
-
-            #[async_trait]
-            impl IAsyncProvider<AsyncDIContainer> for Provider
-            {
-                async fn provide(
-                    &self,
-                    di_container: &Arc<AsyncDIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<AsyncProvidable<AsyncDIContainer>, InjectableError>;
-
-                fn do_clone(&self) -> Box<dyn IAsyncProvider<AsyncDIContainer>>;
-            }
-        }
-
         let di_container = AsyncDIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
             type FactoryFunc = Box<
                 (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
             >;
 
-            let mut inner_mock_provider = MockProvider::new();
+            let mut inner_mock_provider = MockAsyncProvider::new();
 
             let factory_func: &'static (dyn Fn<
                 (Arc<AsyncDIContainer>,),

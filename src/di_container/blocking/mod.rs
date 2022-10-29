@@ -54,6 +54,7 @@ use std::any::type_name;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::errors::di_container::DIContainerError;
@@ -65,10 +66,15 @@ pub mod binding;
 pub mod prelude;
 
 /// Blocking dependency injection container interface.
-pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
+pub trait IDIContainer<DependencyHistoryType>:
+    Sized + 'static + details::DIContainerInternals<DependencyHistoryType>
+where
+    DependencyHistoryType: IDependencyHistory,
 {
     /// Returns a new [`BindingBuilder`] for the given interface.
-    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
+    fn bind<Interface>(
+        self: &mut Rc<Self>,
+    ) -> BindingBuilder<Interface, Self, DependencyHistoryType>
     where
         Interface: 'static + ?Sized;
 
@@ -100,7 +106,7 @@ pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
     #[doc(hidden)]
     fn get_bound<Interface>(
         self: &Rc<Self>,
-        dependency_history: Vec<&'static str>,
+        dependency_history: DependencyHistoryType,
         name: Option<&'static str>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -110,7 +116,8 @@ pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
 /// Blocking dependency injection container.
 pub struct DIContainer
 {
-    binding_storage: RefCell<DIContainerBindingStorage<dyn IProvider<Self>>>,
+    binding_storage:
+        RefCell<DIContainerBindingStorage<dyn IProvider<Self, DependencyHistory>>>,
 }
 
 impl DIContainer
@@ -125,21 +132,23 @@ impl DIContainer
     }
 }
 
-impl IDIContainer for DIContainer
+impl IDIContainer<DependencyHistory> for DIContainer
 {
     #[must_use]
-    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
+    fn bind<Interface>(
+        self: &mut Rc<Self>,
+    ) -> BindingBuilder<Interface, Self, DependencyHistory>
     where
         Interface: 'static + ?Sized,
     {
-        BindingBuilder::<Interface, Self>::new(self.clone())
+        BindingBuilder::new(self.clone(), DependencyHistory::new)
     }
 
     fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
-        self.get_bound::<Interface>(Vec::new(), None)
+        self.get_bound::<Interface>(DependencyHistory::new(), None)
     }
 
     fn get_named<Interface>(
@@ -149,13 +158,13 @@ impl IDIContainer for DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.get_bound::<Interface>(Vec::new(), Some(name))
+        self.get_bound::<Interface>(DependencyHistory::new(), Some(name))
     }
 
     #[doc(hidden)]
     fn get_bound<Interface>(
         self: &Rc<Self>,
-        dependency_history: Vec<&'static str>,
+        dependency_history: DependencyHistory,
         name: Option<&'static str>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -168,7 +177,7 @@ impl IDIContainer for DIContainer
     }
 }
 
-impl details::DIContainerInternals for DIContainer
+impl details::DIContainerInternals<DependencyHistory> for DIContainer
 {
     fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
     where
@@ -180,7 +189,7 @@ impl details::DIContainerInternals for DIContainer
     fn set_binding<Interface>(
         self: &Rc<Self>,
         name: Option<&'static str>,
-        provider: Box<dyn IProvider<Self>>,
+        provider: Box<dyn IProvider<Self, DependencyHistory>>,
     ) where
         Interface: 'static + ?Sized,
     {
@@ -192,7 +201,7 @@ impl details::DIContainerInternals for DIContainer
     fn remove_binding<Interface>(
         self: &Rc<Self>,
         name: Option<&'static str>,
-    ) -> Option<Box<dyn IProvider<Self>>>
+    ) -> Option<Box<dyn IProvider<Self, DependencyHistory>>>
     where
         Interface: 'static + ?Sized,
     {
@@ -204,7 +213,7 @@ impl DIContainer
 {
     fn handle_binding_providable<Interface>(
         self: &Rc<Self>,
-        binding_providable: Providable<Self>,
+        binding_providable: Providable<Self, DependencyHistory>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -262,8 +271,8 @@ impl DIContainer
     fn get_binding_providable<Interface>(
         self: &Rc<Self>,
         name: Option<&'static str>,
-        dependency_history: Vec<&'static str>,
-    ) -> Result<Providable<Self>, DIContainerError>
+        dependency_history: DependencyHistory,
+    ) -> Result<Providable<Self, DependencyHistory>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -291,9 +300,12 @@ pub(crate) mod details
 {
     use std::rc::Rc;
 
+    use crate::dependency_history::IDependencyHistory;
     use crate::provider::blocking::IProvider;
 
-    pub trait DIContainerInternals
+    pub trait DIContainerInternals<DependencyHistoryType>
+    where
+        DependencyHistoryType: IDependencyHistory,
     {
         fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
         where
@@ -302,14 +314,14 @@ pub(crate) mod details
         fn set_binding<Interface>(
             self: &Rc<Self>,
             name: Option<&'static str>,
-            provider: Box<dyn IProvider<Self>>,
+            provider: Box<dyn IProvider<Self, DependencyHistoryType>>,
         ) where
             Interface: 'static + ?Sized;
 
         fn remove_binding<Interface>(
             self: &Rc<Self>,
             name: Option<&'static str>,
-        ) -> Option<Box<dyn IProvider<Self>>>
+        ) -> Option<Box<dyn IProvider<Self, DependencyHistoryType>>>
         where
             Interface: 'static + ?Sized;
     }
@@ -320,33 +332,16 @@ mod tests
 {
     use std::error::Error;
 
-    use mockall::mock;
-
     use super::*;
-    use crate::errors::injectable::InjectableError;
-    use crate::provider::blocking::IProvider;
     use crate::ptr::{SingletonPtr, TransientPtr};
-    use crate::test_utils::subjects;
+    use crate::test_utils::{mocks, subjects};
 
     #[test]
     fn can_get() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Transient(TransientPtr::new(
@@ -369,22 +364,9 @@ mod tests
     #[test]
     fn can_get_named() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Transient(TransientPtr::new(
@@ -407,22 +389,9 @@ mod tests
     #[test]
     fn can_get_singleton() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         let mut singleton = SingletonPtr::new(subjects::Number::new());
 
@@ -452,22 +421,9 @@ mod tests
     #[test]
     fn can_get_singleton_named() -> Result<(), Box<dyn Error>>
     {
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         let mut singleton = SingletonPtr::new(subjects::Number::new());
 
@@ -552,19 +508,6 @@ mod tests
         #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
         let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
@@ -576,7 +519,7 @@ mod tests
             })
         };
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
             Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
@@ -649,19 +592,6 @@ mod tests
         #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
 
-        mock! {
-            Provider {}
-
-            impl IProvider<DIContainer> for Provider
-            {
-                fn provide(
-                    &self,
-                    di_container: &Rc<DIContainer>,
-                    dependency_history: Vec<&'static str>,
-                ) -> Result<Providable<DIContainer>, InjectableError>;
-            }
-        }
-
         let di_container = DIContainer::new();
 
         let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
@@ -673,7 +603,7 @@ mod tests
             })
         };
 
-        let mut mock_provider = MockProvider::new();
+        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
             Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(

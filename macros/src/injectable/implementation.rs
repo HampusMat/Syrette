@@ -101,19 +101,17 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     ) -> proc_macro2::TokenStream
     {
         quote! {
-            if #dependency_history_var.contains(&self_type_name) {
-                #dependency_history_var.push(self_type_name);
+            use syrette::dependency_history::IDependencyHistory;
 
-                let dependency_trace =
-                    syrette::dependency_trace::create_dependency_trace(
-                        #dependency_history_var.as_slice(),
-                        self_type_name
-                    );
+            if #dependency_history_var.contains::<Self>() {
+                #dependency_history_var.push::<Self>();
 
-                return Err(InjectableError::DetectedCircular {dependency_trace });
+                return Err(InjectableError::DetectedCircular {
+                    dependency_history: #dependency_history_var
+                });
             }
 
-            #dependency_history_var.push(self_type_name);
+            #dependency_history_var.push::<Self>();
         }
     }
 
@@ -133,14 +131,15 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         quote! {
             #maybe_doc_hidden
             impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
-                syrette::di_container::asynchronous::AsyncDIContainer
+                syrette::di_container::asynchronous::AsyncDIContainer,
+                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve<'di_container, 'fut>(
                     #di_container_var: &'di_container std::sync::Arc<
                         syrette::di_container::asynchronous::AsyncDIContainer
                     >,
-                    mut #dependency_history_var: Vec<&'static str>,
+                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
                 ) -> syrette::future::BoxFuture<
                     'fut,
                     Result<
@@ -187,14 +186,15 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         quote! {
             #maybe_doc_hidden
             impl #generics syrette::interfaces::injectable::Injectable<
-                syrette::di_container::blocking::DIContainer
+                syrette::di_container::blocking::DIContainer,
+                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve(
                     #di_container_var: &std::rc::Rc<
                         syrette::di_container::blocking::DIContainer
                     >,
-                    mut #dependency_history_var: Vec<&'static str>,
+                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
                 ) -> Result<
                     syrette::ptr::TransientPtr<Self>,
                     syrette::errors::injectable::InjectableError>

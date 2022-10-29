@@ -5,31 +5,38 @@ use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::dependency_history::IDependencyHistory;
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::async_di_container::AsyncBindingWhenConfiguratorError;
 
 /// When configurator for a binding for type 'Interface' inside a [`IAsyncDIContainer`].
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
-pub struct AsyncBindingWhenConfigurator<Interface, DIContainerType>
+pub struct AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
+    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
+    DependencyHistoryType: IDependencyHistory + Send + Sync,
 {
     di_container: Arc<DIContainerType>,
+
     interface_phantom: PhantomData<Interface>,
+    dependency_history_phantom: PhantomData<DependencyHistoryType>,
 }
 
-impl<Interface, DIContainerType> AsyncBindingWhenConfigurator<Interface, DIContainerType>
+impl<Interface, DIContainerType, DependencyHistoryType>
+    AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
+    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
+    DependencyHistoryType: IDependencyHistory + Send + Sync,
 {
     pub(crate) fn new(di_container: Arc<DIContainerType>) -> Self
     {
         Self {
             di_container,
             interface_phantom: PhantomData,
+            dependency_history_phantom: PhantomData,
         }
     }
 
@@ -92,7 +99,8 @@ mod tests
 
         let binding_when_configurator = AsyncBindingWhenConfigurator::<
             dyn subjects_async::INumber,
-            mocks::async_di_container::MockAsyncDIContainer,
+            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
+            mocks::MockDependencyHistory,
         >::new(Arc::new(di_container_mock));
 
         assert!(matches!(

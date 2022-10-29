@@ -2,6 +2,7 @@
 //!
 //! [`Injectable`]: crate::interfaces::injectable::Injectable
 
+use crate::dependency_history::DependencyHistory;
 use crate::errors::di_container::DIContainerError;
 
 /// Error type for structs that implement [`Injectable`].
@@ -35,10 +36,10 @@ pub enum InjectableError
         affected: &'static str,
     },
     /// Detected circular dependencies.
-    #[error("Detected circular dependencies. {dependency_trace}")]
+    #[error("Detected circular dependencies. {dependency_history}")]
     DetectedCircular
     {
-        /// A visual trace of dependencies.
-        dependency_trace: String,
+        /// History of dependencies.
+        dependency_history: DependencyHistory,
     },
 }

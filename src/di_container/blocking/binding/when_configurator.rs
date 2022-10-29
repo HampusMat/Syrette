@@ -5,31 +5,38 @@ use std::any::type_name;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingWhenConfiguratorError;
 
 /// When configurator for a binding for type 'Interface' inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
-pub struct BindingWhenConfigurator<Interface, DIContainerType>
+pub struct BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
+    DIContainerType: IDIContainer<DependencyHistoryType>,
+    DependencyHistoryType: IDependencyHistory,
 {
     di_container: Rc<DIContainerType>,
+
     interface_phantom: PhantomData<Interface>,
+    dependency_history_phantom: PhantomData<DependencyHistoryType>,
 }
 
-impl<Interface, DIContainerType> BindingWhenConfigurator<Interface, DIContainerType>
+impl<Interface, DIContainerType, DependencyHistoryType>
+    BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
+    DIContainerType: IDIContainer<DependencyHistoryType>,
+    DependencyHistoryType: IDependencyHistory,
 {
     pub(crate) fn new(di_container: Rc<DIContainerType>) -> Self
     {
         Self {
             di_container,
             interface_phantom: PhantomData,
+            dependency_history_phantom: PhantomData,
         }
     }
 
@@ -90,7 +97,8 @@ mod tests
 
         let binding_when_configurator = BindingWhenConfigurator::<
             dyn subjects::INumber,
-            mocks::blocking_di_container::MockDIContainer,
+            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
+            mocks::MockDependencyHistory,
         >::new(Rc::new(di_container_mock));
 
         assert!(matches!(
