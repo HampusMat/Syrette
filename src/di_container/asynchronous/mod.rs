@@ -70,7 +70,9 @@ use crate::ptr::{SomeThreadsafePtr, TransientPtr};
 pub mod binding;
 pub mod prelude;
 
-/// Dependency injection container interface.
+/// Async dependency injection container interface.
+///
+/// **This trait is sealed and cannot be implemented for types outside this crate.**
 #[async_trait]
 pub trait IAsyncDIContainer<DependencyHistoryType>:
     Sized + 'static + Send + Sync + details::DIContainerInternals<DependencyHistoryType>
@@ -126,7 +128,7 @@ where
         Interface: 'static + ?Sized + Send + Sync;
 }
 
-/// Dependency injection container.
+/// Async dependency injection container.
 pub struct AsyncDIContainer
 {
     binding_storage:

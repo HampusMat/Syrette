@@ -66,6 +66,8 @@ pub mod binding;
 pub mod prelude;
 
 /// Blocking dependency injection container interface.
+///
+/// **This trait is sealed and cannot be implemented for types outside this crate.**
 pub trait IDIContainer<DependencyHistoryType>:
     Sized + 'static + details::DIContainerInternals<DependencyHistoryType>
 where
