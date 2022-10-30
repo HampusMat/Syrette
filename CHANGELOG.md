@@ -1,6 +1,54 @@
 ## Unreleased
 
 
+## v0.4.1 - 2022-10-30
+### Bug Fixes
+- remove unused Rust feature flag
+
+### Build System/Dependency Changes
+- bump versions to 0.4.1
+
+### Code Refactoring
+- add dependency history type
+- improve injectable macro error messages
+- add Debug implementations for castable factories
+- rename DI container binding map to DI container storage
+- reduce DI container coupling
+- improve internals of macros & add unit tests
+- reorganize DI containers
+- remove relying on Rust nightly for better handling of features
+- clarify binding builder to_factory signature
+- improve management of feature specific items
+- stop using the async_trait macro for AsyncInjectable
+- shorten async binding builder trait bounds
+
+### Code Testing
+- add binding configurator unit tests
+- add castable factory unit tests
+- add provider unit tests
+- add binding builder unit tests
+- add more unit tests
+- fix the can bind to factory unit tests
+
+### Documentation Changes
+- add sealed notices to DI container interfaces
+- add coverage badge
+- fix the example usage in the readme
+- fix unresolved links to DI container types
+- fix spelling mistakes in blocking & async DI containers
+- add binding builder examples
+- add async binding builder examples
+- remove unnecessary feature notices
+
+### BREAKING CHANGE
+
+Binding builders & configurators now take dependency history type arguments, the DetectedCircular variant of InjectableError now contains a dependency history field & the injectable traits take dependency history instead of a Vec
+
+You now have to import the DI containers's interfaces to use the DI containers's methods
+
+DIContainer, AsyncDIContainer & the binding structs have been relocated
+
+
 ## v0.4.0 - 2022-10-01
 ### Bug Fixes
 - prevent problems caused by non send + sync traits
@@ -39,6 +87,7 @@
 - move some factory function types to type aliases
 
 ### Documentation Changes
+- add v0.4.0 to changelog
 - improve item links in the injectable macro
 - fix unresolved link to TransientPtr
 - make IFood in async example Send + Sync
