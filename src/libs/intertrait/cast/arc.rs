@@ -31,19 +31,16 @@ impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
         self: Arc<Self>,
     ) -> Result<Arc<OtherTrait>, CastError>
     {
-        let caster = get_caster::<OtherTrait>((*self).type_id()).map_or_else(
-            || {
-                Err(CastError::CastFailed {
-                    from: type_name::<CastFromSelf>(),
-                    to: type_name::<OtherTrait>(),
-                })
-            },
-            Ok,
-        )?;
+        let caster =
+            get_caster::<OtherTrait>((*self).type_id()).ok_or(CastError::CastFailed {
+                from: type_name::<CastFromSelf>(),
+                to: type_name::<OtherTrait>(),
+            })?;
 
-        match caster.opt_cast_arc {
-            Some(cast_arc) => Ok(cast_arc(self.arc_any())),
-            None => Err(CastError::NotArcCastable(type_name::<OtherTrait>())),
-        }
+        let cast_arc = caster
+            .opt_cast_arc
+            .ok_or(CastError::NotArcCastable(type_name::<OtherTrait>()))?;
+
+        Ok(cast_arc(self.arc_any()))
     }
 }
