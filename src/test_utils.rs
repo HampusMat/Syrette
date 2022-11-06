@@ -10,6 +10,7 @@ pub mod subjects
     use crate::dependency_history::IDependencyHistory;
     use crate::di_container::blocking::IDIContainer;
     use crate::interfaces::injectable::Injectable;
+    use crate::libs::intertrait::CastFromSync;
     use crate::ptr::TransientPtr;
 
     pub trait IUserManager
@@ -130,6 +131,13 @@ pub mod subjects
             Ok(TransientPtr::new(Self::new()))
         }
     }
+
+    #[derive(Debug)]
+    pub struct Ninja;
+
+    pub trait INinja: CastFromSync {}
+
+    impl INinja for Ninja {}
 }
 
 #[cfg(feature = "async")]

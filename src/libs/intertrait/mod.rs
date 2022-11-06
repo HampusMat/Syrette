@@ -244,132 +244,44 @@ impl CastFromSync for dyn Any + Sync + Send + 'static
 #[cfg(test)]
 mod tests
 {
-    use std::any::{Any, TypeId};
-    use std::fmt::{Debug, Display};
+    use std::any::TypeId;
+    use std::fmt::Debug;
 
     use linkme::distributed_slice;
 
-    #[allow(clippy::wildcard_imports)]
-    use super::cast::*;
     use super::*;
+    use crate::test_utils::subjects;
 
     #[distributed_slice(super::CASTERS)]
     static TEST_CASTER: fn() -> (TypeId, BoxedCaster) = create_test_caster;
 
-    #[derive(Debug)]
-    struct TestStruct;
-
-    trait SourceTrait: CastFromSync {}
-
-    impl SourceTrait for TestStruct {}
-
     fn create_test_caster() -> (TypeId, BoxedCaster)
     {
-        let type_id = TypeId::of::<TestStruct>();
+        let type_id = TypeId::of::<subjects::Ninja>();
+
         let caster = Box::new(Caster::<dyn Debug> {
             cast_box: |from| {
                 let concrete = from
-                    .downcast::<TestStruct>()
+                    .downcast::<subjects::Ninja>()
                     .map_err(|_| CasterError::CastBoxFailed)?;
 
                 Ok(concrete as Box<dyn Debug>)
             },
             cast_rc: |from| {
                 let concrete = from
-                    .downcast::<TestStruct>()
+                    .downcast::<subjects::Ninja>()
                     .map_err(|_| CasterError::CastRcFailed)?;
 
                 Ok(concrete as Rc<dyn Debug>)
             },
             opt_cast_arc: Some(|from| {
                 let concrete = from
-                    .downcast::<TestStruct>()
+                    .downcast::<subjects::Ninja>()
                     .map_err(|_| CasterError::CastArcFailed)?;
 
                 Ok(concrete as Arc<dyn Debug>)
             }),
         });
         (type_id, caster)
-    }
-
-    #[test]
-    fn cast_box()
-    {
-        let ts = Box::new(TestStruct);
-        let st: Box<dyn SourceTrait> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
-    }
-
-    #[test]
-    fn cast_rc()
-    {
-        let ts = Rc::new(TestStruct);
-        let st: Rc<dyn SourceTrait> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
-    }
-
-    #[test]
-    fn cast_arc()
-    {
-        let ts = Arc::new(TestStruct);
-        let st: Arc<dyn SourceTrait> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
-    }
-
-    #[test]
-    fn cast_box_wrong()
-    {
-        let ts = Box::new(TestStruct);
-        let st: Box<dyn SourceTrait> = ts;
-        let display = st.cast::<dyn Display>();
-        assert!(display.is_err());
-    }
-
-    #[test]
-    fn cast_rc_wrong()
-    {
-        let ts = Rc::new(TestStruct);
-        let st: Rc<dyn SourceTrait> = ts;
-        let display = st.cast::<dyn Display>();
-        assert!(display.is_err());
-    }
-
-    #[test]
-    fn cast_arc_wrong()
-    {
-        let ts = Arc::new(TestStruct);
-        let st: Arc<dyn SourceTrait> = ts;
-        let display = st.cast::<dyn Display>();
-        assert!(display.is_err());
-    }
-
-    #[test]
-    fn cast_box_from_any()
-    {
-        let ts = Box::new(TestStruct);
-        let st: Box<dyn Any> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
-    }
-
-    #[test]
-    fn cast_rc_from_any()
-    {
-        let ts = Rc::new(TestStruct);
-        let st: Rc<dyn Any> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
-    }
-
-    #[test]
-    fn cast_arc_from_any()
-    {
-        let ts = Arc::new(TestStruct);
-        let st: Arc<dyn Any + Send + Sync> = ts;
-        let debug = st.cast::<dyn Debug>();
-        assert!(debug.is_ok());
     }
 }
