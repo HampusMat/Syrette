@@ -175,7 +175,11 @@ impl IDIContainer<DependencyHistory> for DIContainer
         let binding_providable =
             self.get_binding_providable::<Interface>(name, dependency_history)?;
 
-        self.handle_binding_providable(binding_providable)
+        #[cfg(feature = "factory")]
+        return self.handle_binding_providable(binding_providable);
+
+        #[cfg(not(feature = "factory"))]
+        Self::handle_binding_providable(binding_providable)
     }
 }
 
@@ -214,7 +218,7 @@ impl details::DIContainerInternals<DependencyHistory> for DIContainer
 impl DIContainer
 {
     fn handle_binding_providable<Interface>(
-        self: &Rc<Self>,
+        #[cfg(feature = "factory")] self: &Rc<Self>,
         binding_providable: Providable<Self, DependencyHistory>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
