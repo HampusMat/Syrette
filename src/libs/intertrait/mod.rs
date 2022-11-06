@@ -56,7 +56,12 @@ static CASTER_MAP: Lazy<AHashMap<(TypeId, TypeId), BoxedCaster>> = Lazy::new(|| 
         .collect()
 });
 
-type CastArcFn<Trait> = fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Arc<Trait>;
+type CastBoxFn<Trait> = fn(from: Box<dyn Any>) -> Result<Box<Trait>, CasterError>;
+
+type CastRcFn<Trait> = fn(from: Rc<dyn Any>) -> Result<Rc<Trait>, CasterError>;
+
+type CastArcFn<Trait> =
+    fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Result<Arc<Trait>, CasterError>;
 
 /// A `Caster` knows how to cast a reference to or `Box` of a trait object for `Any`
 /// to a trait object of trait `Trait`. Each `Caster` instance is specific to a concrete
@@ -66,11 +71,11 @@ pub struct Caster<Trait: ?Sized + 'static>
 {
     /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait
     /// object for trait `Trait`.
-    pub cast_box: fn(from: Box<dyn Any>) -> Box<Trait>,
+    pub cast_box: CastBoxFn<Trait>,
 
     /// Casts an `Rc` holding a trait object for `Any` to another `Rc` holding a trait
     /// object for trait `Trait`.
-    pub cast_rc: fn(from: Rc<dyn Any>) -> Rc<Trait>,
+    pub cast_rc: CastRcFn<Trait>,
 
     /// Casts an `Arc` holding a trait object for `Any + Sync + Send + 'static`
     /// to another `Arc` holding a trait object for trait `Trait`.
@@ -79,10 +84,7 @@ pub struct Caster<Trait: ?Sized + 'static>
 
 impl<Trait: ?Sized + 'static> Caster<Trait>
 {
-    pub fn new(
-        cast_box: fn(from: Box<dyn Any>) -> Box<Trait>,
-        cast_rc: fn(from: Rc<dyn Any>) -> Rc<Trait>,
-    ) -> Caster<Trait>
+    pub fn new(cast_box: CastBoxFn<Trait>, cast_rc: CastRcFn<Trait>) -> Caster<Trait>
     {
         Caster::<Trait> {
             cast_box,
@@ -93,9 +95,9 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
 
     #[allow(clippy::similar_names)]
     pub fn new_sync(
-        cast_box: fn(from: Box<dyn Any>) -> Box<Trait>,
-        cast_rc: fn(from: Rc<dyn Any>) -> Rc<Trait>,
-        cast_arc: fn(from: Arc<dyn Any + Sync + Send>) -> Arc<Trait>,
+        cast_box: CastBoxFn<Trait>,
+        cast_rc: CastRcFn<Trait>,
+        cast_arc: CastArcFn<Trait>,
     ) -> Caster<Trait>
     {
         Caster::<Trait> {
@@ -106,14 +108,42 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum CasterError
+{
+    #[error("Failed to cast Box")]
+    CastBoxFailed,
+
+    #[error("Failed to cast Rc")]
+    CastRcFailed,
+
+    #[error("Failed to cast Arc")]
+    CastArcFailed,
+}
+
 /// Returns a `Caster<S, Trait>` from a concrete type `S` to a trait `Trait` implemented
 /// by it.
-fn get_caster<Trait: ?Sized + 'static>(type_id: TypeId)
-    -> Option<&'static Caster<Trait>>
+fn get_caster<Trait: ?Sized + 'static>(
+    type_id: TypeId,
+) -> Result<&'static Caster<Trait>, GetCasterError>
 {
-    CASTER_MAP
+    let any_caster = CASTER_MAP
         .get(&(type_id, TypeId::of::<Caster<Trait>>()))
-        .and_then(|caster| caster.downcast_ref::<Caster<Trait>>())
+        .ok_or(GetCasterError::NotFound)?;
+
+    any_caster
+        .downcast_ref::<Caster<Trait>>()
+        .ok_or(GetCasterError::DowncastFailed)
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum GetCasterError
+{
+    #[error("Caster not found")]
+    NotFound,
+
+    #[error("Failed to downcast caster")]
+    DowncastFailed,
 }
 
 /// `CastFrom` must be extended by a trait that wants to allow for casting into another
@@ -237,9 +267,27 @@ mod tests
     {
         let type_id = TypeId::of::<TestStruct>();
         let caster = Box::new(Caster::<dyn Debug> {
-            cast_box: |from| from.downcast::<TestStruct>().unwrap(),
-            cast_rc: |from| from.downcast::<TestStruct>().unwrap(),
-            opt_cast_arc: Some(|from| from.downcast::<TestStruct>().unwrap()),
+            cast_box: |from| {
+                let concrete = from
+                    .downcast::<TestStruct>()
+                    .map_err(|_| CasterError::CastBoxFailed)?;
+
+                Ok(concrete as Box<dyn Debug>)
+            },
+            cast_rc: |from| {
+                let concrete = from
+                    .downcast::<TestStruct>()
+                    .map_err(|_| CasterError::CastRcFailed)?;
+
+                Ok(concrete as Rc<dyn Debug>)
+            },
+            opt_cast_arc: Some(|from| {
+                let concrete = from
+                    .downcast::<TestStruct>()
+                    .map_err(|_| CasterError::CastArcFailed)?;
+
+                Ok(concrete as Arc<dyn Debug>)
+            }),
         });
         (type_id, caster)
     }

@@ -33,16 +33,46 @@ pub fn generate_caster(
     let new_caster = if sync {
         quote! {
             syrette::libs::intertrait::Caster::<dyn #dst_trait>::new_sync(
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap()
+                |from| {
+                    let concrete = from
+                        .downcast::<#ty>()
+                        .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
+
+                    Ok(concrete as Box<dyn #dst_trait>)
+                },
+                |from| {
+                    let concrete = from
+                        .downcast::<#ty>()
+                        .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
+
+                    Ok(concrete as std::rc::Rc<dyn #dst_trait>)
+                },
+                |from| {
+                    let concrete = from
+                        .downcast::<#ty>()
+                        .map_err(|_| syrette::libs::intertrait::CasterError::CastArcFailed)?;
+
+                    Ok(concrete as std::sync::Arc<dyn #dst_trait>)
+                },
             )
         }
     } else {
         quote! {
             syrette::libs::intertrait::Caster::<dyn #dst_trait>::new(
-                |from| from.downcast::<#ty>().unwrap(),
-                |from| from.downcast::<#ty>().unwrap(),
+                |from| {
+                    let concrete = from
+                        .downcast::<#ty>()
+                        .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
+
+                    Ok(concrete as Box<dyn #dst_trait>)
+                },
+                |from| {
+                    let concrete = from
+                        .downcast::<#ty>()
+                        .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
+
+                    Ok(concrete as std::rc::Rc<dyn #dst_trait>)
+                },
             )
         }
     };

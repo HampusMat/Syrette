@@ -30,12 +30,13 @@ impl<CastFromSelf: ?Sized + CastFrom> CastBox for CastFromSelf
         self: Box<Self>,
     ) -> Result<Box<OtherTrait>, CastError>
     {
-        let caster =
-            get_caster::<OtherTrait>((*self).type_id()).ok_or(CastError::CastFailed {
-                from: type_name::<CastFromSelf>(),
-                to: type_name::<OtherTrait>(),
-            })?;
+        let caster = get_caster::<OtherTrait>((*self).type_id())
+            .map_err(CastError::GetCasterFailed)?;
 
-        Ok((caster.cast_box)(self.box_any()))
+        (caster.cast_box)(self.box_any()).map_err(|err| CastError::CastFailed {
+            source: err,
+            from: type_name::<Self>(),
+            to: type_name::<OtherTrait>(),
+        })
     }
 }

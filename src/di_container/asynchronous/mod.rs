@@ -270,7 +270,12 @@ impl AsyncDIContainer
                                 >(
                                 ))
                             }
-                            CastError::CastFailed { from: _, to: _ } => {
+                            CastError::CastFailed {
+                                source: _,
+                                from: _,
+                                to: _,
+                            }
+                            | CastError::GetCasterFailed(_) => {
                                 AsyncDIContainerError::CastFailed {
                                     interface: type_name::<Interface>(),
                                     binding_kind: "singleton",
@@ -291,7 +296,12 @@ impl AsyncDIContainer
                                 type_name::<Interface>(),
                             )
                         }
-                        CastError::CastFailed { from: _, to: _ } => {
+                        CastError::CastFailed {
+                            source: _,
+                            from: _,
+                            to: _,
+                        }
+                        | CastError::GetCasterFailed(_) => {
                             AsyncDIContainerError::CastFailed {
                                 interface: type_name::<Interface>(),
                                 binding_kind: "factory",
@@ -348,12 +358,15 @@ impl AsyncDIContainer
             CastError::NotArcCastable(_) => {
                 AsyncDIContainerError::InterfaceNotAsync(type_name::<Type>())
             }
-            CastError::CastFailed { from: _, to: _ } => {
-                AsyncDIContainerError::CastFailed {
-                    interface: type_name::<Type>(),
-                    binding_kind,
-                }
+            CastError::CastFailed {
+                source: _,
+                from: _,
+                to: _,
             }
+            | CastError::GetCasterFailed(_) => AsyncDIContainerError::CastFailed {
+                interface: type_name::<Type>(),
+                binding_kind,
+            },
         })
     }
 
