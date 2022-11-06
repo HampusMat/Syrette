@@ -27,14 +27,8 @@ jobs:
       - checkout
       - run: cargo --version
       - run:
-          name: Install Rust stable
-          command: rustup install stable
-      - run:
-          name: Setting Rust stable as default
-          command: rustup default stable
-      - run:
-          name: Run tests with all features enabled
-          command: cargo test --workspace --all-features
+          name: Run tests with all features except factory enabled
+          command: cargo test --workspace --features async
       - run:
           name: Run tests with only default features enabled
           command: cargo test --workspace
@@ -66,12 +60,6 @@ jobs:
       - checkout
       - run: cargo --version
       - run:
-          name: Install Rust nightly
-          command: rustup install nightly
-      - run:
-          name: Setting Rust nightly as default
-          command: rustup default nightly
-      - run:
           name: Run Clippy
           command: cargo clippy
 
@@ -81,15 +69,6 @@ jobs:
     steps:
       - checkout
       - run: cargo --version
-      - run:
-          name: Install Rust nightly
-          command: rustup install nightly
-      - run:
-          name: Setting Rust nightly as default
-          command: rustup default nightly
-      - run:
-          name: Install Rustfmt
-          command: rustup component add rustfmt --toolchain nightly
       - run:
           name: Run Rustfmt
           command: find src macros/src -type f -name "*.rs" -exec rustfmt --edition 2021 --check {} \;
