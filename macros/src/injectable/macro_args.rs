@@ -5,7 +5,8 @@ use syn::{Token, TypePath};
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const INJECTABLE_MACRO_FLAGS: &[&str] = &["no_doc_hidden", "async"];
+pub const INJECTABLE_MACRO_FLAGS: &[&str] =
+    &["no_doc_hidden", "async", "no_declare_concrete_interface"];
 
 pub struct InjectableMacroArgs
 {

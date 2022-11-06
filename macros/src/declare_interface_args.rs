@@ -1,6 +1,6 @@
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{Path, Token, Type};
+use syn::{Token, TypePath};
 
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
@@ -9,8 +9,8 @@ pub const DECLARE_INTERFACE_FLAGS: &[&str] = &["async"];
 
 pub struct DeclareInterfaceArgs
 {
-    pub implementation: Type,
-    pub interface: Path,
+    pub implementation: TypePath,
+    pub interface: TypePath,
     pub flags: Punctuated<MacroFlag, Token![,]>,
 }
 
@@ -18,11 +18,11 @@ impl Parse for DeclareInterfaceArgs
 {
     fn parse(input: ParseStream) -> Result<Self>
     {
-        let implementation: Type = input.parse()?;
+        let implementation: TypePath = input.parse()?;
 
         input.parse::<Token![->]>()?;
 
-        let interface: Path = input.parse()?;
+        let interface: TypePath = input.parse()?;
 
         let flags = if input.peek(Token![,]) {
             input.parse::<Token![,]>()?;

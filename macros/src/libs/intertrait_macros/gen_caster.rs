@@ -32,46 +32,46 @@ pub fn generate_caster(
 
     let new_caster = if sync {
         quote! {
-            syrette::libs::intertrait::Caster::<dyn #dst_trait>::new_sync(
+            syrette::libs::intertrait::Caster::<#dst_trait>::new_sync(
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
                         .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
 
-                    Ok(concrete as Box<dyn #dst_trait>)
+                    Ok(concrete as Box<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
                         .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
 
-                    Ok(concrete as std::rc::Rc<dyn #dst_trait>)
+                    Ok(concrete as std::rc::Rc<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
                         .map_err(|_| syrette::libs::intertrait::CasterError::CastArcFailed)?;
 
-                    Ok(concrete as std::sync::Arc<dyn #dst_trait>)
+                    Ok(concrete as std::sync::Arc<#dst_trait>)
                 },
             )
         }
     } else {
         quote! {
-            syrette::libs::intertrait::Caster::<dyn #dst_trait>::new(
+            syrette::libs::intertrait::Caster::<#dst_trait>::new(
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
                         .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
 
-                    Ok(concrete as Box<dyn #dst_trait>)
+                    Ok(concrete as Box<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
                         .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
 
-                    Ok(concrete as std::rc::Rc<dyn #dst_trait>)
+                    Ok(concrete as std::rc::Rc<#dst_trait>)
                 },
             )
         }

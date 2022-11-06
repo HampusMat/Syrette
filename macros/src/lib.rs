@@ -8,7 +8,17 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse, parse_macro_input};
+use syn::punctuated::Punctuated;
+use syn::token::Dyn;
+use syn::{
+    parse,
+    parse_macro_input,
+    TraitBound,
+    TraitBoundModifier,
+    Type,
+    TypeParamBound,
+    TypeTraitObject,
+};
 
 mod declare_interface_args;
 mod injectable;
@@ -43,15 +53,20 @@ use crate::libs::intertrait_macros::gen_caster::generate_caster;
 /// # Flags
 /// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from
 ///   documentation.
+/// - `no_declare_concrete_interface` - Disable declaring the concrete type as the
+///   interface when no interface trait argument is given.
 /// - `async` - Mark as async.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
 ///
 /// # Important
-/// If the interface trait argument is excluded, you should either manually
+/// When no interface trait argument is given, you should either manually
 /// declare the interface with the [`declare_interface!`] macro or use
 /// the [`di_container_bind`] macro to create a DI container binding.
+///
+/// You can however also use the concrete type as the interface. As it is declared as such
+/// by default if the `no_declare_concrete_interface` flag is not set.
 ///
 /// # Attributes
 /// Attributes specific to impls with this attribute macro.
@@ -127,6 +142,11 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
         .find(|flag| flag.flag.to_string().as_str() == "no_doc_hidden")
         .map_or(false, |flag| flag.is_on.value);
 
+    let no_declare_concrete_interface = flags
+        .iter()
+        .find(|flag| flag.flag.to_string().as_str() == "no_declare_concrete_interface")
+        .map_or(false, |flag| flag.is_on.value);
+
     let is_async = flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "async")
@@ -141,9 +161,9 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 
     let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
-    let maybe_decl_interface = if interface.is_some() {
-        let self_type = &injectable_impl.self_type;
+    let self_type = &injectable_impl.self_type;
 
+    let maybe_decl_interface = if interface.is_some() {
         if is_async {
             quote! {
                 syrette::declare_interface!(#self_type -> #interface, async = true);
@@ -152,6 +172,10 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
             quote! {
                 syrette::declare_interface!(#self_type -> #interface);
             }
+        }
+    } else if !no_declare_concrete_interface {
+        quote! {
+            syrette::declare_interface!(#self_type -> #self_type);
         }
     } else {
         quote! {}
@@ -210,7 +234,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
 {
     use quote::ToTokens;
-    use syn::{parse_str, Type};
+    use syn::parse_str;
 
     use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::macro_args::FactoryMacroArgs;
@@ -393,7 +417,21 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
     let is_async =
         opt_async_flag.map_or_else(|| false, |async_flag| async_flag.is_on.value);
 
-    generate_caster(&implementation, &interface, is_async).into()
+    let interface_type = if interface == implementation {
+        Type::Path(interface)
+    } else {
+        Type::TraitObject(TypeTraitObject {
+            dyn_token: Some(Dyn::default()),
+            bounds: Punctuated::from_iter(vec![TypeParamBound::Trait(TraitBound {
+                paren_token: None,
+                modifier: TraitBoundModifier::None,
+                lifetimes: None,
+                path: interface.path,
+            })]),
+        })
+    };
+
+    generate_caster(&implementation, &interface_type, is_async).into()
 }
 
 /// Declares the name of a dependency.
