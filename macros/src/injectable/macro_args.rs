@@ -17,26 +17,34 @@ impl Parse for InjectableMacroArgs
 {
     fn parse(input: ParseStream) -> syn::Result<Self>
     {
-        let interface = input.parse::<TypePath>().ok();
+        let input_fork = input.fork();
 
-        if interface.is_some() {
-            let comma_input_lookahead = input.lookahead1();
+        let mut interface = None;
 
-            if !comma_input_lookahead.peek(Token![,]) {
+        if input_fork.parse::<MacroFlag>().is_err() {
+            // Input doesn't begin with flags
+
+            interface = input.parse::<TypePath>().ok();
+
+            if interface.is_some() {
+                let comma_input_lookahead = input.lookahead1();
+
+                if !comma_input_lookahead.peek(Token![,]) {
+                    return Ok(Self {
+                        interface,
+                        flags: Punctuated::new(),
+                    });
+                }
+
+                input.parse::<Token![,]>()?;
+            }
+
+            if input.is_empty() {
                 return Ok(Self {
                     interface,
                     flags: Punctuated::new(),
                 });
             }
-
-            input.parse::<Token![,]>()?;
-        }
-
-        if input.is_empty() {
-            return Ok(Self {
-                interface,
-                flags: Punctuated::new(),
-            });
         }
 
         let flags = Punctuated::<MacroFlag, Token![,]>::parse_terminated(input)?;
