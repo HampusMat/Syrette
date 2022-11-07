@@ -1,5 +1,6 @@
 use std::any::type_name;
 use std::fmt::Debug;
+use std::marker::Tuple;
 
 use crate::interfaces::any_factory::AnyFactory;
 use crate::interfaces::factory::IFactory;
@@ -7,7 +8,7 @@ use crate::ptr::TransientPtr;
 
 pub struct CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     func: &'static dyn Fn<Args, Output = TransientPtr<ReturnInterface>>,
@@ -15,7 +16,7 @@ where
 
 impl<Args, ReturnInterface> CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     pub fn new(
@@ -29,14 +30,14 @@ where
 impl<Args, ReturnInterface> IFactory<Args, ReturnInterface>
     for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
 impl<Args, ReturnInterface> Fn<Args> for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call(&self, args: Args) -> Self::Output
@@ -47,7 +48,7 @@ where
 
 impl<Args, ReturnInterface> FnMut<Args> for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output
@@ -58,7 +59,7 @@ where
 
 impl<Args, ReturnInterface> FnOnce<Args> for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     type Output = TransientPtr<ReturnInterface>;
@@ -71,14 +72,14 @@ where
 
 impl<Args, ReturnInterface> AnyFactory for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
 impl<Args, ReturnInterface> Debug for CastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     #[cfg(not(tarpaulin_include))]

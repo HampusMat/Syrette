@@ -1,5 +1,6 @@
 use std::any::type_name;
 use std::fmt::Debug;
+use std::marker::Tuple;
 
 use crate::interfaces::any_factory::{AnyFactory, AnyThreadsafeFactory};
 use crate::interfaces::factory::IThreadsafeFactory;
@@ -7,7 +8,7 @@ use crate::ptr::TransientPtr;
 
 pub struct ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     func: &'static (dyn Fn<Args, Output = TransientPtr<ReturnInterface>> + Send + Sync),
@@ -15,7 +16,7 @@ where
 
 impl<Args, ReturnInterface> ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     pub fn new(
@@ -31,14 +32,14 @@ where
 impl<Args, ReturnInterface> IThreadsafeFactory<Args, ReturnInterface>
     for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
 impl<Args, ReturnInterface> Fn<Args> for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call(&self, args: Args) -> Self::Output
@@ -50,7 +51,7 @@ where
 impl<Args, ReturnInterface> FnMut<Args>
     for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output
@@ -62,7 +63,7 @@ where
 impl<Args, ReturnInterface> FnOnce<Args>
     for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     type Output = TransientPtr<ReturnInterface>;
@@ -76,7 +77,7 @@ where
 impl<Args, ReturnInterface> AnyFactory
     for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
@@ -84,14 +85,14 @@ where
 impl<Args, ReturnInterface> AnyThreadsafeFactory
     for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
 impl<Args, ReturnInterface> Debug for ThreadsafeCastableFactory<Args, ReturnInterface>
 where
-    Args: 'static,
+    Args: Tuple + 'static,
     ReturnInterface: 'static + ?Sized,
 {
     #[cfg(not(tarpaulin_include))]

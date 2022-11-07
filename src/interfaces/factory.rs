@@ -1,3 +1,5 @@
+use std::marker::Tuple;
+
 use crate::libs::intertrait::CastFrom;
 use crate::ptr::TransientPtr;
 
@@ -5,6 +7,7 @@ use crate::ptr::TransientPtr;
 pub trait IFactory<Args, ReturnInterface>:
     Fn<Args, Output = TransientPtr<ReturnInterface>> + CastFrom
 where
+    Args: Tuple,
     ReturnInterface: 'static + ?Sized,
 {
 }
@@ -14,6 +17,7 @@ where
 pub trait IThreadsafeFactory<Args, ReturnInterface>:
     Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::libs::intertrait::CastFromSync
 where
+    Args: Tuple,
     ReturnInterface: 'static + ?Sized,
 {
 }

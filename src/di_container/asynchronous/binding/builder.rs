@@ -185,7 +185,7 @@ where
         AsyncBindingBuilderError,
     >
     where
-        Args: 'static,
+        Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = Return> + Send + Sync,
         FactoryFunc:
@@ -278,7 +278,7 @@ where
         AsyncBindingBuilderError,
     >
     where
-        Args: 'static,
+        Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface:
             Fn<Args, Output = crate::future::BoxFuture<'static, Return>> + Send + Sync,

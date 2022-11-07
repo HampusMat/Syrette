@@ -198,7 +198,7 @@ where
         BindingBuilderError,
     >
     where
-        Args: 'static,
+        Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn<(std::rc::Rc<DIContainerType>,), Output = Box<Interface>>,
