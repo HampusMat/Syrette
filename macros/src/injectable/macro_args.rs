@@ -68,7 +68,7 @@ impl Parse for InjectableMacroArgs
             .collect::<Vec<_>>();
 
         if let Some(dupe_flag_name) = flag_names.iter().find_duplicate() {
-            return Err(input.error(format!("Duplicate flag '{}'", dupe_flag_name)));
+            return Err(input.error(format!("Duplicate flag '{dupe_flag_name}'")));
         }
 
         Ok(Self { interface, flags })
