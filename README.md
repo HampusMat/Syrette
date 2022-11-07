@@ -4,8 +4,7 @@
 [![Build](https://img.shields.io/circleci/build/github/HampusMat/Syrette/master)](https://app.circleci.com/pipelines/github/HampusMat/Syrette)
 [![Coverage](https://img.shields.io/codecov/c/github/HampusMat/Syrette)](https://app.codecov.io/gh/HampusMat/Syrette)
 
-
-The convenient dependency injection framework for Rust.
+The convenient dependency injection & inversion of control framework for Rust.
 
 ## Namesake
 From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
@@ -14,7 +13,7 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 > tube (like that typically used for toothpaste) instead of a rigid tube and piston.
 
 ## Features
-- A [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) container
+- A [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) and [inversion of control](https://en.wikipedia.org/wiki/Inversion_of_control) container
 - Autowiring dependencies
 - API inspired from the one of [InversifyJS](https://github.com/inversify/InversifyJS)
 - Helpful error messages
@@ -32,12 +31,60 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 
 To use these features, you must [enable it in Cargo](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features).
 
+## Why inversion of control & dependency injection?
+The reason for practing IoC and DI is to write modular & loosely coupled applications.
+
+This is what we're trying to avoid:
+```rust
+impl Foo
+{
+    /// ❌ Bad. Foo knows the construction details of Bar.
+    pub fn new() -> Self
+    {
+        Self {
+            bar: Bar::new()
+        }
+    }
+```
+
+The following is better:
+```rust
+impl Foo
+    /// ✅ Better. Foo is unaware of how Bar is constructed.
+    pub fn new(bar: Bar) -> Self
+    {
+        Self {
+            bar
+        }
+    }
+}
+```
+
+This will however grow quite tiresome sooner or later when you have a large codebase
+with many dependencies and dependencies of those and so on. Because you will have to
+specify the dependencies someplace
+
+```rust
+let foobar = Foobar::new(
+    Foo:new(
+        Woof::new(),
+        Meow::new()),
+    Bar::new(
+        Something::new(),
+        SomethingElse::new(),
+        SomethingMore::new()
+    )
+)
+```
+
+This is where Syrette comes in.
+
 ## Motivation
-Other DI/IOC libraries for Rust are either unmaintained ([di](https://crates.io/crates/di) for example),
-overcomplicated and or bloated ([anthill-di](https://crates.io/crates/anthill-di) for example)
+Other DI & IoC libraries for Rust are either unmaintained ([di](https://crates.io/crates/di) for example),
+overcomplicated and requires Rust nightly for all functionality ([anthill-di](https://crates.io/crates/anthill-di) for example)
 or has a weird API ([teloc](https://crates.io/crates/teloc) for example).
 
-The goal of Syrette is to be a simple, useful, convenient and familiar DI library.
+The goal of Syrette is to be a simple, useful, convenient and familiar DI & IoC library.
 
 ## Example usage
 ```rust
