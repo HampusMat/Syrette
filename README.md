@@ -3,6 +3,7 @@
 [![Documentation](https://img.shields.io/badge/docs.rs-syrette-blueviolet)](https://docs.rs/syrette)
 [![Build](https://img.shields.io/circleci/build/github/HampusMat/Syrette/master)](https://app.circleci.com/pipelines/github/HampusMat/Syrette)
 [![Coverage](https://img.shields.io/codecov/c/github/HampusMat/Syrette)](https://app.codecov.io/gh/HampusMat/Syrette)
+[![Rust](https://img.shields.io/badge/rust-1.62.1%2B-informational)](#rust-version-requirements)
 
 The convenient dependency injection & inversion of control framework for Rust.
 
@@ -164,6 +165,10 @@ fn main() -> Result<(), Box<dyn Error>>
 ```
 
 For more examples see the [examples folder](https://git.hampusmat.com/syrette/tree/examples).
+
+## Rust version requirements
+Syrette requires Rust >= 1.62.1 to work. This is mainly due to the dependency on [Linkme](https://crates.io/crates/linkme).
+
 
 ## Todo
 - Add support for generic factories
