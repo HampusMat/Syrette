@@ -163,19 +163,23 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 
     let self_type = &injectable_impl.self_type;
 
-    let maybe_decl_interface = if interface.is_some() {
-        if is_async {
-            quote! {
-                syrette::declare_interface!(#self_type -> #interface, async = true);
-            }
+    let opt_interface = interface.map(Type::Path).or_else(|| {
+        if no_declare_concrete_interface {
+            None
         } else {
-            quote! {
-                syrette::declare_interface!(#self_type -> #interface);
-            }
+            Some(self_type.clone())
         }
-    } else if !no_declare_concrete_interface {
+    });
+
+    let maybe_decl_interface = if let Some(interface) = opt_interface {
+        let async_flag = if is_async {
+            quote! {, async = true}
+        } else {
+            quote! {}
+        };
+
         quote! {
-            syrette::declare_interface!(#self_type -> #self_type);
+            syrette::declare_interface!(#self_type -> #interface #async_flag);
         }
     } else {
         quote! {}
