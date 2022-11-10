@@ -33,18 +33,14 @@ pub mod cast;
 
 pub type BoxedCaster = Box<dyn Any + Send + Sync>;
 
-/// A distributed slice gathering constructor functions for [`Caster<T>`]s.
+/// A distributed slice gathering constructor functions for [`Caster`]s.
 ///
 /// A constructor function returns `TypeId` of a concrete type involved in the casting
-/// and a `Box` of a trait object backed by a [`Caster<T>`].
-///
-/// [`Caster<T>`]: ./struct.Caster.html
+/// and a `Box` of a type or trait backed by a [`Caster`].
 #[distributed_slice]
 pub static CASTERS: [fn() -> (TypeId, BoxedCaster)] = [..];
 
-/// A `HashMap` mapping `TypeId` of a [`Caster<T>`] to an instance of it.
-///
-/// [`Caster<T>`]: ./struct.Caster.html
+/// A `HashMap` mapping `TypeId` of a [`Caster`] to an instance of it.
 static CASTER_MAP: Lazy<AHashMap<(TypeId, TypeId), BoxedCaster>> = Lazy::new(|| {
     CASTERS
         .iter()
@@ -56,37 +52,36 @@ static CASTER_MAP: Lazy<AHashMap<(TypeId, TypeId), BoxedCaster>> = Lazy::new(|| 
         .collect()
 });
 
-type CastBoxFn<Trait> = fn(from: Box<dyn Any>) -> Result<Box<Trait>, CasterError>;
+type CastBoxFn<Dest> = fn(from: Box<dyn Any>) -> Result<Box<Dest>, CasterError>;
 
-type CastRcFn<Trait> = fn(from: Rc<dyn Any>) -> Result<Rc<Trait>, CasterError>;
+type CastRcFn<Dest> = fn(from: Rc<dyn Any>) -> Result<Rc<Dest>, CasterError>;
 
-type CastArcFn<Trait> =
-    fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Result<Arc<Trait>, CasterError>;
+type CastArcFn<Dest> =
+    fn(from: Arc<dyn Any + Sync + Send + 'static>) -> Result<Arc<Dest>, CasterError>;
 
-/// A `Caster` knows how to cast a reference to or `Box` of a trait object for `Any`
-/// to a trait object of trait `Trait`. Each `Caster` instance is specific to a concrete
-/// type. That is, it knows how to cast to single specific trait implemented by single
-/// specific type.
-pub struct Caster<Trait: ?Sized + 'static>
+/// A `Caster` knows how to cast a type or trait to the type or trait `Dest`. Each
+/// `Caster` instance is specific to a concrete type. That is, it knows how to cast to
+/// single specific type or trait implemented by single specific type.
+pub struct Caster<Dest: ?Sized + 'static>
 {
-    /// Casts a `Box` holding a trait object for `Any` to another `Box` holding a trait
-    /// object for trait `Trait`.
-    pub cast_box: CastBoxFn<Trait>,
+    /// Casts a `Box` holding a type or trait object for `Any` to another `Box` holding a
+    /// type or trait `Dest`.
+    pub cast_box: CastBoxFn<Dest>,
 
-    /// Casts an `Rc` holding a trait object for `Any` to another `Rc` holding a trait
-    /// object for trait `Trait`.
-    pub cast_rc: CastRcFn<Trait>,
+    /// Casts an `Rc` holding a type or trait for `Any` to another `Rc` holding a type or
+    /// trait `Dest`.
+    pub cast_rc: CastRcFn<Dest>,
 
-    /// Casts an `Arc` holding a trait object for `Any + Sync + Send + 'static`
-    /// to another `Arc` holding a trait object for trait `Trait`.
-    pub opt_cast_arc: Option<CastArcFn<Trait>>,
+    /// Casts an `Arc` holding a type or trait for `Any + Sync + Send + 'static` to
+    /// another `Arc` holding a type or trait for `Dest`.
+    pub opt_cast_arc: Option<CastArcFn<Dest>>,
 }
 
-impl<Trait: ?Sized + 'static> Caster<Trait>
+impl<Dest: ?Sized + 'static> Caster<Dest>
 {
-    pub fn new(cast_box: CastBoxFn<Trait>, cast_rc: CastRcFn<Trait>) -> Caster<Trait>
+    pub fn new(cast_box: CastBoxFn<Dest>, cast_rc: CastRcFn<Dest>) -> Caster<Dest>
     {
-        Caster::<Trait> {
+        Caster::<Dest> {
             cast_box,
             cast_rc,
             opt_cast_arc: None,
@@ -95,12 +90,12 @@ impl<Trait: ?Sized + 'static> Caster<Trait>
 
     #[allow(clippy::similar_names)]
     pub fn new_sync(
-        cast_box: CastBoxFn<Trait>,
-        cast_rc: CastRcFn<Trait>,
-        cast_arc: CastArcFn<Trait>,
-    ) -> Caster<Trait>
+        cast_box: CastBoxFn<Dest>,
+        cast_rc: CastRcFn<Dest>,
+        cast_arc: CastArcFn<Dest>,
+    ) -> Caster<Dest>
     {
-        Caster::<Trait> {
+        Caster::<Dest> {
             cast_box,
             cast_rc,
             opt_cast_arc: Some(cast_arc),
@@ -121,18 +116,18 @@ pub enum CasterError
     CastArcFailed,
 }
 
-/// Returns a `Caster<S, Trait>` from a concrete type `S` to a trait `Trait` implemented
-/// by it.
-fn get_caster<Trait: ?Sized + 'static>(
+/// Returns a `Caster<Dest>` from a concrete type with the id `type_id` to a type or trait
+/// `Dest`.
+fn get_caster<Dest: ?Sized + 'static>(
     type_id: TypeId,
-) -> Result<&'static Caster<Trait>, GetCasterError>
+) -> Result<&'static Caster<Dest>, GetCasterError>
 {
     let any_caster = CASTER_MAP
-        .get(&(type_id, TypeId::of::<Caster<Trait>>()))
+        .get(&(type_id, TypeId::of::<Caster<Dest>>()))
         .ok_or(GetCasterError::NotFound)?;
 
     any_caster
-        .downcast_ref::<Caster<Trait>>()
+        .downcast_ref::<Caster<Dest>>()
         .ok_or(GetCasterError::DowncastFailed)
 }
 
@@ -186,7 +181,7 @@ pub trait CastFromSync: CastFrom + Sync + Send + 'static
     fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>;
 }
 
-impl<Trait: Sized + Any + 'static> CastFrom for Trait
+impl<Source: Sized + Any + 'static> CastFrom for Source
 {
     fn box_any(self: Box<Self>) -> Box<dyn Any>
     {
@@ -212,7 +207,7 @@ impl CastFrom for dyn Any + 'static
     }
 }
 
-impl<Trait: Sized + Sync + Send + 'static> CastFromSync for Trait
+impl<Source: Sized + Sync + Send + 'static> CastFromSync for Source
 {
     fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>
     {

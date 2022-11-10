@@ -17,31 +17,27 @@ use crate::libs::intertrait::{get_caster, CastFromSync};
 
 pub trait CastArc
 {
-    /// Casts an `Arc` for this trait into that for type `OtherTrait`.
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Arc<Self>,
-    ) -> Result<Arc<OtherTrait>, CastError>;
+    /// Casts an `Arc` with `Self` into an `Arc` with `Dest`.
+    fn cast<Dest: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<Dest>, CastError>;
 }
 
 /// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and
 /// `Send`.
 impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
 {
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Arc<Self>,
-    ) -> Result<Arc<OtherTrait>, CastError>
+    fn cast<Dest: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<Dest>, CastError>
     {
-        let caster = get_caster::<OtherTrait>((*self).type_id())
-            .map_err(CastError::GetCasterFailed)?;
+        let caster =
+            get_caster::<Dest>((*self).type_id()).map_err(CastError::GetCasterFailed)?;
 
         let cast_arc = caster
             .opt_cast_arc
-            .ok_or(CastError::NotArcCastable(type_name::<OtherTrait>()))?;
+            .ok_or(CastError::NotArcCastable(type_name::<Dest>()))?;
 
         cast_arc(self.arc_any()).map_err(|err| CastError::CastFailed {
             source: err,
             from: type_name::<Self>(),
-            to: type_name::<OtherTrait>(),
+            to: type_name::<Dest>(),
         })
     }
 }

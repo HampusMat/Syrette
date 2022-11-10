@@ -17,26 +17,22 @@ use crate::libs::intertrait::{get_caster, CastFrom};
 
 pub trait CastBox
 {
-    /// Casts a box to this trait into that of type `OtherTrait`.
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Box<Self>,
-    ) -> Result<Box<OtherTrait>, CastError>;
+    /// Casts a `Box` with `Self` into a `Box` with `Dest`.
+    fn cast<Dest: ?Sized + 'static>(self: Box<Self>) -> Result<Box<Dest>, CastError>;
 }
 
 /// A blanket implementation of `CastBox` for traits extending `CastFrom`.
 impl<CastFromSelf: ?Sized + CastFrom> CastBox for CastFromSelf
 {
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Box<Self>,
-    ) -> Result<Box<OtherTrait>, CastError>
+    fn cast<Dest: ?Sized + 'static>(self: Box<Self>) -> Result<Box<Dest>, CastError>
     {
-        let caster = get_caster::<OtherTrait>((*self).type_id())
-            .map_err(CastError::GetCasterFailed)?;
+        let caster =
+            get_caster::<Dest>((*self).type_id()).map_err(CastError::GetCasterFailed)?;
 
         (caster.cast_box)(self.box_any()).map_err(|err| CastError::CastFailed {
             source: err,
             from: type_name::<Self>(),
-            to: type_name::<OtherTrait>(),
+            to: type_name::<Dest>(),
         })
     }
 }

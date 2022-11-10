@@ -17,26 +17,22 @@ use crate::libs::intertrait::{get_caster, CastFrom};
 
 pub trait CastRc
 {
-    /// Casts an `Rc` for this trait into that for type `OtherTrait`.
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Rc<Self>,
-    ) -> Result<Rc<OtherTrait>, CastError>;
+    /// Casts an `Rc` with `Self `into a `Rc` with `Dest`.
+    fn cast<Dest: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Dest>, CastError>;
 }
 
 /// A blanket implementation of `CastRc` for traits extending `CastFrom`.
 impl<CastFromSelf: ?Sized + CastFrom> CastRc for CastFromSelf
 {
-    fn cast<OtherTrait: ?Sized + 'static>(
-        self: Rc<Self>,
-    ) -> Result<Rc<OtherTrait>, CastError>
+    fn cast<Dest: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Dest>, CastError>
     {
-        let caster = get_caster::<OtherTrait>((*self).type_id())
-            .map_err(CastError::GetCasterFailed)?;
+        let caster =
+            get_caster::<Dest>((*self).type_id()).map_err(CastError::GetCasterFailed)?;
 
         (caster.cast_rc)(self.rc_any()).map_err(|err| CastError::CastFailed {
             source: err,
             from: type_name::<Self>(),
-            to: type_name::<OtherTrait>(),
+            to: type_name::<Dest>(),
         })
     }
 }

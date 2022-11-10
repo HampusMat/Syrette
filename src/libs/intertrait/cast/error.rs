@@ -6,7 +6,7 @@ pub enum CastError
     #[error("Failed to get caster")]
     GetCasterFailed(#[from] GetCasterError),
 
-    #[error("Failed to cast from trait {from} to trait {to}")]
+    #[error("Failed to cast from {from} to {to}")]
     CastFailed
     {
         #[source]
@@ -15,6 +15,6 @@ pub enum CastError
         to: &'static str,
     },
 
-    #[error("Trait '{0}' can't be cast to Arc")]
+    #[error("'{0}' can't be cast to an Arc")]
     NotArcCastable(&'static str),
 }
