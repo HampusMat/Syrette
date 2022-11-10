@@ -166,9 +166,24 @@ fn main() -> Result<(), Box<dyn Error>>
 
 For more examples see the [examples folder](https://git.hampusmat.com/syrette/tree/examples).
 
+## Terminology
+**Transient**<br>
+A type or trait that is unique to owner.
+
+**Singleton**<br>
+A type that only has a single instance. The opposite of transient. Generally discouraged.
+
+**Interface**<br>
+A type or trait that represents a type (itself in the case of it being a type).
+
+**Factory**<br>
+A function that creates new instances of a specific type or trait.
+
+**Default factory**<br>
+A function that takes no arguments that creates new instances of a specific type or trait.
+
 ## Rust version requirements
 Syrette requires Rust >= 1.62.1 to work. This is mainly due to the dependency on [Linkme](https://crates.io/crates/linkme).
-
 
 ## Todo
 - Add support for generic factories
