@@ -36,9 +36,95 @@ impl Parse for FactoryMacroArgs
             .collect::<Vec<_>>();
 
         if let Some(dupe_flag_name) = flag_names.iter().find_duplicate() {
-            return Err(input.error(format!("Duplicate flag '{}'", dupe_flag_name)));
+            return Err(input.error(format!("Duplicate flag '{dupe_flag_name}'")));
         }
 
         Ok(Self { flags })
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use std::error::Error;
+
+    use proc_macro2::Span;
+    use quote::{format_ident, quote};
+    use syn::{parse2, LitBool};
+
+    use super::*;
+
+    #[test]
+    fn can_parse_with_single_flag() -> Result<(), Box<dyn Error>>
+    {
+        let input_args = quote! {
+            async = true
+        };
+
+        let factory_macro_args = parse2::<FactoryMacroArgs>(input_args)?;
+
+        assert_eq!(
+            factory_macro_args.flags,
+            Punctuated::from_iter(vec![MacroFlag {
+                flag: format_ident!("async"),
+                is_on: LitBool::new(true, Span::call_site())
+            }])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_parse_with_multiple_flags() -> Result<(), Box<dyn Error>>
+    {
+        let input_args = quote! {
+            async = true, threadsafe = false
+        };
+
+        let factory_macro_args = parse2::<FactoryMacroArgs>(input_args)?;
+
+        assert_eq!(
+            factory_macro_args.flags,
+            Punctuated::from_iter(vec![
+                MacroFlag {
+                    flag: format_ident!("async"),
+                    is_on: LitBool::new(true, Span::call_site())
+                },
+                MacroFlag {
+                    flag: format_ident!("threadsafe"),
+                    is_on: LitBool::new(false, Span::call_site())
+                }
+            ])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn cannot_parse_with_invalid_flag()
+    {
+        let input_args = quote! {
+            async = true, threadsafe = false, foo = true
+        };
+
+        assert!(matches!(parse2::<FactoryMacroArgs>(input_args), Err(_)));
+    }
+
+    #[test]
+    fn cannot_parse_with_duplicate_flag()
+    {
+        assert!(matches!(
+            parse2::<FactoryMacroArgs>(quote! {
+                async = true, threadsafe = false, async = true
+            }),
+            Err(_)
+        ));
+
+        assert!(matches!(
+            parse2::<FactoryMacroArgs>(quote! {
+                async = true, threadsafe = false, async = false
+            }),
+            Err(_)
+        ));
     }
 }
