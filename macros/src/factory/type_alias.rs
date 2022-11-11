@@ -40,7 +40,7 @@ mod tests
 
     use quote::{format_ident, quote};
     use syn::token::And;
-    use syn::{Path, PathSegment, TypePath, TypeReference};
+    use syn::TypeReference;
 
     use super::*;
     use crate::test_utils;
