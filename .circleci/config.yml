@@ -13,12 +13,21 @@ jobs:
       - run:
           name: Setting Rust nightly as default
           command: rustup default nightly
+      - restore_cache:
+          name: Restore cache of Cargo data
+          keys:
+            - cargo-cache
       - run:
           name: Run tests with all features enabled
           command: cargo test --workspace --all-features
       - run:
           name: Run tests with only default features enabled
           command: cargo test --workspace
+      - save_cache:
+          name: Save cache of Cargo data
+          key: cargo-cache
+          paths:
+            - ~/.cargo
 
   test-stable:
     docker:
@@ -26,12 +35,21 @@ jobs:
     steps:
       - checkout
       - run: cargo --version
+      - restore_cache:
+          name: Restore cache of Cargo data
+          keys:
+            - cargo-cache
       - run:
           name: Run tests with all features except factory enabled
           command: cargo test --workspace --features async
       - run:
           name: Run tests with only default features enabled
           command: cargo test --workspace
+      - save_cache:
+          name: Save cache of Cargo data
+          key: cargo-cache
+          paths:
+            - ~/.cargo
 
   coverage:
     machine: true
@@ -59,9 +77,18 @@ jobs:
     steps:
       - checkout
       - run: cargo --version
+      - restore_cache:
+          name: Restore cache of Cargo data
+          keys:
+            - cargo-cache
       - run:
           name: Run Clippy
           command: cargo clippy
+      - save_cache:
+          name: Save cache of Cargo data
+          key: cargo-cache
+          paths:
+            - ~/.cargo
 
   code-style:
     docker:
