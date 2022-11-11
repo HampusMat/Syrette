@@ -7,7 +7,87 @@
 
 //! Syrette
 //!
-//! Syrette is a collection of utilities useful for performing dependency injection.
+//! Syrette is a framework for utilizing inversion of control & dependency injection.
+//!
+//! # Example
+//! ```
+//! use std::error::Error;
+//!
+//! use syrette::di_container::blocking::prelude::*;
+//! use syrette::injectable;
+//! use syrette::ptr::TransientPtr;
+//!
+//! trait IWeapon
+//! {
+//!     fn deal_damage(&self, damage: i32);
+//! }
+//!
+//! struct Sword {}
+//!
+//! #[injectable(IWeapon)] // Makes Sword injectable with a interface of IWeapon
+//! impl Sword
+//! {
+//!     fn new() -> Self
+//!     {
+//!         Self {}
+//!     }
+//! }
+//!
+//! impl IWeapon for Sword
+//! {
+//!     fn deal_damage(&self, damage: i32)
+//!     {
+//!         println!("Sword dealt {} damage!", damage);
+//!     }
+//! }
+//!
+//! trait IWarrior
+//! {
+//!     fn fight(&self);
+//! }
+//!
+//! struct Warrior
+//! {
+//!     weapon: TransientPtr<dyn IWeapon>,
+//! }
+//!
+//! #[injectable(IWarrior)] // Makes Warrior injectable with a interface of IWarrior
+//! impl Warrior
+//! {
+//!     fn new(weapon: TransientPtr<dyn IWeapon>) -> Self
+//!     {
+//!         Self { weapon }
+//!     }
+//! }
+//!
+//! impl IWarrior for Warrior
+//! {
+//!     fn fight(&self)
+//!     {
+//!         self.weapon.deal_damage(30);
+//!     }
+//! }
+//!
+//! fn main() -> Result<(), Box<dyn Error>>
+//! {
+//!     let mut di_container = DIContainer::new();
+//!
+//!     // Creates a binding of the interface IWeapon to the concrete type Sword
+//!     di_container.bind::<dyn IWeapon>().to::<Sword>()?;
+//!
+//!     // Creates a binding of the interface IWarrior to the concrete type Warrior
+//!     di_container.bind::<dyn IWarrior>().to::<Warrior>()?;
+//!
+//!     // Create a transient IWarrior with all of its dependencies automatically injected
+//!     let warrior = di_container.get::<dyn IWarrior>()?.transient()?;
+//!
+//!     warrior.fight();
+//!
+//!     println!("Warrior has fighted");
+//!
+//!     Ok(())
+//! }
+//! ```
 
 pub mod dependency_history;
 pub mod di_container;
