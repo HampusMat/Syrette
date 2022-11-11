@@ -28,7 +28,7 @@ pub fn generate_caster(
     sync: bool,
 ) -> TokenStream
 {
-    let fn_ident = create_caster_fn_ident();
+    let fn_ident = create_caster_fn_ident(Uuid::new_v4());
 
     let new_caster = if sync {
         quote! {
@@ -86,18 +86,65 @@ pub fn generate_caster(
     }
 }
 
-fn create_caster_fn_ident() -> Ident
+fn create_caster_fn_ident(uuid: impl IUuid) -> Ident
 {
     let buf = &mut [0u8; FN_BUF_LEN];
 
     buf[..CASTER_FN_NAME_PREFIX.len()].copy_from_slice(CASTER_FN_NAME_PREFIX);
 
-    Uuid::new_v4()
-        .to_simple()
-        .encode_lower(&mut buf[CASTER_FN_NAME_PREFIX.len()..]);
+    uuid.encode_simple_lower_into(&mut buf[CASTER_FN_NAME_PREFIX.len()..]);
 
     let fn_name =
         from_utf8(&buf[..FN_BUF_LEN]).expect("Created caster function name is not UTF-8");
 
     format_ident!("{}", fn_name)
+}
+
+/// Simple interface for `Uuid`.
+///
+/// Created for ease of testing the [`create_caster_fn_ident`] function.
+///
+/// [`Uuid`]: uuid::Uuid
+#[cfg_attr(test, mockall::automock)]
+trait IUuid
+{
+    /// Writes the Uuid as a simple lower-case string to `buf`.
+    fn encode_simple_lower_into(self, buf: &mut [u8]);
+}
+
+impl IUuid for Uuid
+{
+    fn encode_simple_lower_into(self, buf: &mut [u8])
+    {
+        self.to_simple().encode_lower(buf);
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use pretty_assertions::assert_eq;
+    use test_util_macros::repeat_char;
+
+    use super::*;
+
+    #[test]
+    fn can_create_caster_fn_ident()
+    {
+        let mut uuid_mock = MockIUuid::new();
+
+        uuid_mock
+            .expect_encode_simple_lower_into()
+            .return_once(|buf| {
+                for index in 0..(FN_BUF_LEN - 2) {
+                    buf[index] = b'f';
+                }
+            })
+            .once();
+
+        assert_eq!(
+            create_caster_fn_ident(uuid_mock),
+            format_ident!(concat!("__", repeat_char!('f', 32)))
+        );
+    }
 }

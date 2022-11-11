@@ -33,3 +33,4 @@ syrette = { version = "0.4.1", path = ".." }
 mockall = "0.11.1"
 pretty_assertions = "1.3.0"
 syn = { version = "1.0.96", features = ["full", "extra-traits"] }
+test_util_macros = { path = "../test_util_macros" }
