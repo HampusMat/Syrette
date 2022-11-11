@@ -65,6 +65,7 @@ mod tests
     use syn::token::Dyn;
     use syn::{
         parse2,
+        LitBool,
         Path,
         PathArguments,
         PathSegment,
@@ -76,7 +77,6 @@ mod tests
     };
 
     use super::*;
-    use crate::macro_flag::MacroFlag;
 
     #[test]
     fn can_parse_with_interface_only() -> Result<(), Box<dyn Error>>
@@ -143,7 +143,7 @@ mod tests
             dec_def_fac_args.flags,
             Punctuated::from_iter(vec![MacroFlag {
                 flag: format_ident!("threadsafe"),
-                is_on: syn::LitBool::new(true, Span::call_site())
+                is_on: LitBool::new(true, Span::call_site())
             }])
         );
 
@@ -183,11 +183,11 @@ mod tests
             Punctuated::from_iter(vec![
                 MacroFlag {
                     flag: format_ident!("threadsafe"),
-                    is_on: syn::LitBool::new(true, Span::call_site())
+                    is_on: LitBool::new(true, Span::call_site())
                 },
                 MacroFlag {
                     flag: format_ident!("async"),
-                    is_on: syn::LitBool::new(false, Span::call_site())
+                    is_on: LitBool::new(false, Span::call_site())
                 }
             ])
         );
