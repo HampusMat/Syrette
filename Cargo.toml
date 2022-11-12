@@ -60,7 +60,6 @@ tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
 [workspace]
 members = [
 	"macros",
-	"test_util_macros",
 	"examples/with-3rd-party/third-party-lib",
 ]
 

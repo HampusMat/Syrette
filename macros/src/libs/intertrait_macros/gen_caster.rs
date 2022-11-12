@@ -124,7 +124,7 @@ impl IUuid for Uuid
 mod tests
 {
     use pretty_assertions::assert_eq;
-    use test_util_macros::repeat_char;
+    use utility_macros::repeat_char;
 
     use super::*;
 
