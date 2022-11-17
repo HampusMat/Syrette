@@ -54,8 +54,8 @@
 use std::any::type_name;
 use std::sync::Arc;
 
+use async_lock::Mutex;
 use async_trait::async_trait;
-use tokio::sync::Mutex;
 
 use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
