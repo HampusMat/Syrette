@@ -16,11 +16,9 @@ where
     Transient(TransientPtr<dyn Injectable<DIContainerType, DependencyHistoryType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType, DependencyHistoryType>>),
     #[cfg(feature = "factory")]
-    Factory(crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>),
+    Factory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
     #[cfg(feature = "factory")]
-    DefaultFactory(
-        crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
-    ),
+    DefaultFactory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
 }
 
 #[cfg_attr(test, mockall::automock, allow(dead_code))]
@@ -135,7 +133,7 @@ where
 #[cfg(feature = "factory")]
 pub struct FactoryProvider
 {
-    factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+    factory: crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>,
     is_default_factory: bool,
 }
 
@@ -143,7 +141,7 @@ pub struct FactoryProvider
 impl FactoryProvider
 {
     pub fn new(
-        factory: crate::ptr::FactoryPtr<dyn crate::interfaces::any_factory::AnyFactory>,
+        factory: crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>,
         is_default_factory: bool,
     ) -> Self
     {
@@ -239,7 +237,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn factory_provider_works() -> Result<(), Box<dyn Error>>
     {
-        use crate::interfaces::any_factory::AnyFactory;
+        use crate::private::any_factory::AnyFactory;
         use crate::ptr::FactoryPtr;
 
         #[derive(Debug)]

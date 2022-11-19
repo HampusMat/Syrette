@@ -10,31 +10,26 @@
 //!
 //! at your option.
 use std::any::type_name;
-use std::sync::Arc;
+use std::rc::Rc;
 
-use crate::libs::intertrait::cast::error::CastError;
-use crate::libs::intertrait::{get_caster, CastFromSync};
+use crate::private::cast::error::CastError;
+use crate::private::cast::{get_caster, CastFrom};
 
-pub trait CastArc
+pub trait CastRc
 {
-    /// Casts an `Arc` with `Self` into an `Arc` with `Dest`.
-    fn cast<Dest: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<Dest>, CastError>;
+    /// Casts an `Rc` with `Self `into a `Rc` with `Dest`.
+    fn cast<Dest: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Dest>, CastError>;
 }
 
-/// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and
-/// `Send`.
-impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
+/// A blanket implementation of `CastRc` for traits extending `CastFrom`.
+impl<CastFromSelf: ?Sized + CastFrom> CastRc for CastFromSelf
 {
-    fn cast<Dest: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<Dest>, CastError>
+    fn cast<Dest: ?Sized + 'static>(self: Rc<Self>) -> Result<Rc<Dest>, CastError>
     {
         let caster =
             get_caster::<Dest>((*self).type_id()).map_err(CastError::GetCasterFailed)?;
 
-        let cast_arc = caster
-            .opt_cast_arc
-            .ok_or(CastError::NotArcCastable(type_name::<Dest>()))?;
-
-        cast_arc(self.arc_any()).map_err(|err| CastError::CastFailed {
+        (caster.cast_rc)(self.rc_any()).map_err(|err| CastError::CastFailed {
             source: err,
             from: type_name::<Self>(),
             to: type_name::<Dest>(),
@@ -47,17 +42,16 @@ mod tests
 {
     use std::any::Any;
     use std::fmt::{Debug, Display};
-    use std::sync::Arc;
 
     use super::*;
     use crate::test_utils::subjects;
 
     #[test]
-    fn can_cast_arc()
+    fn can_cast_rc()
     {
-        let concrete_ninja = Arc::new(subjects::Ninja);
+        let concrete_ninja = Rc::new(subjects::Ninja);
 
-        let abstract_ninja: Arc<dyn subjects::INinja> = concrete_ninja;
+        let abstract_ninja: Rc<dyn subjects::INinja> = concrete_ninja;
 
         let debug_ninja_result = abstract_ninja.cast::<dyn Debug>();
 
@@ -65,11 +59,11 @@ mod tests
     }
 
     #[test]
-    fn cannot_cast_arc_wrong()
+    fn cannot_cast_rc_wrong()
     {
-        let concrete_ninja = Arc::new(subjects::Ninja);
+        let concrete_ninja = Rc::new(subjects::Ninja);
 
-        let abstract_ninja: Arc<dyn subjects::INinja> = concrete_ninja;
+        let abstract_ninja: Rc<dyn subjects::INinja> = concrete_ninja;
 
         let display_ninja_result = abstract_ninja.cast::<dyn Display>();
 
@@ -80,11 +74,11 @@ mod tests
     }
 
     #[test]
-    fn can_cast_arc_from_any()
+    fn can_cast_rc_from_any()
     {
-        let concrete_ninja = Arc::new(subjects::Ninja);
+        let concrete_ninja = Rc::new(subjects::Ninja);
 
-        let any_ninja: Arc<dyn Any + Send + Sync> = concrete_ninja;
+        let any_ninja: Rc<dyn Any> = concrete_ninja;
 
         let debug_ninja_result = any_ninja.cast::<dyn Debug>();
 

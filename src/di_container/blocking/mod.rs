@@ -58,7 +58,8 @@ use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::errors::di_container::DIContainerError;
-use crate::libs::intertrait::cast::{CastBox, CastRc};
+use crate::private::cast::boxed::CastBox;
+use crate::private::cast::rc::CastRc;
 use crate::provider::blocking::{IProvider, Providable};
 use crate::ptr::SomePtr;
 
@@ -243,7 +244,7 @@ impl DIContainer
             )),
             #[cfg(feature = "factory")]
             Providable::Factory(factory_binding) => {
-                use crate::interfaces::factory::IFactory;
+                use crate::private::factory::IFactory;
 
                 let factory = factory_binding
                     .cast::<dyn IFactory<(Rc<DIContainer>,), Interface>>()
@@ -256,7 +257,7 @@ impl DIContainer
             }
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
-                use crate::interfaces::factory::IFactory;
+                use crate::private::factory::IFactory;
                 use crate::ptr::TransientPtr;
 
                 let default_factory = factory_binding
@@ -463,7 +464,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory() -> Result<(), Box<dyn Error>>
     {
-        use crate::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::blocking::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -547,7 +548,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named() -> Result<(), Box<dyn Error>>
     {
-        use crate::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::blocking::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager

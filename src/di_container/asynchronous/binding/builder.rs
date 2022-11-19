@@ -191,7 +191,7 @@ where
         FactoryFunc:
             Fn<(Arc<DIContainerType>,), Output = BoxFn<Args, Return>> + Send + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self.di_container.has_binding::<Interface>(None).await {
@@ -288,7 +288,7 @@ where
             > + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self.di_container.has_binding::<Interface>(None).await {
@@ -378,7 +378,7 @@ where
             > + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self.di_container.has_binding::<Interface>(None).await {
@@ -472,7 +472,7 @@ where
             > + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self.di_container.has_binding::<Interface>(None).await {

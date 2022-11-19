@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
-use crate::libs::intertrait::CastFrom;
+use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
 
 /// Interface for structs that can be injected into or be injected to.

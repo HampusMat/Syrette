@@ -1,4 +1,4 @@
-use crate::libs::intertrait::{CasterError, GetCasterError};
+use crate::private::cast::{CasterError, GetCasterError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum CastError

@@ -2,8 +2,8 @@ use std::any::type_name;
 use std::fmt::Debug;
 use std::marker::Tuple;
 
-use crate::interfaces::any_factory::AnyFactory;
-use crate::interfaces::factory::IFactory;
+use crate::private::any_factory::AnyFactory;
+use crate::private::factory::IFactory;
 use crate::ptr::TransientPtr;
 
 pub struct CastableFactory<Args, ReturnInterface>

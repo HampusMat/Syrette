@@ -2,8 +2,8 @@ use std::any::type_name;
 use std::fmt::Debug;
 use std::marker::Tuple;
 
-use crate::interfaces::any_factory::{AnyFactory, AnyThreadsafeFactory};
-use crate::interfaces::factory::IThreadsafeFactory;
+use crate::private::any_factory::{AnyFactory, AnyThreadsafeFactory};
+use crate::private::factory::IThreadsafeFactory;
 use crate::ptr::TransientPtr;
 
 pub struct ThreadsafeCastableFactory<Args, ReturnInterface>

@@ -1,15 +1,3 @@
-//! A library providing direct casting among trait objects implemented by a type.
-//!
-//! In Rust, an object of a sub-trait of [`Any`] can be downcast to a concrete type
-//! at runtime if the type is known. But no direct casting between two trait objects
-//! (i.e. without involving the concrete type of the backing value) is possible
-//! (even no coercion from a trait object to that of its super-trait yet).
-//!
-//! With this crate, any trait object with [`CastFrom`] as its super-trait can be cast
-//! directly to another trait object implemented by the underlying type if the target
-//! traits are registered beforehand with the macros provided by this crate.
-//!
-//!
 //! Originally from Intertrait by CodeChain
 //!
 //! <https://github.com/CodeChain-io/intertrait>
@@ -29,7 +17,10 @@ use ahash::AHashMap;
 use linkme::distributed_slice;
 use once_cell::sync::Lazy;
 
-pub mod cast;
+pub mod arc;
+pub mod boxed;
+pub mod error;
+pub mod rc;
 
 pub type BoxedCaster = Box<dyn Any + Send + Sync>;
 

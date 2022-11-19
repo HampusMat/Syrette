@@ -32,25 +32,25 @@ pub fn generate_caster(
 
     let new_caster = if sync {
         quote! {
-            syrette::libs::intertrait::Caster::<#dst_trait>::new_sync(
+            syrette::private::cast::Caster::<#dst_trait>::new_sync(
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
-                        .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
+                        .map_err(|_| syrette::private::cast::CasterError::CastBoxFailed)?;
 
                     Ok(concrete as Box<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
-                        .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
+                        .map_err(|_| syrette::private::cast::CasterError::CastRcFailed)?;
 
                     Ok(concrete as std::rc::Rc<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
-                        .map_err(|_| syrette::libs::intertrait::CasterError::CastArcFailed)?;
+                        .map_err(|_| syrette::private::cast::CasterError::CastArcFailed)?;
 
                     Ok(concrete as std::sync::Arc<#dst_trait>)
                 },
@@ -58,18 +58,18 @@ pub fn generate_caster(
         }
     } else {
         quote! {
-            syrette::libs::intertrait::Caster::<#dst_trait>::new(
+            syrette::private::cast::Caster::<#dst_trait>::new(
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
-                        .map_err(|_| syrette::libs::intertrait::CasterError::CastBoxFailed)?;
+                        .map_err(|_| syrette::private::cast::CasterError::CastBoxFailed)?;
 
                     Ok(concrete as Box<#dst_trait>)
                 },
                 |from| {
                     let concrete = from
                         .downcast::<#ty>()
-                        .map_err(|_| syrette::libs::intertrait::CasterError::CastRcFailed)?;
+                        .map_err(|_| syrette::private::cast::CasterError::CastRcFailed)?;
 
                     Ok(concrete as std::rc::Rc<#dst_trait>)
                 },
@@ -78,9 +78,9 @@ pub fn generate_caster(
     };
 
     quote! {
-        #[syrette::libs::linkme::distributed_slice(syrette::libs::intertrait::CASTERS)]
-        #[linkme(crate = syrette::libs::linkme)]
-        fn #fn_ident() -> (::std::any::TypeId, syrette::libs::intertrait::BoxedCaster) {
+        #[syrette::private::linkme::distributed_slice(syrette::private::cast::CASTERS)]
+        #[linkme(crate = syrette::private::linkme)]
+        fn #fn_ident() -> (::std::any::TypeId, syrette::private::cast::BoxedCaster) {
             (::std::any::TypeId::of::<#ty>(), Box::new(#new_caster))
         }
     }

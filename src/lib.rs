@@ -108,14 +108,9 @@ pub use di_container::blocking::DIContainer;
 pub use syrette_macros::{declare_default_factory, factory};
 pub use syrette_macros::{declare_interface, injectable, named};
 
-#[cfg(feature = "factory")]
 #[doc(hidden)]
-pub mod castable_factory;
+pub mod private;
 
-#[doc(hidden)]
-pub mod libs;
-
-// Private
 mod provider;
 
 #[cfg(test)]

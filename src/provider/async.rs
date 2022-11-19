@@ -24,19 +24,19 @@ where
     #[cfg(feature = "factory")]
     Factory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+            dyn crate::private::any_factory::AnyThreadsafeFactory,
         >,
     ),
     #[cfg(feature = "factory")]
     DefaultFactory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+            dyn crate::private::any_factory::AnyThreadsafeFactory,
         >,
     ),
     #[cfg(feature = "factory")]
     AsyncDefaultFactory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+            dyn crate::private::any_factory::AnyThreadsafeFactory,
         >,
     ),
 }
@@ -228,7 +228,7 @@ pub enum AsyncFactoryVariant
 pub struct AsyncFactoryProvider
 {
     factory: crate::ptr::ThreadsafeFactoryPtr<
-        dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+        dyn crate::private::any_factory::AnyThreadsafeFactory,
     >,
     variant: AsyncFactoryVariant,
 }
@@ -238,7 +238,7 @@ impl AsyncFactoryProvider
 {
     pub fn new(
         factory: crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::interfaces::any_factory::AnyThreadsafeFactory,
+            dyn crate::private::any_factory::AnyThreadsafeFactory,
         >,
         variant: AsyncFactoryVariant,
     ) -> Self
@@ -354,7 +354,7 @@ mod tests
     #[cfg(feature = "factory")]
     async fn async_factory_provider_works() -> Result<(), Box<dyn Error>>
     {
-        use crate::interfaces::any_factory::AnyThreadsafeFactory;
+        use crate::private::any_factory::AnyThreadsafeFactory;
         use crate::ptr::ThreadsafeFactoryPtr;
 
         #[derive(Debug)]

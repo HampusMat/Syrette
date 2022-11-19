@@ -203,7 +203,7 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn<(std::rc::Rc<DIContainerType>,), Output = Box<Interface>>,
     {
-        use crate::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::blocking::CastableFactory;
 
         if self.di_container.has_binding::<Interface>(None) {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
@@ -295,7 +295,7 @@ where
             >,
         >,
     {
-        use crate::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::blocking::CastableFactory;
 
         if self.di_container.has_binding::<Interface>(None) {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<

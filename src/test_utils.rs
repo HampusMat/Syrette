@@ -10,7 +10,7 @@ pub mod subjects
     use crate::dependency_history::IDependencyHistory;
     use crate::di_container::blocking::IDIContainer;
     use crate::interfaces::injectable::Injectable;
-    use crate::libs::intertrait::CastFromSync;
+    use crate::private::cast::CastFromSync;
     use crate::ptr::TransientPtr;
 
     pub trait IUserManager

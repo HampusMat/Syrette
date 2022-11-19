@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use crate::libs::intertrait::{CastFrom, CastFromSync};
+use crate::private::cast::{CastFrom, CastFromSync};
 
 /// Interface for any factory to ever exist.
 pub trait AnyFactory: CastFrom + Debug {}

@@ -1,6 +1,6 @@
 use std::marker::Tuple;
 
-use crate::libs::intertrait::CastFrom;
+use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
 
 /// Interface for a factory.
@@ -15,7 +15,7 @@ where
 /// Interface for a threadsafe factory.
 #[cfg(feature = "async")]
 pub trait IThreadsafeFactory<Args, ReturnInterface>:
-    Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::libs::intertrait::CastFromSync
+    Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::private::cast::CastFromSync
 where
     Args: Tuple,
     ReturnInterface: 'static + ?Sized,

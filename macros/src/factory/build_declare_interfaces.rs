@@ -11,10 +11,10 @@ pub fn build_declare_factory_interfaces(
     if is_threadsafe {
         quote! {
             syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                syrette::private::castable_factory::threadsafe::ThreadsafeCastableFactory<
                     (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
-                > -> syrette::interfaces::factory::IThreadsafeFactory<
+                > -> syrette::private::factory::IThreadsafeFactory<
                     (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 >,
@@ -22,30 +22,30 @@ pub fn build_declare_factory_interfaces(
             );
 
             syrette::declare_interface!(
-                syrette::castable_factory::threadsafe::ThreadsafeCastableFactory<
+                syrette::private::castable_factory::threadsafe::ThreadsafeCastableFactory<
                     (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
-                > -> syrette::interfaces::any_factory::AnyThreadsafeFactory,
+                > -> syrette::private::any_factory::AnyThreadsafeFactory,
                 async = true
             );
         }
     } else {
         quote! {
             syrette::declare_interface!(
-                syrette::castable_factory::blocking::CastableFactory<
+                syrette::private::castable_factory::blocking::CastableFactory<
                     (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
-                > -> syrette::interfaces::factory::IFactory<
+                > -> syrette::private::factory::IFactory<
                     (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
                 >
             );
 
             syrette::declare_interface!(
-                syrette::castable_factory::blocking::CastableFactory<
+                syrette::private::castable_factory::blocking::CastableFactory<
                     (std::rc::Rc<syrette::DIContainer>,),
                     #factory_interface
-                > -> syrette::interfaces::any_factory::AnyFactory
+                > -> syrette::private::any_factory::AnyFactory
             );
         }
     }

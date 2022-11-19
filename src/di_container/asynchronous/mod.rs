@@ -62,8 +62,9 @@ use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::errors::async_di_container::AsyncDIContainerError;
 use crate::future::BoxFuture;
-use crate::libs::intertrait::cast::error::CastError;
-use crate::libs::intertrait::cast::{CastArc, CastBox};
+use crate::private::cast::arc::CastArc;
+use crate::private::cast::boxed::CastBox;
+use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
 use crate::ptr::{SomeThreadsafePtr, TransientPtr};
 
@@ -286,7 +287,7 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {
-                use crate::interfaces::factory::IThreadsafeFactory;
+                use crate::private::factory::IThreadsafeFactory;
 
                 let factory = factory_binding
                     .cast::<dyn IThreadsafeFactory<(Arc<AsyncDIContainer>,), Interface>>()
@@ -315,7 +316,7 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
-                use crate::interfaces::factory::IThreadsafeFactory;
+                use crate::private::factory::IThreadsafeFactory;
 
                 let default_factory = Self::cast_factory_binding::<
                     dyn IThreadsafeFactory<
@@ -328,7 +329,7 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
-                use crate::interfaces::factory::IThreadsafeFactory;
+                use crate::private::factory::IThreadsafeFactory;
 
                 let async_default_factory = Self::cast_factory_binding::<
                     dyn IThreadsafeFactory<
@@ -350,7 +351,7 @@ impl AsyncDIContainer
 
     #[cfg(feature = "factory")]
     fn cast_factory_binding<Type: 'static + ?Sized>(
-        factory_binding: Arc<dyn crate::interfaces::any_factory::AnyThreadsafeFactory>,
+        factory_binding: Arc<dyn crate::private::any_factory::AnyThreadsafeFactory>,
         binding_kind: &'static str,
     ) -> Result<Arc<Type>, AsyncDIContainerError>
     {
@@ -667,7 +668,7 @@ mod tests
         }
 
         use crate as syrette;
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
         #[crate::factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
@@ -762,7 +763,7 @@ mod tests
         }
 
         use crate as syrette;
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
         #[crate::factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;

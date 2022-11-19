@@ -20,9 +20,9 @@ use syn::{
     TypeTraitObject,
 };
 
+mod caster;
 mod declare_interface_args;
 mod injectable;
-mod libs;
 mod macro_flag;
 mod util;
 
@@ -37,11 +37,11 @@ mod fn_trait;
 #[cfg(test)]
 mod test_utils;
 
+use crate::caster::generate_caster;
 use crate::declare_interface_args::DeclareInterfaceArgs;
 use crate::injectable::dependency::Dependency;
 use crate::injectable::implementation::InjectableImpl;
 use crate::injectable::macro_args::InjectableMacroArgs;
-use crate::libs::intertrait_macros::gen_caster::generate_caster;
 
 /// Makes a struct injectable. Thereby usable with [`DIContainer`] or
 /// [`AsyncDIContainer`].
