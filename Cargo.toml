@@ -1,6 +1,6 @@
 [package]
 name = "syrette"
-version = "0.4.1"
+version = "0.4.2"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "The convenient dependency injection framework"
@@ -40,7 +40,7 @@ name = "prevent-circular"
 required-features = ["prevent-circular"]
 
 [dependencies]
-syrette_macros = { path = "./macros", version = "0.4.0" }
+syrette_macros = { path = "./macros", version = "0.4.2" }
 linkme = "0.3.0"
 once_cell = "1.4"
 ahash = "0.7.6"

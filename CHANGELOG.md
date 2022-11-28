@@ -1,6 +1,46 @@
 ## Unreleased
 
 
+## v0.4.2 - 2022-11-28
+### Bug Fixes
+- allow for concrete type interfaces to be marked async
+- make factories work again after Rust nightly-2022-11-07
+- allow declaring a concrete type as it's own interface
+- allow injectable macro flag arguments without a interface argument
+
+### Build System/Dependency Changes
+- bump versions to 0.4.2
+- fix running macros tests on Rust stable
+
+### Code Refactoring
+- reorganize non-public API items
+- use the async-lock crate instead of Tokio
+- improve type param names, docs & more of casting
+- fix some Clippy lints regarding format!()
+- fix unused self clippy lint in blocking DI container
+- improve cast error handling
+- improve readability of cast functions
+
+### Code Testing
+- replace the test_util_macros crate with utility-macros
+- add unit test for create_caster_fn_ident
+- add unit tests for parsing injectable macro args
+- remove some unused imports
+- add unit tests for parsing declare_interface macro args
+- add unit test for parsing factory type aliases
+- make small improvements in the declare_default_factory macro args tests
+- add unit tests for parsing factory macro args
+- add unit tests for parsing declare_default_factory macro args
+- split up cast unit tests into their respective modules
+
+### Documentation Changes
+- add a example to the crate root
+- add terminology guide to readme
+- add msrv
+- add arguments for IoC & DI to readme
+- add comments explaining the prevent-circular example
+
+
 ## v0.4.1 - 2022-10-30
 ### Bug Fixes
 - remove unused Rust feature flag
