@@ -4,7 +4,6 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 #![deny(missing_docs)]
-#![deny(unsafe_code)]
 
 //! Syrette
 //!

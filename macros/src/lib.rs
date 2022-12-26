@@ -3,7 +3,6 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 #![deny(missing_docs)]
-#![forbid(unsafe_code)]
 
 //! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
