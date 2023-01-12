@@ -1,8 +1,6 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
+#![deny(clippy::all, clippy::pedantic, missing_docs, unsafe_code)]
 #![allow(clippy::module_name_repetitions)]
-#![deny(missing_docs)]
 
 //! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
