@@ -116,10 +116,7 @@ where
 
         let ret = type_name::<TransientPtr<ReturnInterface>>();
 
-        formatter.write_fmt(format_args!(
-            "ThreadsafeCastableFactory ({}) -> {}",
-            args, ret
-        ))
+        formatter.write_fmt(format_args!("ThreadsafeCastableFactory ({args}) -> {ret}",))
     }
 }
 
