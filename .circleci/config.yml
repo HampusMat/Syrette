@@ -71,7 +71,7 @@ jobs:
                 --out Xml
             bash <(curl -s https://codecov.io/bash)
 
-  lints:
+  lints-stable:
     docker:
       - image: cimg/rust:1.63.0
     steps:
@@ -83,7 +83,32 @@ jobs:
             - cargo-cache
       - run:
           name: Run Clippy
-          command: cargo clippy
+          command: cargo clippy --workspace
+      - save_cache:
+          name: Save cache of Cargo data
+          key: cargo-cache
+          paths:
+            - ~/.cargo
+
+  lints-nightly:
+    docker:
+      - image: cimg/rust:1.63.0
+    steps:
+      - checkout
+      - run: cargo --version
+      - run:
+          name: Install Rust nightly
+          command: rustup install nightly
+      - run:
+          name: Setting Rust nightly as default
+          command: rustup default nightly
+      - restore_cache:
+          name: Restore cache of Cargo data
+          keys:
+            - cargo-cache
+      - run:
+          name: Run Clippy with all features enabled
+          command: cargo clippy --workspace --all-features
       - save_cache:
           name: Save cache of Cargo data
           key: cargo-cache
@@ -115,6 +140,7 @@ workflows:
 
   checks:
     jobs:
-      - lints
+      - lints-stable
+      - lints-nightly
       - code-style
 
