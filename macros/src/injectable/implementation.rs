@@ -8,7 +8,7 @@ use syn::{parse_str, ExprMethodCall, FnArg, Generics, ImplItemMethod, ItemImpl, 
 use crate::injectable::dependency::IDependency;
 use crate::util::item_impl::find_impl_method_by_name_mut;
 use crate::util::string::camelcase_to_snakecase;
-use crate::util::syn_path::syn_path_to_string;
+use crate::util::syn_path::SynPathExt;
 
 const DI_CONTAINER_VAR_NAME: &str = "di_container";
 const DEPENDENCY_HISTORY_VAR_NAME: &str = "dependency_history";
@@ -245,7 +245,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             Type::TraitObject(interface_trait) => {
                 Ok(interface_trait.to_token_stream().to_string())
             }
-            Type::Path(path_interface) => Ok(syn_path_to_string(&path_interface.path)),
+            Type::Path(path_interface) => Ok(path_interface.path.to_string()),
             &_ => Err("Invalid type. Expected trait type or path type"),
         }?;
 
@@ -319,7 +319,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                 .iter()
                 .enumerate()
                 .filter_map(|(index, attr)| {
-                    if syn_path_to_string(&attr.path).as_str() == "syrette::named" {
+                    if &attr.path.to_string() == "syrette::named" {
                         return Some(index);
                     }
 

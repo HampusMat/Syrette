@@ -1,21 +1,30 @@
 use quote::ToTokens;
 use syn::punctuated::Pair;
 
-pub fn syn_path_to_string(path: &syn::Path) -> String
+pub trait SynPathExt
 {
-    path.segments
-        .pairs()
-        .map(Pair::into_tuple)
-        .map(|(segment, opt_punct)| {
-            let segment_ident = &segment.ident;
+    /// Converts the [`syn::Path`] to a [`String`].
+    fn to_string(&self) -> String;
+}
 
-            format!(
-                "{}{}",
-                segment_ident,
-                opt_punct.map_or_else(String::new, |punct| punct
-                    .to_token_stream()
-                    .to_string())
-            )
-        })
-        .collect()
+impl SynPathExt for syn::Path
+{
+    fn to_string(&self) -> String
+    {
+        self.segments
+            .pairs()
+            .map(Pair::into_tuple)
+            .map(|(segment, opt_punct)| {
+                let segment_ident = &segment.ident;
+
+                format!(
+                    "{}{}",
+                    segment_ident,
+                    opt_punct.map_or_else(String::new, |punct| punct
+                        .to_token_stream()
+                        .to_string())
+                )
+            })
+            .collect()
+    }
 }

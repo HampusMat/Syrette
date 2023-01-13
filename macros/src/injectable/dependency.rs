@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use syn::{parse2, FnArg, GenericArgument, LitStr, PathArguments, Type};
 
 use crate::injectable::named_attr_input::NamedAttrInput;
-use crate::util::syn_path::syn_path_to_string;
+use crate::util::syn_path::SynPathExt;
 
 /// Interface for a representation of a dependency of a injectable type.
 ///
@@ -79,7 +79,7 @@ impl IDependency for Dependency
             attr.path.get_ident().map_or_else(
                 || false,
                 |attr_ident| attr_ident.to_string().as_str() == "named",
-            ) || syn_path_to_string(&attr.path) == "syrette::named"
+            ) || &attr.path.to_string() == "syrette::named"
         });
 
         let opt_named_attr_tokens = opt_named_attr.map(|attr| &attr.tokens);
