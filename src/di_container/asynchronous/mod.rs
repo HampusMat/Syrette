@@ -81,7 +81,6 @@ where
     DependencyHistoryType: IDependencyHistory + Send + Sync,
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
-    #[must_use]
     fn bind<Interface>(
         self: &mut Arc<Self>,
     ) -> AsyncBindingBuilder<Interface, Self, DependencyHistoryType>
@@ -151,7 +150,6 @@ impl AsyncDIContainer
 #[async_trait]
 impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
 {
-    #[must_use]
     fn bind<Interface>(
         self: &mut Arc<Self>,
     ) -> AsyncBindingBuilder<Interface, Self, DependencyHistory>
