@@ -64,19 +64,12 @@ where
     /// This is the default.
     #[allow(clippy::must_use_candidate)]
     pub fn in_transient_scope(
-        &self,
+        self,
     ) -> BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
     {
-        self.di_container.set_binding::<Interface>(
-            None,
-            Box::new(TransientTypeProvider::<
-                Implementation,
-                DIContainerType,
-                DependencyHistoryType,
-            >::new()),
-        );
+        self.set_in_transient_scope();
 
-        BindingWhenConfigurator::new(self.di_container.clone())
+        BindingWhenConfigurator::new(self.di_container)
     }
 
     /// Configures the binding to be in a singleton scope.
@@ -84,7 +77,7 @@ where
     /// # Errors
     /// Will return Err if resolving the implementation fails.
     pub fn in_singleton_scope(
-        &self,
+        self,
     ) -> Result<
         BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
         BindingScopeConfiguratorError,
@@ -101,7 +94,19 @@ where
         self.di_container
             .set_binding::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
 
-        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(BindingWhenConfigurator::new(self.di_container))
+    }
+
+    pub(crate) fn set_in_transient_scope(&self)
+    {
+        self.di_container.set_binding::<Interface>(
+            None,
+            Box::new(TransientTypeProvider::<
+                Implementation,
+                DIContainerType,
+                DependencyHistoryType,
+            >::new()),
+        );
     }
 }
 

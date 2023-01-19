@@ -16,6 +16,7 @@ use crate::interfaces::injectable::Injectable;
 /// Binding builder for type `Interface` inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+#[must_use = "No binding will be created if you don't use the binding builder"]
 pub struct BindingBuilder<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized,
@@ -90,7 +91,7 @@ where
     ///
     /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     pub fn to<Implementation>(
-        &self,
+        self,
     ) -> Result<
         BindingScopeConfigurator<
             Interface,
@@ -117,7 +118,7 @@ where
             self.dependency_history_factory,
         );
 
-        binding_scope_configurator.in_transient_scope();
+        binding_scope_configurator.set_in_transient_scope();
 
         Ok(binding_scope_configurator)
     }
@@ -191,7 +192,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_factory<Args, Return, Func>(
-        &self,
+        self,
         factory_func: &'static Func,
     ) -> Result<
         BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
@@ -221,7 +222,7 @@ where
             )),
         );
 
-        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(BindingWhenConfigurator::new(self.di_container))
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
@@ -280,7 +281,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_default_factory<Return, FactoryFunc>(
-        &self,
+        self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
         BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
@@ -313,7 +314,7 @@ where
             )),
         );
 
-        Ok(BindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(BindingWhenConfigurator::new(self.di_container))
     }
 }
 

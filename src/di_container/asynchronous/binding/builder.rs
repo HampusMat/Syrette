@@ -21,6 +21,7 @@ pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)
 /// Binding builder for type `Interface` inside a [`IAsyncDIContainer`].
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
+#[must_use = "No binding will be created if you don't use the binding builder"]
 pub struct AsyncBindingBuilder<Interface, DIContainerType, DependencyHistoryType>
 where
     Interface: 'static + ?Sized + Send + Sync,
@@ -96,7 +97,7 @@ where
     ///
     /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     pub async fn to<Implementation>(
-        &self,
+        self,
     ) -> Result<
         AsyncBindingScopeConfigurator<
             Interface,
@@ -121,7 +122,7 @@ where
             self.dependency_history_factory,
         );
 
-        binding_scope_configurator.in_transient_scope().await;
+        binding_scope_configurator.set_in_transient_scope().await;
 
         Ok(binding_scope_configurator)
     }
@@ -178,7 +179,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_factory<Args, Return, FactoryFunc>(
-        &self,
+        self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
         AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
@@ -271,7 +272,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
-        &self,
+        self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
         AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
@@ -364,7 +365,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_default_factory<Return, FactoryFunc>(
-        &self,
+        self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
         AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
@@ -458,7 +459,7 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_default_factory<Return, FactoryFunc>(
-        &self,
+        self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
         AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,

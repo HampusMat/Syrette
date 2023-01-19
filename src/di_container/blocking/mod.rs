@@ -137,7 +137,6 @@ impl DIContainer
 
 impl IDIContainer<DependencyHistory> for DIContainer
 {
-    #[must_use]
     fn bind<Interface>(
         self: &mut Rc<Self>,
     ) -> BindingBuilder<Interface, Self, DependencyHistory>

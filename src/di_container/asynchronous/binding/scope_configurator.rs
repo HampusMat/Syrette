@@ -63,19 +63,10 @@ where
     ///
     /// This is the default.
     pub async fn in_transient_scope(
-        &self,
+        self,
     ) -> AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
     {
-        self.di_container
-            .set_binding::<Interface>(
-                None,
-                Box::new(AsyncTransientTypeProvider::<
-                    Implementation,
-                    DIContainerType,
-                    DependencyHistoryType,
-                >::new()),
-            )
-            .await;
+        self.set_in_transient_scope().await;
 
         AsyncBindingWhenConfigurator::new(self.di_container.clone())
     }
@@ -85,7 +76,7 @@ where
     /// # Errors
     /// Will return Err if resolving the implementation fails.
     pub async fn in_singleton_scope(
-        &self,
+        self,
     ) -> Result<
         AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
         AsyncBindingScopeConfiguratorError,
@@ -109,6 +100,20 @@ where
             .await;
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+    }
+
+    pub(crate) async fn set_in_transient_scope(&self)
+    {
+        self.di_container
+            .set_binding::<Interface>(
+                None,
+                Box::new(AsyncTransientTypeProvider::<
+                    Implementation,
+                    DIContainerType,
+                    DependencyHistoryType,
+                >::new()),
+            )
+            .await;
     }
 }
 

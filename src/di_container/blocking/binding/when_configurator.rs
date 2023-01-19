@@ -45,7 +45,7 @@ where
     /// # Errors
     /// Will return Err if no binding for the interface already exists.
     pub fn when_named(
-        &self,
+        self,
         name: &'static str,
     ) -> Result<(), BindingWhenConfiguratorError>
     {
