@@ -174,7 +174,11 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     let injectable_impl =
         InjectableImpl::<Dependency>::parse(input_stream).unwrap_or_abort();
 
-    set_dummy(injectable_impl.expand_dummy_blocking_impl());
+    set_dummy(if is_async_flag.is_on() {
+        injectable_impl.expand_dummy_async_impl()
+    } else {
+        injectable_impl.expand_dummy_blocking_impl()
+    });
 
     injectable_impl.validate().unwrap_or_abort();
 

@@ -328,6 +328,43 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
+    pub fn expand_dummy_async_impl(&self) -> proc_macro2::TokenStream
+    {
+        let generics = &self.generics;
+        let self_type = &self.self_type;
+
+        let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
+        let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
+
+        quote! {
+            impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
+                syrette::di_container::asynchronous::AsyncDIContainer,
+                syrette::dependency_history::DependencyHistory
+            > for #self_type
+            {
+                fn resolve<'di_container, 'fut>(
+                    #di_container_var: &'di_container std::sync::Arc<
+                        syrette::di_container::asynchronous::AsyncDIContainer
+                    >,
+                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
+                ) -> syrette::future::BoxFuture<
+                    'fut,
+                    Result<
+                        syrette::ptr::TransientPtr<Self>,
+                        syrette::errors::injectable::InjectableError
+                    >
+                >
+                where
+                    Self: Sized + 'fut,
+                    'di_container: 'fut
+                {
+                    unimplemented!();
+                }
+            }
+        }
+    }
+
     fn create_get_dep_method_calls(
         dependencies: &[Dep],
         is_async: bool,
