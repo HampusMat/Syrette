@@ -40,13 +40,8 @@ impl Parse for DeclareInterfaceArgs
                 }
             }
 
-            let flag_names = flags
-                .iter()
-                .map(|flag| flag.flag.to_string())
-                .collect::<Vec<_>>();
-
-            if let Some(dupe_flag_name) = flag_names.iter().find_duplicate() {
-                return Err(input.error(format!("Duplicate flag '{dupe_flag_name}'")));
+            if let Some((dupe_flag, _)) = flags.iter().find_duplicate() {
+                return Err(input.error(format!("Duplicate flag '{}'", dupe_flag.flag)));
             }
 
             flags

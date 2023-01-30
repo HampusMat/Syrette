@@ -2,7 +2,7 @@ use quote::ToTokens;
 use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::token::Paren;
-use syn::{parenthesized, parse_str, Ident, Token, TraitBound, Type};
+use syn::{parenthesized, Ident, Token, TraitBound, Type};
 
 /// A function trait. `dyn Fn(u32) -> String`
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,7 +76,7 @@ impl ToTokens for FnTrait
         self.output.to_tokens(tokens);
 
         if !self.trait_bounds.is_empty() {
-            let plus: Token![+] = parse_str("+").unwrap();
+            let plus = <Token![+]>::default();
 
             plus.to_tokens(tokens);
 

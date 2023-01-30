@@ -1,28 +1,59 @@
+use std::hash::Hash;
+
+use proc_macro2::Span;
 use syn::parse::{Parse, ParseStream};
 use syn::{Ident, LitBool, Token};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Clone)]
 pub struct MacroFlag
 {
     pub flag: Ident,
     pub is_on: LitBool,
 }
 
+impl MacroFlag
+{
+    pub fn new_off(flag: &str) -> Self
+    {
+        Self {
+            flag: Ident::new(flag, Span::call_site()),
+            is_on: LitBool::new(false, Span::call_site()),
+        }
+    }
+
+    pub fn is_on(&self) -> bool
+    {
+        self.is_on.value
+    }
+}
+
 impl Parse for MacroFlag
 {
     fn parse(input: ParseStream) -> syn::Result<Self>
     {
-        let input_forked = input.fork();
-
-        let flag: Ident = input_forked.parse()?;
-
-        input.parse::<Ident>()?;
+        let flag = input.parse::<Ident>()?;
 
         input.parse::<Token![=]>()?;
 
         let is_on: LitBool = input.parse()?;
 
         Ok(Self { flag, is_on })
+    }
+}
+
+impl PartialEq for MacroFlag
+{
+    fn eq(&self, other: &Self) -> bool
+    {
+        self.flag == other.flag
+    }
+}
+
+impl Hash for MacroFlag
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H)
+    {
+        self.flag.hash(state);
     }
 }
 

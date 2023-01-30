@@ -47,7 +47,7 @@ impl Parse for DeclareDefaultFactoryMacroArgs
             .map(|flag| flag.flag.to_string())
             .collect::<Vec<_>>();
 
-        if let Some(dupe_flag_name) = flag_names.iter().find_duplicate() {
+        if let Some((dupe_flag_name, _)) = flag_names.iter().find_duplicate() {
             return Err(input.error(format!("Duplicate flag '{dupe_flag_name}'")));
         }
 

@@ -1,7 +1,9 @@
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
+use syn::spanned::Spanned;
 use syn::{parse2, FnArg, GenericArgument, LitStr, PathArguments, Type};
 
 use crate::injectable::named_attr_input::NamedAttrInput;
+use crate::util::error::diagnostic_error_enum;
 use crate::util::syn_path::SynPathExt;
 
 /// Interface for a representation of a dependency of a injectable type.
@@ -40,29 +42,40 @@ impl IDependency for Dependency
     {
         let typed_new_method_arg = match new_method_arg {
             FnArg::Typed(typed_arg) => Ok(typed_arg),
-            FnArg::Receiver(_) => Err(DependencyError::UnexpectedSelfArgument),
+            FnArg::Receiver(receiver_arg) => Err(DependencyError::UnexpectedSelf {
+                self_token_span: receiver_arg.self_token.span,
+            }),
         }?;
 
         let dependency_type_path = match typed_new_method_arg.ty.as_ref() {
             Type::Path(arg_type_path) => Ok(arg_type_path),
             Type::Reference(ref_type_path) => match ref_type_path.elem.as_ref() {
                 Type::Path(arg_type_path) => Ok(arg_type_path),
-                &_ => Err(DependencyError::TypeNotPath),
+                other_type => Err(DependencyError::InvalidType {
+                    type_span: other_type.span(),
+                }),
             },
-            &_ => Err(DependencyError::TypeNotPath),
+            other_type => Err(DependencyError::InvalidType {
+                type_span: other_type.span(),
+            }),
         }?;
 
-        let ptr_path_segment = dependency_type_path
-            .path
-            .segments
-            .last()
-            .map_or_else(|| Err(DependencyError::PtrTypePathEmpty), Ok)?;
+        let ptr_path_segment = dependency_type_path.path.segments.last().map_or_else(
+            || {
+                Err(DependencyError::MissingType {
+                    arg_span: typed_new_method_arg.span(),
+                })
+            },
+            Ok,
+        )?;
 
         let ptr_ident = ptr_path_segment.ident.clone();
 
-        let ptr_generic_args = &match &ptr_path_segment.arguments {
+        let ptr_generic_args = match ptr_path_segment.arguments.clone() {
             PathArguments::AngleBracketed(generic_args) => Ok(generic_args),
-            &_ => Err(DependencyError::PtrTypeNoGenerics),
+            _ => Err(DependencyError::DependencyTypeMissingGenerics {
+                ptr_ident_span: ptr_ident.span(),
+            }),
         }?
         .args;
 
@@ -70,7 +83,9 @@ impl IDependency for Dependency
             if let Some(GenericArgument::Type(interface)) = ptr_generic_args.first() {
                 Ok(interface.clone())
             } else {
-                Err(DependencyError::PtrTypeNoGenerics)
+                Err(DependencyError::DependencyTypeMissingGenerics {
+                    ptr_ident_span: ptr_ident.span(),
+                })
             }?;
 
         let arg_attrs = &typed_new_method_arg.attrs;
@@ -84,15 +99,17 @@ impl IDependency for Dependency
 
         let opt_named_attr_tokens = opt_named_attr.map(|attr| &attr.tokens);
 
-        let opt_named_attr_input = if let Some(named_attr_tokens) = opt_named_attr_tokens
-        {
-            Some(
-                parse2::<NamedAttrInput>(named_attr_tokens.clone())
-                    .map_err(DependencyError::ParseNamedAttrInputFailed)?,
-            )
-        } else {
-            None
-        };
+        let opt_named_attr_input =
+            if let Some(named_attr_tokens) = opt_named_attr_tokens {
+                Some(parse2::<NamedAttrInput>(named_attr_tokens.clone()).map_err(
+                    |err| DependencyError::InvalidNamedAttrInput {
+                        arg_span: typed_new_method_arg.span(),
+                        err,
+                    },
+                )?)
+            } else {
+                None
+            };
 
         Ok(Self {
             interface,
@@ -117,23 +134,43 @@ impl IDependency for Dependency
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+diagnostic_error_enum! {
 pub enum DependencyError
 {
-    #[error("Unexpected 'self' argument in 'new' method")]
-    UnexpectedSelfArgument,
+    #[error("Unexpected 'self' parameter"), span = self_token_span]
+    #[help("Remove the 'self' parameter"), span = self_token_span]
+    UnexpectedSelf {
+        self_token_span: Span
+    },
 
-    #[error("Argument type must either be a path or a path reference")]
-    TypeNotPath,
+    #[
+        error("Dependency type must either be a path or a path reference"),
+        span = type_span
+    ]
+    InvalidType {
+        type_span: Span
+    },
 
-    #[error("Expected pointer type path to not be empty")]
-    PtrTypePathEmpty,
+    #[error("Dependency is missing a type"), span = arg_span]
+    MissingType {
+        arg_span: Span
+    },
 
-    #[error("Expected pointer type to take generic arguments")]
-    PtrTypeNoGenerics,
+    #[
+        error("Expected dependency type to take generic parameters"),
+        span = ptr_ident_span
+    ]
+    DependencyTypeMissingGenerics {
+        ptr_ident_span: Span
+    },
 
-    #[error("Failed to parse the input to a 'named' attribute")]
-    ParseNamedAttrInputFailed(#[source] syn::Error),
+    #[error("Dependency has a 'named' attribute given invalid input"), span = arg_span]
+    #[source(err)]
+    InvalidNamedAttrInput {
+        arg_span: Span,
+        err: syn::Error
+    },
+}
 }
 
 #[cfg(test)]
@@ -162,9 +199,9 @@ mod tests
     use crate::test_utils;
 
     #[test]
-    fn can_build_dependency() -> Result<(), Box<dyn Error>>
+    fn can_build_dependency()
     {
-        assert_eq!(
+        assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![],
                 pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
@@ -177,17 +214,17 @@ mod tests
                         ]))]
                     ),
                 ])))
-            }))?,
-            Dependency {
+            })),
+            Ok(dependency) if dependency == Dependency {
                 interface: test_utils::create_type(test_utils::create_path(&[
                     PathSegment::from(format_ident!("Foo"))
                 ])),
                 ptr: format_ident!("TransientPtr"),
                 name: None
             }
-        );
+        ));
 
-        assert_eq!(
+        assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![],
                 pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
@@ -202,23 +239,21 @@ mod tests
                         ]))]
                     ),
                 ])))
-            }))?,
-            Dependency {
+            })),
+            Ok(dependency) if dependency == Dependency {
                 interface: test_utils::create_type(test_utils::create_path(&[
                     PathSegment::from(format_ident!("Bar"))
                 ])),
                 ptr: format_ident!("SingletonPtr"),
                 name: None
             }
-        );
-
-        Ok(())
+        ));
     }
 
     #[test]
-    fn can_build_dependency_with_name() -> Result<(), Box<dyn Error>>
+    fn can_build_dependency_with_name()
     {
-        assert_eq!(
+        assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![Attribute {
                     pound_token: Pound::default(),
@@ -240,17 +275,17 @@ mod tests
                         ]))]
                     ),
                 ])))
-            }))?,
-            Dependency {
+            })),
+            Ok(dependency) if dependency == Dependency {
                 interface: test_utils::create_type(test_utils::create_path(&[
                     PathSegment::from(format_ident!("Foo"))
                 ])),
                 ptr: format_ident!("TransientPtr"),
                 name: Some(LitStr::new("cool", Span::call_site()))
             }
-        );
+        ));
 
-        assert_eq!(
+        assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![Attribute {
                     pound_token: Pound::default(),
@@ -274,17 +309,15 @@ mod tests
                         ]))]
                     ),
                 ])))
-            }))?,
-            Dependency {
+            })),
+            Ok(dependency) if dependency == Dependency {
                 interface: test_utils::create_type(test_utils::create_path(&[
                     PathSegment::from(format_ident!("Bar"))
                 ])),
                 ptr: format_ident!("FactoryPtr"),
                 name: Some(LitStr::new("awesome", Span::call_site()))
             }
-        );
-
-        Ok(())
+        ));
     }
 
     #[test]

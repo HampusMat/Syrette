@@ -1,11 +1,22 @@
 use std::error::Error;
 
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::parse::{Parse, ParseStream};
-use syn::{parse_str, ExprMethodCall, FnArg, Generics, ImplItemMethod, ItemImpl, Type};
+use syn::spanned::Spanned;
+use syn::{
+    parse2,
+    parse_str,
+    ExprMethodCall,
+    FnArg,
+    Generics,
+    ImplItemMethod,
+    ItemImpl,
+    ReturnType,
+    Type,
+};
 
-use crate::injectable::dependency::IDependency;
+use crate::injectable::dependency::{DependencyError, IDependency};
+use crate::util::error::diagnostic_error_enum;
 use crate::util::item_impl::find_impl_method_by_name_mut;
 use crate::util::string::camelcase_to_snakecase;
 use crate::util::syn_path::SynPathExt;
@@ -19,36 +30,107 @@ pub struct InjectableImpl<Dep: IDependency>
     pub self_type: Type,
     pub generics: Generics,
     pub original_impl: ItemImpl,
+
+    new_method: ImplItemMethod,
 }
 
-impl<Dep: IDependency> Parse for InjectableImpl<Dep>
+impl<Dep: IDependency> InjectableImpl<Dep>
 {
     #[cfg(not(tarpaulin_include))]
-    fn parse(input: ParseStream) -> syn::Result<Self>
+    pub fn parse(input: TokenStream) -> Result<Self, InjectableImplError>
     {
-        let input_fork = input.fork();
+        let mut item_impl = parse2::<ItemImpl>(input).map_err(|err| {
+            InjectableImplError::NotAImplementation {
+                err_span: err.span(),
+            }
+        })?;
 
-        let mut item_impl = input.parse::<ItemImpl>()?;
+        if let Some((_, trait_path, _)) = item_impl.trait_ {
+            return Err(InjectableImplError::TraitImpl {
+                trait_path_span: trait_path.span(),
+            });
+        }
 
-        let new_method = find_impl_method_by_name_mut(&mut item_impl, "new")
-            .map_or_else(|| Err(input_fork.error("Missing a 'new' method")), Ok)?;
+        let item_impl_span = item_impl.self_ty.span();
 
-        let dependencies =
-            Self::build_dependencies(new_method).map_err(|err| input.error(err))?;
+        let new_method = find_impl_method_by_name_mut(&mut item_impl, "new").ok_or(
+            InjectableImplError::MissingNewMethod {
+                implementation_span: item_impl_span,
+            },
+        )?;
+
+        let dependencies = Self::build_dependencies(new_method).map_err(|err| {
+            InjectableImplError::ContainsAInvalidDependency {
+                implementation_span: item_impl_span,
+                err,
+            }
+        })?;
 
         Self::remove_method_argument_attrs(new_method);
+
+        let new_method = new_method.clone();
 
         Ok(Self {
             dependencies,
             self_type: item_impl.self_ty.as_ref().clone(),
             generics: item_impl.generics.clone(),
             original_impl: item_impl,
+            new_method,
         })
     }
-}
 
-impl<Dep: IDependency> InjectableImpl<Dep>
-{
+    pub fn validate(&self) -> Result<(), InjectableImplError>
+    {
+        if matches!(self.new_method.sig.output, ReturnType::Default) {
+            return Err(InjectableImplError::InvalidNewMethodReturnType {
+                new_method_output_span: self.new_method.sig.output.span(),
+                expected: "Self".to_string(),
+                found: "()".to_string(),
+            });
+        }
+
+        if let ReturnType::Type(_, ret_type) = &self.new_method.sig.output {
+            if let Type::Path(path_type) = ret_type.as_ref() {
+                if path_type
+                    .path
+                    .get_ident()
+                    .map_or_else(|| true, |ident| *ident != "Self")
+                {
+                    return Err(InjectableImplError::InvalidNewMethodReturnType {
+                        new_method_output_span: self.new_method.sig.output.span(),
+                        expected: "Self".to_string(),
+                        found: ret_type.to_token_stream().to_string(),
+                    });
+                }
+            } else {
+                return Err(InjectableImplError::InvalidNewMethodReturnType {
+                    new_method_output_span: self.new_method.sig.output.span(),
+                    expected: "Self".to_string(),
+                    found: ret_type.to_token_stream().to_string(),
+                });
+            }
+        }
+
+        if let Some(unsafety) = self.new_method.sig.unsafety {
+            return Err(InjectableImplError::NewMethodUnsafe {
+                unsafety_span: unsafety.span,
+            });
+        }
+
+        if let Some(asyncness) = self.new_method.sig.asyncness {
+            return Err(InjectableImplError::NewMethodAsync {
+                asyncness_span: asyncness.span,
+            });
+        }
+
+        if !self.new_method.sig.generics.params.is_empty() {
+            return Err(InjectableImplError::NewMethodGeneric {
+                generics_span: self.new_method.sig.generics.span(),
+            });
+        }
+        Ok(())
+    }
+
     #[cfg(not(tarpaulin_include))]
     pub fn expand(&self, no_doc_hidden: bool, is_async: bool)
         -> proc_macro2::TokenStream
@@ -216,6 +298,36 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         }
     }
 
+    #[cfg(not(tarpaulin_include))]
+    pub fn expand_dummy_blocking_impl(&self) -> proc_macro2::TokenStream
+    {
+        let generics = &self.generics;
+        let self_type = &self.self_type;
+
+        let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
+        let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
+
+        quote! {
+            impl #generics syrette::interfaces::injectable::Injectable<
+                syrette::di_container::blocking::DIContainer,
+                syrette::dependency_history::DependencyHistory
+            > for #self_type
+            {
+                fn resolve(
+                    #di_container_var: &std::rc::Rc<
+                        syrette::di_container::blocking::DIContainer
+                    >,
+                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
+                ) -> Result<
+                    syrette::ptr::TransientPtr<Self>,
+                    syrette::errors::injectable::InjectableError>
+                {
+                    unimplemented!();
+                }
+            }
+        }
+    }
+
     fn create_get_dep_method_calls(
         dependencies: &[Dep],
         is_async: bool,
@@ -288,8 +400,9 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         })
     }
 
-    fn build_dependencies(new_method: &ImplItemMethod)
-        -> Result<Vec<Dep>, Box<dyn Error>>
+    fn build_dependencies(
+        new_method: &ImplItemMethod,
+    ) -> Result<Vec<Dep>, DependencyError>
     {
         let new_method_args = &new_method.sig.inputs;
 
@@ -336,6 +449,74 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             }
         }
     }
+}
+
+diagnostic_error_enum! {
+pub enum InjectableImplError
+{
+    #[
+        error("The 'injectable' attribute must be placed on a implementation"),
+        span = err_span
+    ]
+    NotAImplementation
+    {
+        err_span: Span
+    },
+
+    #[
+        error("The 'injectable' attribute cannot be placed on a trait implementation"),
+        span = trait_path_span
+    ]
+    TraitImpl
+    {
+        trait_path_span: Span
+    },
+
+    #[error("Missing a 'new' method"), span = implementation_span]
+    #[note("Required by the 'injectable' attribute macro")]
+    MissingNewMethod {
+        implementation_span: Span
+    },
+
+    #[
+        error(concat!(
+            "Invalid 'new' method return type. Expected it to be '{}'. ",
+            "Found '{}'"
+        ), expected, found),
+        span = new_method_output_span
+    ]
+    InvalidNewMethodReturnType
+    {
+        new_method_output_span: Span,
+        expected: String,
+        found: String
+    },
+
+    #[error("'new' method is not allowed to be unsafe"), span = unsafety_span]
+    #[note("Required by the 'injectable' attribute macro")]
+    NewMethodUnsafe {
+        unsafety_span: Span
+    },
+
+    #[error("'new' method is not allowed to be async"), span = asyncness_span]
+    #[note("Required by the 'injectable' attribute macro")]
+    NewMethodAsync {
+        asyncness_span: Span
+    },
+
+    #[error("'new' method is not allowed to have generics"), span = generics_span]
+    #[note("Required by the 'injectable' attribute macro")]
+    NewMethodGeneric {
+        generics_span: Span
+    },
+
+    #[error("Has a invalid dependency"), span = implementation_span]
+    #[source(err)]
+    ContainsAInvalidDependency {
+        implementation_span: Span,
+        err: DependencyError
+    },
+}
 }
 
 #[cfg(test)]
@@ -436,8 +617,8 @@ mod tests
             .expect()
             .returning(|_| Ok(MockIDependency::new()));
 
-        let dependencies =
-            InjectableImpl::<MockIDependency>::build_dependencies(&method)?;
+        let dependencies = InjectableImpl::<MockIDependency>::build_dependencies(&method)
+            .expect("Expected Ok");
 
         assert_eq!(dependencies.len(), 2);
 
@@ -445,7 +626,7 @@ mod tests
     }
 
     #[test]
-    fn can_build_named_dependencies() -> Result<(), Box<dyn Error>>
+    fn can_build_named_dependencies()
     {
         let method = ImplItemMethod {
             attrs: vec![],
@@ -517,12 +698,10 @@ mod tests
             .returning(|_| Ok(MockIDependency::new()))
             .times(2);
 
-        let dependencies =
-            InjectableImpl::<MockIDependency>::build_dependencies(&method)?;
+        let dependencies = InjectableImpl::<MockIDependency>::build_dependencies(&method)
+            .expect("Expected Ok");
 
         assert_eq!(dependencies.len(), 2);
-
-        Ok(())
     }
 
     #[test]

@@ -17,7 +17,7 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 default = ["prevent-circular"]
 factory = ["syrette_macros/factory"]
 prevent-circular = ["syrette_macros/prevent-circular"]
-async = ["dep:async-trait", "dep:async-lock"]
+async = ["dep:async-trait", "dep:async-lock", "syrette_macros/async"]
 
 [[example]]
 name = "factory"

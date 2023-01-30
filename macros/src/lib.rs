@@ -6,18 +6,18 @@
 //! Macros for the [Syrette](https://crates.io/crates/syrette) crate.
 
 use proc_macro::TokenStream;
+use proc_macro_error::{proc_macro_error, set_dummy, ResultExt};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Dyn;
-use syn::{
-    parse,
-    parse_macro_input,
-    TraitBound,
-    TraitBoundModifier,
-    Type,
-    TypeParamBound,
-    TypeTraitObject,
-};
+use syn::{parse, TraitBound, TraitBoundModifier, Type, TypeParamBound, TypeTraitObject};
+
+use crate::caster::generate_caster;
+use crate::declare_interface_args::DeclareInterfaceArgs;
+use crate::injectable::dependency::Dependency;
+use crate::injectable::implementation::InjectableImpl;
+use crate::injectable::macro_args::InjectableMacroArgs;
+use crate::macro_flag::MacroFlag;
 
 mod caster;
 mod declare_interface_args;
@@ -36,11 +36,8 @@ mod fn_trait;
 #[cfg(test)]
 mod test_utils;
 
-use crate::caster::generate_caster;
-use crate::declare_interface_args::DeclareInterfaceArgs;
-use crate::injectable::dependency::Dependency;
-use crate::injectable::implementation::InjectableImpl;
-use crate::injectable::macro_args::InjectableMacroArgs;
+#[allow(dead_code)]
+const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Makes a struct injectable. Thereby usable with [`DIContainer`] or
 /// [`AsyncDIContainer`].
@@ -131,38 +128,62 @@ use crate::injectable::macro_args::InjectableMacroArgs;
 /// [`Injectable`]: https://docs.rs/syrette/latest/syrette/interfaces/injectable/trait.Injectable.html
 /// [`di_container_bind`]: https://docs.rs/syrette/latest/syrette/macro.di_container_bind.html
 #[cfg(not(tarpaulin_include))]
+#[proc_macro_error]
 #[proc_macro_attribute]
-pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenStream
+pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenStream
 {
-    let InjectableMacroArgs { interface, flags } = parse_macro_input!(args_stream);
+    let input_stream: proc_macro2::TokenStream = input_stream.into();
 
-    let no_doc_hidden = flags
+    set_dummy(input_stream.clone());
+
+    let args = parse::<InjectableMacroArgs>(args_stream).unwrap_or_abort();
+
+    args.check_flags().unwrap_or_abort();
+
+    let no_doc_hidden = args
+        .flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "no_doc_hidden")
         .map_or(false, |flag| flag.is_on.value);
 
-    let no_declare_concrete_interface = flags
+    let no_declare_concrete_interface = args
+        .flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "no_declare_concrete_interface")
         .map_or(false, |flag| flag.is_on.value);
 
-    let is_async = flags
+    let is_async_flag = args
+        .flags
         .iter()
         .find(|flag| flag.flag.to_string().as_str() == "async")
-        .map_or(false, |flag| flag.is_on.value);
+        .cloned()
+        .unwrap_or_else(|| MacroFlag::new_off("async"));
 
-    let injectable_impl: InjectableImpl<Dependency> = match parse(impl_stream) {
-        Ok(injectable_impl) => injectable_impl,
-        Err(err) => {
-            panic!("{err}");
-        }
-    };
+    #[cfg(not(feature = "async"))]
+    if is_async_flag.is_on() {
+        use proc_macro_error::abort;
 
-    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
+        abort!(
+            is_async_flag.flag.span(),
+            "The 'async' Cargo feature must be enabled to use this flag";
+            suggestion = "In your Cargo.toml: syrette = {{ version = \"{}\", features = [\"async\"] }}",
+            PACKAGE_VERSION
+        );
+    }
+
+    let injectable_impl =
+        InjectableImpl::<Dependency>::parse(input_stream).unwrap_or_abort();
+
+    set_dummy(injectable_impl.expand_dummy_blocking_impl());
+
+    injectable_impl.validate().unwrap_or_abort();
+
+    let expanded_injectable_impl =
+        injectable_impl.expand(no_doc_hidden, is_async_flag.is_on());
 
     let self_type = &injectable_impl.self_type;
 
-    let opt_interface = interface.map(Type::Path).or_else(|| {
+    let opt_interface = args.interface.map(Type::Path).or_else(|| {
         if no_declare_concrete_interface {
             None
         } else {
@@ -171,7 +192,7 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
     });
 
     let maybe_decl_interface = if let Some(interface) = opt_interface {
-        let async_flag = if is_async {
+        let async_flag = if is_async_flag.is_on() {
             quote! {, async = true}
         } else {
             quote! {}
@@ -233,17 +254,22 @@ pub fn injectable(args_stream: TokenStream, impl_stream: TokenStream) -> TokenSt
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 #[cfg(not(tarpaulin_include))]
+#[proc_macro_error]
 #[proc_macro_attribute]
-pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> TokenStream
+pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStream
 {
     use quote::ToTokens;
-    use syn::parse_str;
+    use syn::{parse2, parse_str};
 
     use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::macro_args::FactoryMacroArgs;
     use crate::factory::type_alias::FactoryTypeAlias;
 
-    let FactoryMacroArgs { flags } = parse(args_stream).unwrap();
+    let input_stream: proc_macro2::TokenStream = input_stream.into();
+
+    set_dummy(input_stream.clone());
+
+    let FactoryMacroArgs { flags } = parse(args_stream).unwrap_or_abort();
 
     let mut is_threadsafe = flags
         .iter()
@@ -264,7 +290,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         mut factory_interface,
         arg_types: _,
         return_type: _,
-    } = parse(type_alias_stream).unwrap();
+    } = parse2(input_stream).unwrap_or_abort();
 
     let output = factory_interface.output.clone();
 
@@ -280,11 +306,11 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
         }
         .into(),
     )
-    .unwrap();
+    .unwrap_or_abort();
 
     if is_threadsafe {
-        factory_interface.add_trait_bound(parse_str("Send").unwrap());
-        factory_interface.add_trait_bound(parse_str("Sync").unwrap());
+        factory_interface.add_trait_bound(parse_str("Send").unwrap_or_abort());
+        factory_interface.add_trait_bound(parse_str("Sync").unwrap_or_abort());
     }
 
     type_alias.ty = Box::new(Type::Verbatim(factory_interface.to_token_stream()));
@@ -332,6 +358,7 @@ pub fn factory(args_stream: TokenStream, type_alias_stream: TokenStream) -> Toke
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 #[cfg(not(tarpaulin_include))]
+#[proc_macro_error]
 #[proc_macro]
 pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 {
@@ -341,7 +368,8 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
     use crate::factory::declare_default_args::DeclareDefaultFactoryMacroArgs;
     use crate::fn_trait::FnTrait;
 
-    let DeclareDefaultFactoryMacroArgs { interface, flags } = parse(args_stream).unwrap();
+    let DeclareDefaultFactoryMacroArgs { interface, flags } =
+        parse(args_stream).unwrap_or_abort();
 
     let mut is_threadsafe = flags
         .iter()
@@ -372,11 +400,11 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
         }
         .into(),
     )
-    .unwrap();
+    .unwrap_or_abort();
 
     if is_threadsafe {
-        factory_interface.add_trait_bound(parse_str("Send").unwrap());
-        factory_interface.add_trait_bound(parse_str("Sync").unwrap());
+        factory_interface.add_trait_bound(parse_str("Send").unwrap_or_abort());
+        factory_interface.add_trait_bound(parse_str("Sync").unwrap_or_abort());
     }
 
     build_declare_factory_interfaces(&factory_interface, is_threadsafe).into()
@@ -404,6 +432,7 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 /// declare_interface!(Ninja -> INinja);
 /// ```
 #[cfg(not(tarpaulin_include))]
+#[proc_macro_error]
 #[proc_macro]
 pub fn declare_interface(input: TokenStream) -> TokenStream
 {
@@ -411,7 +440,7 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
         implementation,
         interface,
         flags,
-    } = parse_macro_input!(input);
+    } = parse(input).unwrap_or_abort();
 
     let opt_async_flag = flags
         .iter()
