@@ -430,10 +430,16 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         };
 
         Ok(quote! {
-            #do_method_call.map_err(|err| #resolve_failed_error {
-                reason: Box::new(err),
-                affected: self_type_name
-            })?.#to_ptr().unwrap()
+            #do_method_call
+                .map_err(|err| #resolve_failed_error {
+                    reason: Box::new(err),
+                    affected: self_type_name
+                })?
+                .#to_ptr()
+                .map_err(|err| InjectableError:: PrepareDependencyFailed {
+                    reason: err,
+                    dependency_name: #dep_interface_str
+                })?
         })
     }
 

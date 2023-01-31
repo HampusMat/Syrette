@@ -4,6 +4,7 @@
 
 use crate::dependency_history::DependencyHistory;
 use crate::errors::di_container::DIContainerError;
+use crate::errors::ptr::SomePtrError;
 
 /// Error type for structs that implement [`Injectable`].
 ///
@@ -41,5 +42,17 @@ pub enum InjectableError
     {
         /// History of dependencies.
         dependency_history: DependencyHistory,
+    },
+
+    /// Failed to prepare a dependency.
+    #[error("Failed to prepare dependency '{dependency_name}'")]
+    PrepareDependencyFailed
+    {
+        /// Error reason.
+        #[source]
+        reason: SomePtrError,
+
+        /// The name of the dependency.
+        dependency_name: &'static str,
     },
 }
