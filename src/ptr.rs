@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use paste::paste;
 
-use crate::errors::ptr::{SomePtrError, SomeThreadsafePtrError};
+use crate::errors::ptr::SomePtrError;
 
 /// A smart pointer for a interface in the transient scope.
 pub type TransientPtr<Interface> = Box<Interface>;
@@ -26,11 +26,11 @@ pub type FactoryPtr<FactoryInterface> = Rc<FactoryInterface>;
 pub type ThreadsafeFactoryPtr<FactoryInterface> = Arc<FactoryInterface>;
 
 macro_rules! create_as_variant_fn {
-    ($enum: ident, $variant: ident) => {
-        create_as_variant_fn!($enum, $variant,);
+    ($enum: ident, $variant: ident, $err: ident) => {
+        create_as_variant_fn!($enum, $variant, $err,);
     };
 
-    ($enum: ident, $variant: ident, $($attrs: meta),*) => {
+    ($enum: ident, $variant: ident, $err: ident, $($attrs: meta),*) => {
         paste! {
             #[doc =
                 "Returns as the `" [<$variant>] "` variant.\n"
@@ -39,13 +39,13 @@ macro_rules! create_as_variant_fn {
                 "Will return Err if it's not the `" [<$variant>] "` variant."
             ]
             $(#[$attrs])*
-            pub fn [<$variant:snake>](self) -> Result<[<$variant Ptr>]<Interface>, [<$enum Error>]>
+            pub fn [<$variant:snake>](self) -> Result<[<$variant Ptr>]<Interface>, $err>
             {
                 if let $enum::$variant(ptr) = self {
                     return Ok(ptr);
                 }
 
-                Err([<$enum Error>]::WrongPtrType {
+                Err($err::WrongPtrType {
                     expected: stringify!($variant),
                     found: self.into()
                 })
@@ -76,13 +76,14 @@ impl<Interface> SomePtr<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    create_as_variant_fn!(SomePtr, Transient);
+    create_as_variant_fn!(SomePtr, Transient, SomePtrError);
 
-    create_as_variant_fn!(SomePtr, Singleton);
+    create_as_variant_fn!(SomePtr, Singleton, SomePtrError);
 
     create_as_variant_fn!(
         SomePtr,
         Factory,
+        SomePtrError,
         cfg(feature = "factory"),
         cfg_attr(doc_cfg, doc(cfg(feature = "factory")))
     );
@@ -110,13 +111,14 @@ impl<Interface> SomeThreadsafePtr<Interface>
 where
     Interface: 'static + ?Sized,
 {
-    create_as_variant_fn!(SomeThreadsafePtr, Transient);
+    create_as_variant_fn!(SomeThreadsafePtr, Transient, SomePtrError);
 
-    create_as_variant_fn!(SomeThreadsafePtr, ThreadsafeSingleton);
+    create_as_variant_fn!(SomeThreadsafePtr, ThreadsafeSingleton, SomePtrError);
 
     create_as_variant_fn!(
         SomeThreadsafePtr,
         ThreadsafeFactory,
+        SomePtrError,
         cfg(feature = "factory"),
         cfg_attr(doc_cfg, doc(cfg(feature = "factory")))
     );
