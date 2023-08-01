@@ -154,24 +154,26 @@ mod tests
             Foobar -> IFoobar, xyz = false, async = true
         };
 
-        assert!(matches!(parse2::<DeclareInterfaceArgs>(input_args), Err(_)));
+        assert!(parse2::<DeclareInterfaceArgs>(input_args).is_err());
     }
 
     #[test]
     fn cannot_parse_with_duplicate_flag()
     {
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<DeclareInterfaceArgs>(quote! {
                 Foobar -> IFoobar, async = true, async = true
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
 
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<DeclareInterfaceArgs>(quote! {
                 Foobar -> IFoobar, async = true, async = false
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
     }
 }
