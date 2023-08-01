@@ -57,6 +57,16 @@ anyhow = "1.0.62"
 third-party-lib = { path = "./examples/with-3rd-party/third-party-lib" }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
 
+# The following is needed because of this change:
+# https://github.com/assert-rs/predicates-rs/commit/7a961436d8c2b9cf09e9576a0c9341acb302f49c
+#
+# The predicates family of crates is a dependency of mockall.
+#
+# Follow this on
+# https://github.com/asomers/mockall/issues/507
+predicates-tree = "=1.0.7"
+predicates-core = "=1.0.5"
+
 [workspace]
 members = [
 	"macros",
