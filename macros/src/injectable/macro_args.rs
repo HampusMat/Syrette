@@ -146,8 +146,7 @@ mod tests
 
         let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
 
-        assert!(matches!(injectable_macro_args.interface, None));
-
+        assert!(injectable_macro_args.interface.is_none());
         assert!(injectable_macro_args.flags.is_empty());
 
         Ok(())
@@ -173,7 +172,7 @@ mod tests
 
         assert_eq!(
             injectable_macro_args.flags,
-            Punctuated::from_iter(vec![
+            Punctuated::from_iter([
                 MacroFlag {
                     flag: format_ident!("no_doc_hidden"),
                     is_on: LitBool::new(true, Span::call_site())
@@ -197,11 +196,11 @@ mod tests
 
         let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
 
-        assert!(matches!(injectable_macro_args.interface, None));
+        assert!(injectable_macro_args.interface.is_none());
 
         assert_eq!(
             injectable_macro_args.flags,
-            Punctuated::from_iter(vec![
+            Punctuated::from_iter([
                 MacroFlag {
                     flag: format_ident!("async"),
                     is_on: LitBool::new(false, Span::call_site())
@@ -217,15 +216,13 @@ mod tests
     }
 
     #[test]
-    fn can_parse_with_unknown_flag() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_unknown_flag()
     {
         let input_args = quote! {
             IFoo, haha = true, async = false
         };
 
         assert!(parse2::<InjectableMacroArgs>(input_args).is_ok());
-
-        Ok(())
     }
 
     #[test]
