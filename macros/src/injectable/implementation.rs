@@ -576,6 +576,7 @@ mod tests
         AttrStyle,
         Attribute,
         Block,
+        Expr,
         ImplItemMethod,
         LitStr,
         Pat,
@@ -874,8 +875,8 @@ mod tests
             )?;
 
         assert_eq!(
-            parse2::<ExprMethodCall>(output)?,
-            parse2::<ExprMethodCall>(quote! {
+            parse2::<Expr>(output)?,
+            parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(#dep_history_var_ident.clone(), None)
                     .map_err(|err| InjectableError::ResolveFailed {
@@ -883,8 +884,10 @@ mod tests
                         affected: self_type_name
                     })?
                     .transient()
-                    .unwrap()
-
+                    .map_err(|err| InjectableError::PrepareDependencyFailed {
+                        reason: err,
+                        dependency_name: "Foo"
+                    })?
             })?
         );
 
@@ -920,8 +923,8 @@ mod tests
             )?;
 
         assert_eq!(
-            parse2::<ExprMethodCall>(output)?,
-            parse2::<ExprMethodCall>(quote! {
+            parse2::<Expr>(output)?,
+            parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(#dep_history_var_ident.clone(), Some("special"))
                     .map_err(|err| InjectableError::ResolveFailed {
@@ -929,8 +932,10 @@ mod tests
                         affected: self_type_name
                     })?
                     .transient()
-                    .unwrap()
-
+                    .map_err(|err| InjectableError::PrepareDependencyFailed {
+                        reason: err,
+                        dependency_name: "Foo"
+                    })?
             })?
         );
 
@@ -964,8 +969,8 @@ mod tests
             )?;
 
         assert_eq!(
-            parse2::<ExprMethodCall>(output)?,
-            parse2::<ExprMethodCall>(quote! {
+            parse2::<Expr>(output)?,
+            parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(#dep_history_var_ident.clone(), None)
                     .await
@@ -974,8 +979,10 @@ mod tests
                         affected: self_type_name
                     })?
                     .transient()
-                    .unwrap()
-
+                    .map_err(|err| InjectableError::PrepareDependencyFailed {
+                        reason: err,
+                        dependency_name: "Foo"
+                    })?
             })?
         );
 
@@ -1012,8 +1019,8 @@ mod tests
             )?;
 
         assert_eq!(
-            parse2::<ExprMethodCall>(output)?,
-            parse2::<ExprMethodCall>(quote! {
+            parse2::<Expr>(output)?,
+            parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(#dep_history_var_ident.clone(), Some("foobar"))
                     .await
@@ -1022,8 +1029,10 @@ mod tests
                         affected: self_type_name
                     })?
                     .transient()
-                    .unwrap()
-
+                    .map_err(|err| InjectableError::PrepareDependencyFailed {
+                        reason: err,
+                        dependency_name: "Foo"
+                    })?
             })?
         );
 
