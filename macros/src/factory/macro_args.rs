@@ -107,24 +107,26 @@ mod tests
             async = true, threadsafe = false, foo = true
         };
 
-        assert!(matches!(parse2::<FactoryMacroArgs>(input_args), Err(_)));
+        assert!(parse2::<FactoryMacroArgs>(input_args).is_err());
     }
 
     #[test]
     fn cannot_parse_with_duplicate_flag()
     {
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<FactoryMacroArgs>(quote! {
                 async = true, threadsafe = false, async = true
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
 
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<FactoryMacroArgs>(quote! {
                 async = true, threadsafe = false, async = false
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
     }
 }
