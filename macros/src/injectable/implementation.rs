@@ -605,7 +605,7 @@ mod tests
     }
 
     #[test]
-    fn can_build_dependencies() -> Result<(), Box<dyn Error>>
+    fn can_build_dependencies()
     {
         let method = ImplItemMethod {
             attrs: vec![],
@@ -665,8 +665,6 @@ mod tests
             .expect("Expected Ok");
 
         assert_eq!(dependencies.len(), 2);
-
-        Ok(())
     }
 
     #[test]
