@@ -101,9 +101,6 @@ mod tests
             mocks::MockDependencyHistory,
         >::new(Rc::new(di_container_mock));
 
-        assert!(matches!(
-            binding_when_configurator.when_named("cool"),
-            Ok(_)
-        ));
+        assert!(binding_when_configurator.when_named("cool").is_ok());
     }
 }

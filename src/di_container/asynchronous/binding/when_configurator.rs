@@ -103,9 +103,9 @@ mod tests
             mocks::MockDependencyHistory,
         >::new(Arc::new(di_container_mock));
 
-        assert!(matches!(
-            binding_when_configurator.when_named("awesome").await,
-            Ok(_)
-        ));
+        assert!(binding_when_configurator
+            .when_named("awesome")
+            .await
+            .is_ok());
     }
 }

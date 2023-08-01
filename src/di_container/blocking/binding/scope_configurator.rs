@@ -161,9 +161,6 @@ mod tests
             mocks::MockDependencyHistory::new,
         );
 
-        assert!(matches!(
-            binding_scope_configurator.in_singleton_scope(),
-            Ok(_)
-        ));
+        assert!(binding_scope_configurator.in_singleton_scope().is_ok());
     }
 }
