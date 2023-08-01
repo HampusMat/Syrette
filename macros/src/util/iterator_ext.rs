@@ -55,7 +55,7 @@ mod tests
         }
 
         assert_eq!(
-            vec![
+            [
                 Fruit {
                     name: "Apple".to_string(),
                 },
@@ -82,7 +82,7 @@ mod tests
         );
 
         assert_eq!(
-            vec![
+            [
                 Fruit {
                     name: "Banana".to_string(),
                 },
