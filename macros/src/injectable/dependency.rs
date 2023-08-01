@@ -176,8 +176,6 @@ pub enum DependencyError
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use proc_macro::TokenStream;
     use proc_macro2::Span;
     use quote::{format_ident, quote};
