@@ -101,12 +101,12 @@ where
         let mut args = type_name::<Args>();
 
         if args.len() < 2 {
-            return Err(std::fmt::Error::default());
+            return Err(std::fmt::Error);
         }
 
         args = args
             .get(1..args.len() - 1)
-            .map_or_else(|| Err(std::fmt::Error::default()), Ok)?;
+            .map_or_else(|| Err(std::fmt::Error), Ok)?;
 
         if args.ends_with(',') {
             args = args
