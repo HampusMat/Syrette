@@ -64,8 +64,10 @@ tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }
 #
 # Follow this on
 # https://github.com/asomers/mockall/issues/507
-predicates-tree = "=1.0.7"
-predicates-core = "=1.0.5"
+[patch.crates-io]
+predicates-tree = { git = "https://github.com/assert-rs/predicates-rs", tag = "v2.1.3", version = "^1.0.7" }
+predicates-core = { git = "https://github.com/assert-rs/predicates-rs", tag = "v2.1.3", version = "^1.0.5" }
+
 
 [workspace]
 members = [
