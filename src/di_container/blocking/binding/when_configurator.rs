@@ -9,7 +9,7 @@ use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingWhenConfiguratorError;
 
-/// When configurator for a binding for type 'Interface' inside a [`IDIContainer`].
+/// When configurator for a binding for type `Interface` inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
 pub struct BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>

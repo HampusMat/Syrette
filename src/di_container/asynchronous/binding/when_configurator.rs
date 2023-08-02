@@ -9,7 +9,7 @@ use crate::dependency_history::IDependencyHistory;
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::async_di_container::AsyncBindingWhenConfiguratorError;
 
-/// When configurator for a binding for type 'Interface' inside a [`IAsyncDIContainer`].
+/// When configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
 pub struct AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>

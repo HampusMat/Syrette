@@ -12,7 +12,7 @@ use crate::interfaces::injectable::Injectable;
 use crate::provider::blocking::{SingletonProvider, TransientTypeProvider};
 use crate::ptr::SingletonPtr;
 
-/// Scope configurator for a binding for type 'Interface' inside a [`IDIContainer`].
+/// Scope configurator for a binding for type `Interface` inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
 pub struct BindingScopeConfigurator<

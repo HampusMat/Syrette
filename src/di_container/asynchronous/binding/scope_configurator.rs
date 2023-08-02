@@ -12,7 +12,7 @@ use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::provider::r#async::{AsyncSingletonProvider, AsyncTransientTypeProvider};
 use crate::ptr::ThreadsafeSingletonPtr;
 
-/// Scope configurator for a binding for type 'Interface' inside a [`IAsyncDIContainer`].
+/// Scope configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
 pub struct AsyncBindingScopeConfigurator<
