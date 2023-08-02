@@ -202,27 +202,26 @@ mod tests
             dyn IBar, async = true, foo = false
         };
 
-        assert!(matches!(
-            parse2::<DeclareDefaultFactoryMacroArgs>(input_args),
-            Err(_)
-        ));
+        assert!(parse2::<DeclareDefaultFactoryMacroArgs>(input_args).is_err());
     }
 
     #[test]
     fn cannot_parse_with_interface_and_duplicate_flag()
     {
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<DeclareDefaultFactoryMacroArgs>(quote! {
                 dyn IBar, async = true, threadsafe = false, async = true
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
 
-        assert!(matches!(
+        assert!(
+            // Formatting is weird without this comment
             parse2::<DeclareDefaultFactoryMacroArgs>(quote! {
                 dyn IBar, async = true, threadsafe = false, async = false
-            }),
-            Err(_)
-        ));
+            })
+            .is_err()
+        );
     }
 }
