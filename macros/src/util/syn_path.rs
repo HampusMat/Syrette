@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use quote::ToTokens;
 use syn::punctuated::Pair;
 
@@ -11,20 +13,22 @@ impl SynPathExt for syn::Path
 {
     fn to_string(&self) -> String
     {
-        self.segments
-            .pairs()
-            .map(Pair::into_tuple)
-            .map(|(segment, opt_punct)| {
+        self.segments.pairs().map(Pair::into_tuple).fold(
+            String::new(),
+            |mut acc, (segment, opt_punct)| {
                 let segment_ident = &segment.ident;
 
-                format!(
-                    "{}{}",
-                    segment_ident,
-                    opt_punct.map_or_else(String::new, |punct| punct
-                        .to_token_stream()
-                        .to_string())
+                write!(
+                    acc,
+                    "{segment_ident}{}",
+                    opt_punct
+                        .map(|punct| punct.to_token_stream().to_string())
+                        .unwrap_or_default()
                 )
-            })
-            .collect()
+                .ok();
+
+                acc
+            },
+        )
     }
 }
