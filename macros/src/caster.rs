@@ -124,7 +124,6 @@ impl IUuid for Uuid
 mod tests
 {
     use pretty_assertions::assert_eq;
-    use utility_macros::repeat_char;
 
     use super::*;
 
@@ -136,15 +135,13 @@ mod tests
         uuid_mock
             .expect_encode_simple_lower_into()
             .return_once(|buf| {
-                for index in 0..(FN_BUF_LEN - 2) {
-                    buf[index] = b'f';
-                }
+                buf[..FN_BUF_LEN - 2].fill(b'f');
             })
             .once();
 
         assert_eq!(
             create_caster_fn_ident(uuid_mock),
-            format_ident!(concat!("__", repeat_char!('f', 32)))
+            format_ident!("__{}", "f".repeat(FN_BUF_LEN - 2))
         );
     }
 }
