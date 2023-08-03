@@ -30,7 +30,7 @@ impl Parse for DeclareInterfaceArgs
             let flags = Punctuated::<MacroFlag, Token![,]>::parse_terminated(input)?;
 
             for flag in &flags {
-                let flag_name = flag.flag.to_string();
+                let flag_name = flag.name().to_string();
 
                 if !DECLARE_INTERFACE_FLAGS.contains(&flag_name.as_str()) {
                     return Err(input.error(format!(
@@ -41,7 +41,7 @@ impl Parse for DeclareInterfaceArgs
             }
 
             if let Some((dupe_flag, _)) = flags.iter().find_duplicate() {
-                return Err(input.error(format!("Duplicate flag '{}'", dupe_flag.flag)));
+                return Err(input.error(format!("Duplicate flag '{}'", dupe_flag.name())));
             }
 
             flags
@@ -64,9 +64,10 @@ mod tests
 
     use proc_macro2::Span;
     use quote::{format_ident, quote};
-    use syn::{parse2, LitBool};
+    use syn::{parse2, Lit, LitBool};
 
     use super::*;
+    use crate::macro_flag::MacroFlagValue;
     use crate::test_utils;
 
     #[test]
@@ -139,8 +140,11 @@ mod tests
         assert_eq!(
             decl_interface_args.flags,
             Punctuated::from_iter(vec![MacroFlag {
-                flag: format_ident!("async"),
-                is_on: LitBool::new(true, Span::call_site())
+                name: format_ident!("async"),
+                value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                    true,
+                    Span::call_site()
+                )))
             }])
         );
 

@@ -6,14 +6,12 @@ use crate::injectable::named_attr_input::NamedAttrInput;
 use crate::util::error::diagnostic_error_enum;
 use crate::util::syn_path::SynPathExt;
 
-/// Interface for a representation of a dependency of a injectable type.
-///
-/// Found as a argument in the 'new' method of the type.
+/// Interface for a dependency of a `Injectable`.
 #[cfg_attr(test, mockall::automock)]
 pub trait IDependency: Sized
 {
-    /// Build a new `Dependency` from a argument in a 'new' method.
-    fn build(new_method_arg: &FnArg) -> Result<Self, DependencyError>;
+    /// Build a new `Dependency` from a argument in a constructor method.
+    fn build(ctor_method_arg: &FnArg) -> Result<Self, DependencyError>;
 
     /// Returns the interface type.
     fn get_interface(&self) -> &Type;
@@ -27,7 +25,7 @@ pub trait IDependency: Sized
 
 /// Representation of a dependency of a injectable type.
 ///
-/// Found as a argument in the 'new' method of the type.
+/// Found as a argument in the constructor method of a `Injectable`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Dependency
 {
@@ -38,16 +36,16 @@ pub struct Dependency
 
 impl IDependency for Dependency
 {
-    fn build(new_method_arg: &FnArg) -> Result<Self, DependencyError>
+    fn build(ctor_method_arg: &FnArg) -> Result<Self, DependencyError>
     {
-        let typed_new_method_arg = match new_method_arg {
+        let typed_ctor_method_arg = match ctor_method_arg {
             FnArg::Typed(typed_arg) => Ok(typed_arg),
             FnArg::Receiver(receiver_arg) => Err(DependencyError::UnexpectedSelf {
                 self_token_span: receiver_arg.self_token.span,
             }),
         }?;
 
-        let dependency_type_path = match typed_new_method_arg.ty.as_ref() {
+        let dependency_type_path = match typed_ctor_method_arg.ty.as_ref() {
             Type::Path(arg_type_path) => Ok(arg_type_path),
             Type::Reference(ref_type_path) => match ref_type_path.elem.as_ref() {
                 Type::Path(arg_type_path) => Ok(arg_type_path),
@@ -63,7 +61,7 @@ impl IDependency for Dependency
         let ptr_path_segment = dependency_type_path.path.segments.last().map_or_else(
             || {
                 Err(DependencyError::MissingType {
-                    arg_span: typed_new_method_arg.span(),
+                    arg_span: typed_ctor_method_arg.span(),
                 })
             },
             Ok,
@@ -88,7 +86,7 @@ impl IDependency for Dependency
                 })
             }?;
 
-        let arg_attrs = &typed_new_method_arg.attrs;
+        let arg_attrs = &typed_ctor_method_arg.attrs;
 
         let opt_named_attr = arg_attrs.iter().find(|attr| {
             attr.path.get_ident().map_or_else(
@@ -103,7 +101,7 @@ impl IDependency for Dependency
             if let Some(named_attr_tokens) = opt_named_attr_tokens {
                 Some(parse2::<NamedAttrInput>(named_attr_tokens.clone()).map_err(
                     |err| DependencyError::InvalidNamedAttrInput {
-                        arg_span: typed_new_method_arg.span(),
+                        arg_span: typed_ctor_method_arg.span(),
                         err,
                     },
                 )?)

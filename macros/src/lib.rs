@@ -44,14 +44,29 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 ///
 /// # Arguments
 /// * (Optional) A interface trait the struct implements.
-/// * (Zero or more) Flags. Like `a = true, b = false`
+/// * (Zero or more) Comma separated flags. Each flag being formatted `name=value`.
 ///
 /// # Flags
-/// - `no_doc_hidden` - Don't hide the impl of the [`Injectable`] trait from
-///   documentation.
-/// - `no_declare_concrete_interface` - Disable declaring the concrete type as the
-///   interface when no interface trait argument is given.
-/// - `async` - Mark as async.
+/// #### `no_doc_hidden`
+/// **Value:** boolean literal<br>
+/// **Default:** `false`<br>
+/// Don't hide the impl of the [`Injectable`] trait from documentation.
+///
+/// #### `no_declare_concrete_interface`
+/// **Value:** boolean literal<br>
+/// **Default:** `false`<br>
+/// Disable declaring the concrete type as the interface when no interface trait argument
+/// is given.
+///
+/// #### `async`
+/// **Value:** boolean literal<br>
+/// **Default:** `false`<br>
+/// Mark as async.
+///
+/// #### `constructor`
+/// **Value:** identifier<br>
+/// **Default:** `new`<br>
+/// Constructor method name.
 ///
 /// # Panics
 /// If the attributed item is not a impl.
@@ -132,6 +147,8 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenStream
 {
+    use quote::format_ident;
+
     let input_stream: proc_macro2::TokenStream = input_stream.into();
 
     set_dummy(input_stream.clone());
@@ -143,28 +160,39 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     let no_doc_hidden = args
         .flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "no_doc_hidden")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "no_doc_hidden")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     let no_declare_concrete_interface = args
         .flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "no_declare_concrete_interface")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "no_declare_concrete_interface")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
+
+    let constructor = args
+        .flags
+        .iter()
+        .find(|flag| flag.name() == "constructor")
+        .map_or(Ok(format_ident!("new")), MacroFlag::get_ident)
+        .unwrap_or_abort();
 
     let is_async_flag = args
         .flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "async")
+        .find(|flag| flag.name() == "async")
         .cloned()
         .unwrap_or_else(|| MacroFlag::new_off("async"));
 
+    let is_async = is_async_flag.get_bool().unwrap_or_abort();
+
     #[cfg(not(feature = "async"))]
-    if is_async_flag.is_on() {
+    if is_async {
         use proc_macro_error::abort;
 
         abort!(
-            is_async_flag.flag.span(),
+            is_async_flag.name().span(),
             "The 'async' Cargo feature must be enabled to use this flag";
             suggestion = "In your Cargo.toml: syrette = {{ version = \"{}\", features = [\"async\"] }}",
             PACKAGE_VERSION
@@ -172,9 +200,9 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     }
 
     let injectable_impl =
-        InjectableImpl::<Dependency>::parse(input_stream).unwrap_or_abort();
+        InjectableImpl::<Dependency>::parse(input_stream, &constructor).unwrap_or_abort();
 
-    set_dummy(if is_async_flag.is_on() {
+    set_dummy(if is_async {
         injectable_impl.expand_dummy_async_impl()
     } else {
         injectable_impl.expand_dummy_blocking_impl()
@@ -182,8 +210,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 
     injectable_impl.validate().unwrap_or_abort();
 
-    let expanded_injectable_impl =
-        injectable_impl.expand(no_doc_hidden, is_async_flag.is_on());
+    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
     let self_type = &injectable_impl.self_type;
 
@@ -196,7 +223,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     });
 
     let maybe_decl_interface = if let Some(interface) = opt_interface {
-        let async_flag = if is_async_flag.is_on() {
+        let async_flag = if is_async {
             quote! {, async = true}
         } else {
             quote! {}
@@ -277,13 +304,15 @@ pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStre
 
     let mut is_threadsafe = flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "threadsafe")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     let is_async = flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "async")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "async")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     if is_async {
         is_threadsafe = true;
@@ -377,13 +406,15 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 
     let mut is_threadsafe = flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "threadsafe")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "threadsafe")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     let is_async = flags
         .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "async")
-        .map_or(false, |flag| flag.is_on.value);
+        .find(|flag| flag.name() == "async")
+        .map_or(Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     if is_async {
         is_threadsafe = true;
@@ -446,12 +477,11 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
         flags,
     } = parse(input).unwrap_or_abort();
 
-    let opt_async_flag = flags
-        .iter()
-        .find(|flag| flag.flag.to_string().as_str() == "async");
+    let opt_async_flag = flags.iter().find(|flag| flag.name() == "async");
 
-    let is_async =
-        opt_async_flag.map_or_else(|| false, |async_flag| async_flag.is_on.value);
+    let is_async = opt_async_flag
+        .map_or_else(|| Ok(false), MacroFlag::get_bool)
+        .unwrap_or_abort();
 
     let interface_type = if interface == implementation {
         Type::Path(interface)

@@ -7,8 +7,12 @@ use crate::macro_flag::MacroFlag;
 use crate::util::error::diagnostic_error_enum;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const INJECTABLE_MACRO_FLAGS: &[&str] =
-    &["no_doc_hidden", "async", "no_declare_concrete_interface"];
+pub const INJECTABLE_MACRO_FLAGS: &[&str] = &[
+    "no_doc_hidden",
+    "async",
+    "no_declare_concrete_interface",
+    "constructor",
+];
 
 pub struct InjectableMacroArgs
 {
@@ -21,9 +25,9 @@ impl InjectableMacroArgs
     pub fn check_flags(&self) -> Result<(), InjectableMacroArgsError>
     {
         for flag in &self.flags {
-            if !INJECTABLE_MACRO_FLAGS.contains(&flag.flag.to_string().as_str()) {
+            if !INJECTABLE_MACRO_FLAGS.contains(&flag.name().to_string().as_str()) {
                 return Err(InjectableMacroArgsError::UnknownFlag {
-                    flag_ident: flag.flag.clone(),
+                    flag_ident: flag.name().clone(),
                 });
             }
         }
@@ -32,8 +36,8 @@ impl InjectableMacroArgs
             self.flags.iter().find_duplicate()
         {
             return Err(InjectableMacroArgsError::DuplicateFlag {
-                first_flag_ident: dupe_flag_first.flag.clone(),
-                last_flag_span: dupe_flag_second.flag.span(),
+                first_flag_ident: dupe_flag_first.name().clone(),
+                last_flag_span: dupe_flag_second.name().span(),
             });
         }
 
@@ -111,9 +115,10 @@ mod tests
 
     use proc_macro2::Span;
     use quote::{format_ident, quote};
-    use syn::{parse2, LitBool};
+    use syn::{parse2, Lit, LitBool};
 
     use super::*;
+    use crate::macro_flag::MacroFlagValue;
     use crate::test_utils;
 
     #[test]
@@ -174,12 +179,18 @@ mod tests
             injectable_macro_args.flags,
             Punctuated::from_iter([
                 MacroFlag {
-                    flag: format_ident!("no_doc_hidden"),
-                    is_on: LitBool::new(true, Span::call_site())
+                    name: format_ident!("no_doc_hidden"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        true,
+                        Span::call_site()
+                    )))
                 },
                 MacroFlag {
-                    flag: format_ident!("async"),
-                    is_on: LitBool::new(false, Span::call_site())
+                    name: format_ident!("async"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        false,
+                        Span::call_site()
+                    )))
                 }
             ])
         );
@@ -202,12 +213,18 @@ mod tests
             injectable_macro_args.flags,
             Punctuated::from_iter([
                 MacroFlag {
-                    flag: format_ident!("async"),
-                    is_on: LitBool::new(false, Span::call_site())
+                    name: format_ident!("async"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        false,
+                        Span::call_site()
+                    )))
                 },
                 MacroFlag {
-                    flag: format_ident!("no_declare_concrete_interface"),
-                    is_on: LitBool::new(false, Span::call_site())
+                    name: format_ident!("no_declare_concrete_interface"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        false,
+                        Span::call_site()
+                    )))
                 }
             ])
         );

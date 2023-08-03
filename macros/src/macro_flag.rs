@@ -2,13 +2,15 @@ use std::hash::Hash;
 
 use proc_macro2::Span;
 use syn::parse::{Parse, ParseStream};
-use syn::{Ident, LitBool, Token};
+use syn::{Ident, Lit, LitBool, Token};
 
-#[derive(Debug, Eq, Clone)]
+use crate::util::error::diagnostic_error_enum;
+
+#[derive(Debug, Clone)]
 pub struct MacroFlag
 {
-    pub flag: Ident,
-    pub is_on: LitBool,
+    pub name: Ident,
+    pub value: MacroFlagValue,
 }
 
 impl MacroFlag
@@ -16,14 +18,41 @@ impl MacroFlag
     pub fn new_off(flag: &str) -> Self
     {
         Self {
-            flag: Ident::new(flag, Span::call_site()),
-            is_on: LitBool::new(false, Span::call_site()),
+            name: Ident::new(flag, Span::call_site()),
+            value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                false,
+                Span::call_site(),
+            ))),
         }
     }
 
-    pub fn is_on(&self) -> bool
+    pub fn name(&self) -> &Ident
     {
-        self.is_on.value
+        &self.name
+    }
+
+    pub fn get_bool(&self) -> Result<bool, MacroFlagError>
+    {
+        if let MacroFlagValue::Literal(Lit::Bool(lit_bool)) = &self.value {
+            return Ok(lit_bool.value);
+        }
+
+        Err(MacroFlagError::UnexpectedValueKind {
+            expected: "boolean literal",
+            value_span: self.value.span(),
+        })
+    }
+
+    pub fn get_ident(&self) -> Result<Ident, MacroFlagError>
+    {
+        if let MacroFlagValue::Identifier(ident) = &self.value {
+            return Ok(ident.clone());
+        }
+
+        Err(MacroFlagError::UnexpectedValueKind {
+            expected: "identifier",
+            value_span: self.value.span(),
+        })
     }
 }
 
@@ -31,13 +60,13 @@ impl Parse for MacroFlag
 {
     fn parse(input: ParseStream) -> syn::Result<Self>
     {
-        let flag = input.parse::<Ident>()?;
+        let name = input.parse::<Ident>()?;
 
         input.parse::<Token![=]>()?;
 
-        let is_on: LitBool = input.parse()?;
+        let value: MacroFlagValue = input.parse()?;
 
-        Ok(Self { flag, is_on })
+        Ok(Self { name, value })
     }
 }
 
@@ -45,15 +74,59 @@ impl PartialEq for MacroFlag
 {
     fn eq(&self, other: &Self) -> bool
     {
-        self.flag == other.flag
+        self.name == other.name
     }
 }
+
+impl Eq for MacroFlag {}
 
 impl Hash for MacroFlag
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H)
     {
-        self.flag.hash(state);
+        self.name.hash(state);
+    }
+}
+
+diagnostic_error_enum! {
+pub enum MacroFlagError {
+    #[error("Expected a {expected}"), span = value_span]
+    UnexpectedValueKind {
+        expected: &'static str,
+        value_span: Span
+    },
+}
+}
+
+#[derive(Debug, Clone)]
+pub enum MacroFlagValue
+{
+    Literal(Lit),
+    Identifier(Ident),
+}
+
+impl MacroFlagValue
+{
+    fn span(&self) -> Span
+    {
+        match self {
+            Self::Literal(lit) => lit.span(),
+            Self::Identifier(ident) => ident.span(),
+        }
+    }
+}
+
+impl Parse for MacroFlagValue
+{
+    fn parse(input: ParseStream) -> syn::Result<Self>
+    {
+        if let Ok(lit) = input.parse::<Lit>() {
+            return Ok(Self::Literal(lit));
+        };
+
+        input.parse::<Ident>().map(Self::Identifier).map_err(|err| {
+            syn::Error::new(err.span(), "Expected a literal or a identifier")
+        })
     }
 }
 
@@ -76,8 +149,11 @@ mod tests
                 more = true
             })?,
             MacroFlag {
-                flag: format_ident!("more"),
-                is_on: LitBool::new(true, Span::call_site())
+                name: format_ident!("more"),
+                value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                    true,
+                    Span::call_site()
+                )))
             }
         );
 
@@ -86,8 +162,11 @@ mod tests
                 do_something = false
             })?,
             MacroFlag {
-                flag: format_ident!("do_something"),
-                is_on: LitBool::new(false, Span::call_site())
+                name: format_ident!("do_something"),
+                value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                    false,
+                    Span::call_site()
+                )))
             }
         );
 

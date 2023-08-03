@@ -31,13 +31,16 @@ pub struct InjectableImpl<Dep: IDependency>
     pub generics: Generics,
     pub original_impl: ItemImpl,
 
-    new_method: ImplItemMethod,
+    constructor_method: ImplItemMethod,
 }
 
 impl<Dep: IDependency> InjectableImpl<Dep>
 {
     #[cfg(not(tarpaulin_include))]
-    pub fn parse(input: TokenStream) -> Result<Self, InjectableImplError>
+    pub fn parse(
+        input: TokenStream,
+        constructor: &Ident,
+    ) -> Result<Self, InjectableImplError>
     {
         let mut item_impl = parse2::<ItemImpl>(input).map_err(|err| {
             InjectableImplError::NotAImplementation {
@@ -53,79 +56,88 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         let item_impl_span = item_impl.self_ty.span();
 
-        let new_method = find_impl_method_by_name_mut(&mut item_impl, "new").ok_or(
-            InjectableImplError::MissingNewMethod {
-                implementation_span: item_impl_span,
-            },
-        )?;
+        let constructor_method =
+            find_impl_method_by_name_mut(&mut item_impl, constructor).ok_or(
+                InjectableImplError::MissingConstructorMethod {
+                    constructor: constructor.clone(),
+                    implementation_span: item_impl_span,
+                },
+            )?;
 
-        let dependencies = Self::build_dependencies(new_method).map_err(|err| {
-            InjectableImplError::ContainsAInvalidDependency {
-                implementation_span: item_impl_span,
-                err,
-            }
-        })?;
+        let dependencies =
+            Self::build_dependencies(constructor_method).map_err(|err| {
+                InjectableImplError::ContainsAInvalidDependency {
+                    implementation_span: item_impl_span,
+                    err,
+                }
+            })?;
 
-        Self::remove_method_argument_attrs(new_method);
+        Self::remove_method_argument_attrs(constructor_method);
 
-        let new_method = new_method.clone();
+        let constructor_method = constructor_method.clone();
 
         Ok(Self {
             dependencies,
             self_type: item_impl.self_ty.as_ref().clone(),
             generics: item_impl.generics.clone(),
             original_impl: item_impl,
-            new_method,
+            constructor_method,
         })
     }
 
     pub fn validate(&self) -> Result<(), InjectableImplError>
     {
-        if matches!(self.new_method.sig.output, ReturnType::Default) {
-            return Err(InjectableImplError::InvalidNewMethodReturnType {
-                new_method_output_span: self.new_method.sig.output.span(),
+        if matches!(self.constructor_method.sig.output, ReturnType::Default) {
+            return Err(InjectableImplError::InvalidConstructorMethodReturnType {
+                ctor_method_output_span: self.constructor_method.sig.output.span(),
                 expected: "Self".to_string(),
                 found: "()".to_string(),
             });
         }
 
-        if let ReturnType::Type(_, ret_type) = &self.new_method.sig.output {
+        if let ReturnType::Type(_, ret_type) = &self.constructor_method.sig.output {
             if let Type::Path(path_type) = ret_type.as_ref() {
                 if path_type
                     .path
                     .get_ident()
                     .map_or_else(|| true, |ident| *ident != "Self")
                 {
-                    return Err(InjectableImplError::InvalidNewMethodReturnType {
-                        new_method_output_span: self.new_method.sig.output.span(),
-                        expected: "Self".to_string(),
-                        found: ret_type.to_token_stream().to_string(),
-                    });
+                    return Err(
+                        InjectableImplError::InvalidConstructorMethodReturnType {
+                            ctor_method_output_span: self
+                                .constructor_method
+                                .sig
+                                .output
+                                .span(),
+                            expected: "Self".to_string(),
+                            found: ret_type.to_token_stream().to_string(),
+                        },
+                    );
                 }
             } else {
-                return Err(InjectableImplError::InvalidNewMethodReturnType {
-                    new_method_output_span: self.new_method.sig.output.span(),
+                return Err(InjectableImplError::InvalidConstructorMethodReturnType {
+                    ctor_method_output_span: self.constructor_method.sig.output.span(),
                     expected: "Self".to_string(),
                     found: ret_type.to_token_stream().to_string(),
                 });
             }
         }
 
-        if let Some(unsafety) = self.new_method.sig.unsafety {
-            return Err(InjectableImplError::NewMethodUnsafe {
+        if let Some(unsafety) = self.constructor_method.sig.unsafety {
+            return Err(InjectableImplError::ConstructorMethodUnsafe {
                 unsafety_span: unsafety.span,
             });
         }
 
-        if let Some(asyncness) = self.new_method.sig.asyncness {
-            return Err(InjectableImplError::NewMethodAsync {
+        if let Some(asyncness) = self.constructor_method.sig.asyncness {
+            return Err(InjectableImplError::ConstructorMethodAsync {
                 asyncness_span: asyncness.span,
             });
         }
 
-        if !self.new_method.sig.generics.params.is_empty() {
-            return Err(InjectableImplError::NewMethodGeneric {
-                generics_span: self.new_method.sig.generics.span(),
+        if !self.constructor_method.sig.generics.params.is_empty() {
+            return Err(InjectableImplError::ConstructorMethodGeneric {
+                generics_span: self.constructor_method.sig.generics.span(),
             });
         }
         Ok(())
@@ -209,6 +221,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     {
         let generics = &self.generics;
         let self_type = &self.self_type;
+        let constructor = &self.constructor_method.sig.ident;
 
         quote! {
             #maybe_doc_hidden
@@ -243,7 +256,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
                         #maybe_prevent_circular_deps
 
-                        Ok(syrette::ptr::TransientPtr::new(Self::new(
+                        Ok(syrette::ptr::TransientPtr::new(Self::#constructor(
                             #(#get_dep_method_calls),*
                         )))
                     })
@@ -264,6 +277,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     {
         let generics = &self.generics;
         let self_type = &self.self_type;
+        let constructor = &self.constructor_method.sig.ident;
 
         quote! {
             #maybe_doc_hidden
@@ -290,7 +304,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
                     #maybe_prevent_circular_deps
 
-                    return Ok(syrette::ptr::TransientPtr::new(Self::new(
+                    return Ok(syrette::ptr::TransientPtr::new(Self::#constructor(
                         #(#get_dep_method_calls),*
                     )));
                 }
@@ -444,13 +458,13 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     }
 
     fn build_dependencies(
-        new_method: &ImplItemMethod,
+        ctor_method: &ImplItemMethod,
     ) -> Result<Vec<Dep>, DependencyError>
     {
-        let new_method_args = &new_method.sig.inputs;
+        let ctor_method_args = &ctor_method.sig.inputs;
 
         let dependencies_result: Result<Vec<_>, _> =
-            new_method_args.iter().map(Dep::build).collect();
+            ctor_method_args.iter().map(Dep::build).collect();
 
         let deps = dependencies_result?;
 
@@ -515,41 +529,45 @@ pub enum InjectableImplError
         trait_path_span: Span
     },
 
-    #[error("Missing a 'new' method"), span = implementation_span]
+    #[
+        error("No constructor method '{constructor}' found in impl"),
+        span = implementation_span
+    ]
     #[note("Required by the 'injectable' attribute macro")]
-    MissingNewMethod {
+    MissingConstructorMethod {
+        constructor: Ident,
         implementation_span: Span
     },
 
     #[
         error(concat!(
-            "Invalid 'new' method return type. Expected it to be '{}'. ",
+            "Invalid constructor method return type. Expected it to be '{}'. ",
             "Found '{}'"
         ), expected, found),
-        span = new_method_output_span
+        span = ctor_method_output_span
     ]
-    InvalidNewMethodReturnType
+    InvalidConstructorMethodReturnType
     {
-        new_method_output_span: Span,
+        ctor_method_output_span: Span,
         expected: String,
         found: String
     },
 
-    #[error("'new' method is not allowed to be unsafe"), span = unsafety_span]
+    #[error("Constructor method is not allowed to be unsafe"), span = unsafety_span]
     #[note("Required by the 'injectable' attribute macro")]
-    NewMethodUnsafe {
+    ConstructorMethodUnsafe {
         unsafety_span: Span
     },
 
-    #[error("'new' method is not allowed to be async"), span = asyncness_span]
+    #[error("Constructor method is not allowed to be async"), span = asyncness_span]
     #[note("Required by the 'injectable' attribute macro")]
-    NewMethodAsync {
+    ConstructorMethodAsync {
         asyncness_span: Span
     },
 
-    #[error("'new' method is not allowed to have generics"), span = generics_span]
+    #[error("Constructor method is not allowed to have generics"), span = generics_span]
     #[note("Required by the 'injectable' attribute macro")]
-    NewMethodGeneric {
+    ConstructorMethodGeneric {
         generics_span: Span
     },
 

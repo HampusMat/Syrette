@@ -31,12 +31,11 @@ impl Parse for DeclareDefaultFactoryMacroArgs
         let flags = Punctuated::<MacroFlag, Token![,]>::parse_terminated(input)?;
 
         for flag in &flags {
-            let flag_str = flag.flag.to_string();
+            let name = flag.name().to_string();
 
-            if !FACTORY_MACRO_FLAGS.contains(&flag_str.as_str()) {
+            if !FACTORY_MACRO_FLAGS.contains(&name.as_str()) {
                 return Err(input.error(format!(
-                    "Unknown flag '{}'. Expected one of [ {} ]",
-                    flag_str,
+                    "Unknown flag '{name}'. Expected one of [ {} ]",
                     FACTORY_MACRO_FLAGS.join(",")
                 )));
             }
@@ -44,7 +43,7 @@ impl Parse for DeclareDefaultFactoryMacroArgs
 
         let flag_names = flags
             .iter()
-            .map(|flag| flag.flag.to_string())
+            .map(|flag| flag.name().to_string())
             .collect::<Vec<_>>();
 
         if let Some((dupe_flag_name, _)) = flag_names.iter().find_duplicate() {
@@ -65,6 +64,7 @@ mod tests
     use syn::token::Dyn;
     use syn::{
         parse2,
+        Lit,
         LitBool,
         Path,
         PathArguments,
@@ -77,6 +77,7 @@ mod tests
     };
 
     use super::*;
+    use crate::macro_flag::MacroFlagValue;
 
     #[test]
     fn can_parse_with_interface_only() -> Result<(), Box<dyn Error>>
@@ -142,8 +143,11 @@ mod tests
         assert_eq!(
             dec_def_fac_args.flags,
             Punctuated::from_iter(vec![MacroFlag {
-                flag: format_ident!("threadsafe"),
-                is_on: LitBool::new(true, Span::call_site())
+                name: format_ident!("threadsafe"),
+                value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                    true,
+                    Span::call_site()
+                )))
             }])
         );
 
@@ -182,12 +186,18 @@ mod tests
             dec_def_fac_args.flags,
             Punctuated::from_iter(vec![
                 MacroFlag {
-                    flag: format_ident!("threadsafe"),
-                    is_on: LitBool::new(true, Span::call_site())
+                    name: format_ident!("threadsafe"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        true,
+                        Span::call_site()
+                    )))
                 },
                 MacroFlag {
-                    flag: format_ident!("async"),
-                    is_on: LitBool::new(false, Span::call_site())
+                    name: format_ident!("async"),
+                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
+                        false,
+                        Span::call_site()
+                    )))
                 }
             ])
         );
