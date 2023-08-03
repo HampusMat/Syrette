@@ -68,9 +68,6 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// **Default:** `new`<br>
 /// Constructor method name.
 ///
-/// # Panics
-/// If the attributed item is not a impl.
-///
 /// # Important
 /// When no interface trait argument is given, you should either manually
 /// declare the interface with the [`declare_interface!`] macro or use
@@ -256,9 +253,6 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 /// - `async` - Mark as async. Infers the `threadsafe` flag. The return type is
 ///   automatically put inside of a pinned boxed future.
 ///
-/// # Panics
-/// If the attributed item is not a type alias.
-///
 /// # Examples
 /// ```
 /// # use syrette::factory;
@@ -373,9 +367,6 @@ pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStre
 /// # Flags
 /// - `threadsafe` - Mark as threadsafe.
 /// - `async` - Mark as async. Infers the `threadsafe` flag.
-///
-/// # Panics
-/// If the provided arguments are invalid.
 ///
 /// # Examples
 /// ```
