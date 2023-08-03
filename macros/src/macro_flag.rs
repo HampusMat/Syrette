@@ -133,21 +133,20 @@ impl Parse for MacroFlagValue
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use proc_macro2::Span;
     use quote::{format_ident, quote};
-    use syn::parse2;
+    use syn::{parse2, LitInt, LitStr};
 
     use super::*;
 
     #[test]
-    fn can_parse_macro_flag() -> Result<(), Box<dyn Error>>
+    fn parse_macro_flag_literal_works()
     {
         assert_eq!(
             parse2::<MacroFlag>(quote! {
                 more = true
-            })?,
+            })
+            .expect("Expected Ok"),
             MacroFlag {
                 name: format_ident!("more"),
                 value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
@@ -159,22 +158,115 @@ mod tests
 
         assert_eq!(
             parse2::<MacroFlag>(quote! {
-                do_something = false
-            })?,
+                guitarist = "John Norum"
+            })
+            .expect("Expected Ok"),
             MacroFlag {
-                name: format_ident!("do_something"),
-                value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
-                    false,
+                name: format_ident!("guitarist"),
+                value: MacroFlagValue::Literal(Lit::Str(LitStr::new(
+                    "John Norum",
                     Span::call_site()
                 )))
             }
         );
+    }
 
-        assert!(parse2::<MacroFlag>(quote! {
-            10 = false
-        })
-        .is_err());
+    #[test]
+    fn parse_macro_flag_identifier_works()
+    {
+        assert_eq!(
+            parse2::<MacroFlag>(quote! {
+                error = FooError
+            })
+            .expect("Expected Ok"),
+            MacroFlag {
+                name: format_ident!("error"),
+                value: MacroFlagValue::Identifier(Ident::new(
+                    "FooError",
+                    Span::call_site()
+                ))
+            }
+        );
+    }
 
-        Ok(())
+    #[test]
+    fn get_bool_works()
+    {
+        assert!(
+            // Formatting is weird without this comment
+            MacroFlag {
+                name: format_ident!("rocked_the_night"),
+                value: MacroFlagValue::Literal(Lit::Bool(LitBool {
+                    value: true,
+                    span: Span::call_site()
+                }))
+            }
+            .get_bool()
+            .expect("Expected Ok")
+        );
+
+        assert!(
+            // Formatting is weird without this comment
+            MacroFlag {
+                name: format_ident!("vocalist"),
+                value: MacroFlagValue::Literal(Lit::Str(LitStr::new(
+                    "Joey Tempest",
+                    Span::call_site()
+                )))
+            }
+            .get_bool()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn get_ident_works()
+    {
+        assert_eq!(
+            MacroFlag {
+                name: format_ident!("formed_in"),
+                value: MacroFlagValue::Identifier(format_ident!("upplands_vasby"))
+            }
+            .get_ident()
+            .expect("Expected Ok"),
+            "upplands_vasby"
+        );
+
+        assert!(
+            // Formatting is weird without this comment
+            MacroFlag {
+                name: format_ident!("formed"),
+                value: MacroFlagValue::Literal(Lit::Int(LitInt::new(
+                    "1979",
+                    Span::call_site()
+                )))
+            }
+            .get_ident()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn parse_with_invalid_name_fails()
+    {
+        assert!(
+            // Formatting is weird without this comment
+            parse2::<MacroFlag>(quote! {
+                10 = false
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn parse_with_invalid_value_fails()
+    {
+        assert!(
+            // Formatting is weird without this comment
+            parse2::<MacroFlag>(quote! {
+                years_active = ["1979-1992", "1999", "2003–present"]
+            })
+            .is_err()
+        );
     }
 }
