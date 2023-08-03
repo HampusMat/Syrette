@@ -79,6 +79,22 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// You can however also use the concrete type as the interface. As it is declared as such
 /// by default if the `no_declare_concrete_interface` flag is not set.
 ///
+/// # Examples
+/// ```
+/// # use syrette::injectable;
+/// #
+/// # struct PasswordManager {}
+/// #
+/// #[injectable]
+/// impl PasswordManager
+/// {
+///     pub fn new() -> Self
+///     {
+///         Self {}
+///     }
+/// }
+/// ```
+///
 /// # Attributes
 /// Attributes specific to impls with this attribute macro.
 ///
@@ -120,22 +136,6 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// }
 /// #
 /// # impl IKnight for Knight {}
-/// ```
-///
-/// # Example
-/// ```
-/// # use syrette::injectable;
-/// #
-/// # struct PasswordManager {}
-/// #
-/// #[injectable]
-/// impl PasswordManager
-/// {
-///     pub fn new() -> Self
-///     {
-///         Self {}
-///     }
-/// }
 /// ```
 ///
 /// [`DIContainer`]: https://docs.rs/syrette/latest/syrette/di_container/struct.DIContainer.html
