@@ -257,7 +257,7 @@ pub mod subjects_async
         }
     }
 
-    declare_interface!(Number -> INumber, async = true);
+    declare_interface!(Number -> INumber, threadsafe_sharable = true);
 
     #[async_trait]
     impl<DIContainerType, DependencyHistoryType>

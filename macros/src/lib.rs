@@ -220,14 +220,14 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     });
 
     let maybe_decl_interface = if let Some(interface) = opt_interface {
-        let async_flag = if is_async {
-            quote! {, async = true}
+        let threadsafe_sharable_flag = if is_async {
+            quote! { , threadsafe_sharable = true }
         } else {
             quote! {}
         };
 
         quote! {
-            syrette::declare_interface!(#self_type -> #interface #async_flag);
+            syrette::declare_interface!(#self_type -> #interface #threadsafe_sharable_flag);
         }
     } else {
         quote! {}
@@ -443,7 +443,8 @@ pub fn declare_default_factory(args_stream: TokenStream) -> TokenStream
 /// * (Zero or more) Flags. Like `a = true, b = false`
 ///
 /// # Flags
-/// - `async` - Mark as async.
+/// - `threadsafe_sharable` - Enables the use of thread-safe shared instances of the
+///   implementation accessed with the interface.
 ///
 /// # Examples
 /// ```
@@ -468,9 +469,11 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
         flags,
     } = parse(input).unwrap_or_abort();
 
-    let opt_async_flag = flags.iter().find(|flag| flag.name() == "async");
+    let threadsafe_sharable_flag = flags
+        .iter()
+        .find(|flag| flag.name() == "threadsafe_sharable");
 
-    let is_async = opt_async_flag
+    let is_async = threadsafe_sharable_flag
         .map_or_else(|| Ok(false), MacroFlag::get_bool)
         .unwrap_or_abort();
 

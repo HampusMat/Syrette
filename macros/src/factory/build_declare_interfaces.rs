@@ -18,7 +18,7 @@ pub fn build_declare_factory_interfaces(
                     (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 >,
-                async = true
+                threadsafe_sharable = true
             );
 
             syrette::declare_interface!(
@@ -26,7 +26,7 @@ pub fn build_declare_factory_interfaces(
                     (std::sync::Arc<syrette::AsyncDIContainer>,),
                     #factory_interface
                 > -> syrette::private::any_factory::AnyThreadsafeFactory,
-                async = true
+                threadsafe_sharable = true
             );
         }
     } else {

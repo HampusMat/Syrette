@@ -5,7 +5,7 @@ use syn::{Token, TypePath};
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const DECLARE_INTERFACE_FLAGS: &[&str] = &["async"];
+pub const DECLARE_INTERFACE_FLAGS: &[&str] = &["threadsafe_sharable"];
 
 pub struct DeclareInterfaceArgs
 {
@@ -110,7 +110,7 @@ mod tests
     fn can_parse_with_flags() -> Result<(), Box<dyn Error>>
     {
         let input_args = quote! {
-            Foobar -> IFoobar, async = true
+            Foobar -> IFoobar, threadsafe_sharable = true
         };
 
         let decl_interface_args = parse2::<DeclareInterfaceArgs>(input_args)?;
@@ -140,7 +140,7 @@ mod tests
         assert_eq!(
             decl_interface_args.flags,
             Punctuated::from_iter(vec![MacroFlag {
-                name: format_ident!("async"),
+                name: format_ident!("threadsafe_sharable"),
                 value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
                     true,
                     Span::call_site()
@@ -155,7 +155,7 @@ mod tests
     fn cannot_parse_with_invalid_flag()
     {
         let input_args = quote! {
-            Foobar -> IFoobar, xyz = false, async = true
+            Foobar -> IFoobar, xyz = false, threadsafe_sharable = true
         };
 
         assert!(parse2::<DeclareInterfaceArgs>(input_args).is_err());
@@ -167,7 +167,7 @@ mod tests
         assert!(
             // Formatting is weird without this comment
             parse2::<DeclareInterfaceArgs>(quote! {
-                Foobar -> IFoobar, async = true, async = true
+                Foobar -> IFoobar, threadsafe_sharable = true, threadsafe_sharable = true
             })
             .is_err()
         );
@@ -175,7 +175,7 @@ mod tests
         assert!(
             // Formatting is weird without this comment
             parse2::<DeclareInterfaceArgs>(quote! {
-                Foobar -> IFoobar, async = true, async = false
+                Foobar -> IFoobar, threadsafe_sharable = true, threadsafe_sharable = false
             })
             .is_err()
         );
