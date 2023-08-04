@@ -153,7 +153,7 @@ pub trait CastFrom: Any + 'static
     fn rc_any(self: Rc<Self>) -> Rc<dyn Any>;
 }
 
-/// `CastFromSync` must be extended by a trait that is `Any + Sync + Send + 'static`
+/// This trait must be extended by a trait that is `Any + Sync + Send + 'static`
 /// and wants to allow for casting into another trait behind references and smart pointers
 /// especially including `Arc`.
 ///
@@ -163,11 +163,11 @@ pub trait CastFrom: Any + 'static
 ///
 /// # Examples
 /// ```ignore
-/// trait Source: CastFromSync {
+/// trait Source: CastFromArc {
 ///     ...
 /// }
 /// ```
-pub trait CastFromSync: CastFrom + Sync + Send + 'static
+pub trait CastFromArc: CastFrom + Sync + Send + 'static
 {
     fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>;
 }
@@ -198,7 +198,7 @@ impl CastFrom for dyn Any + 'static
     }
 }
 
-impl<Source: Sized + Sync + Send + 'static> CastFromSync for Source
+impl<Source: Sized + Sync + Send + 'static> CastFromArc for Source
 {
     fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>
     {
@@ -219,7 +219,7 @@ impl CastFrom for dyn Any + Sync + Send + 'static
     }
 }
 
-impl CastFromSync for dyn Any + Sync + Send + 'static
+impl CastFromArc for dyn Any + Sync + Send + 'static
 {
     fn arc_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send + 'static>
     {

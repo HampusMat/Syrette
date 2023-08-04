@@ -13,7 +13,7 @@ use std::any::type_name;
 use std::sync::Arc;
 
 use crate::private::cast::error::CastError;
-use crate::private::cast::{get_caster, CastFromSync};
+use crate::private::cast::{get_caster, CastFromArc};
 
 pub trait CastArc
 {
@@ -23,7 +23,7 @@ pub trait CastArc
 
 /// A blanket implementation of `CastArc` for traits extending `CastFrom`, `Sync`, and
 /// `Send`.
-impl<CastFromSelf: ?Sized + CastFromSync> CastArc for CastFromSelf
+impl<CastFromSelf: ?Sized + CastFromArc> CastArc for CastFromSelf
 {
     fn cast<Dest: ?Sized + 'static>(self: Arc<Self>) -> Result<Arc<Dest>, CastError>
     {

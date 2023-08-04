@@ -6,11 +6,11 @@ use crate::dependency_history::IDependencyHistory;
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::future::BoxFuture;
-use crate::private::cast::CastFromSync;
+use crate::private::cast::CastFromArc;
 use crate::ptr::TransientPtr;
 
 /// Interface for structs that can be injected into or be injected to.
-pub trait AsyncInjectable<DIContainerType, DependencyHistoryType>: CastFromSync
+pub trait AsyncInjectable<DIContainerType, DependencyHistoryType>: CastFromArc
 where
     DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
     DependencyHistoryType: IDependencyHistory + Send + Sync,

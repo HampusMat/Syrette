@@ -15,7 +15,7 @@ where
 /// Interface for a threadsafe factory.
 #[cfg(feature = "async")]
 pub trait IThreadsafeFactory<Args, ReturnInterface>:
-    Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::private::cast::CastFromSync
+    Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::private::cast::CastFromArc
 where
     Args: Tuple,
     ReturnInterface: 'static + ?Sized,

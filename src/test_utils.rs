@@ -10,7 +10,7 @@ pub mod subjects
     use crate::dependency_history::IDependencyHistory;
     use crate::di_container::blocking::IDIContainer;
     use crate::interfaces::injectable::Injectable;
-    use crate::private::cast::CastFromSync;
+    use crate::private::cast::CastFromArc;
     use crate::ptr::TransientPtr;
 
     pub trait IUserManager
@@ -135,7 +135,7 @@ pub mod subjects
     #[derive(Debug)]
     pub struct Ninja;
 
-    pub trait INinja: CastFromSync {}
+    pub trait INinja: CastFromArc {}
 
     impl INinja for Ninja {}
 }
