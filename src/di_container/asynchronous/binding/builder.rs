@@ -229,7 +229,7 @@ where
     /// # use std::error::Error;
     /// # use std::time::Duration;
     /// #
-    /// # use syrette::{factory, async_closure};
+    /// # use syrette::{factory};
     /// # use syrette::di_container::asynchronous::prelude::*;
     /// # use syrette::ptr::TransientPtr;
     /// #
@@ -254,12 +254,14 @@ where
     /// di_container
     ///     .bind::<FooFactory>()
     ///     .to_async_factory(&|_| {
-    ///         async_closure!(|num, some_str| {
-    ///             let bar = TransientPtr::new(Bar { num, some_str });
+    ///         Box::new(|num, some_str| {
+    ///             Box::pin(async move {
+    ///                 let bar = TransientPtr::new(Bar { num, some_str });
     ///
-    ///             tokio::time::sleep(Duration::from_secs(2)).await;
+    ///                 tokio::time::sleep(Duration::from_secs(2)).await;
     ///
-    ///             bar as TransientPtr<dyn Foo>
+    ///                 bar as TransientPtr<dyn Foo>
+    ///             })
     ///         })
     ///     })
     ///     .await?;
@@ -416,7 +418,6 @@ where
     /// # use std::error::Error;
     /// # use std::time::Duration;
     /// #
-    /// # use syrette::async_closure;
     /// # use syrette::di_container::asynchronous::prelude::*;
     /// # use syrette::ptr::TransientPtr;
     /// #
@@ -438,15 +439,17 @@ where
     /// di_container
     ///     .bind::<dyn Foo>()
     ///     .to_async_default_factory(&|_| {
-    ///         async_closure!(|| {
-    ///             let bar = TransientPtr::new(Bar {
-    ///                 num: 42,
-    ///                 some_str: "hello".to_string(),
-    ///             });
+    ///         Box::new(|| {
+    ///             Box::pin(async {
+    ///                 let bar = TransientPtr::new(Bar {
+    ///                     num: 42,
+    ///                     some_str: "hello".to_string(),
+    ///                 });
     ///
-    ///             tokio::time::sleep(Duration::from_secs(1)).await;
+    ///                 tokio::time::sleep(Duration::from_secs(1)).await;
     ///
-    ///             bar as TransientPtr<dyn Foo>
+    ///                 bar as TransientPtr<dyn Foo>
+    ///             })
     ///         })
     ///     })
     ///     .await?;
@@ -600,7 +603,8 @@ mod tests
     async fn can_bind_to_async_factory() -> Result<(), Box<dyn Error>>
     {
         use crate::ptr::TransientPtr;
-        use crate::{self as syrette, async_closure, factory};
+        use crate::test_utils::async_closure;
+        use crate::{self as syrette, factory};
 
         #[factory(async = true)]
         type IUserManagerFactory = dyn Fn(String) -> dyn subjects_async::IUserManager;
@@ -699,7 +703,8 @@ mod tests
         use syrette_macros::declare_default_factory;
 
         use crate::ptr::TransientPtr;
-        use crate::{self as syrette, async_closure};
+        use crate::test_utils::async_closure;
+        use crate::{self as syrette};
 
         declare_default_factory!(dyn subjects_async::IUserManager, async = true);
 

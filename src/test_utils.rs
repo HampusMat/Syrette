@@ -536,3 +536,20 @@ pub mod mocks
         impl crate::dependency_history::private::Sealed for DependencyHistory {}
     }
 }
+
+#[cfg(feature = "async")]
+macro_rules! async_closure {
+    (|$($args: ident),*| { $($inner: stmt);* }) => {
+        Box::new(|$($args),*| {
+            Box::pin(async move { $($inner)* })
+        })
+    };
+    (|| { $($inner: stmt);* }) => {
+        Box::new(|| {
+            Box::pin(async move { $($inner)* })
+        })
+    };
+}
+
+#[cfg(feature = "async")]
+pub(crate) use async_closure;

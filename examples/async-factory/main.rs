@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use syrette::di_container::asynchronous::prelude::*;
 use syrette::ptr::TransientPtr;
-use syrette::{async_closure, declare_default_factory, factory};
+use syrette::{declare_default_factory, factory};
 use tokio::time::sleep;
 
 trait IFoo: Send + Sync
@@ -77,10 +77,12 @@ async fn main() -> Result<()>
     di_container
         .bind::<IFooFactory>()
         .to_async_factory(&|_| {
-            async_closure!(|cnt| {
-                let foo_ptr = Box::new(Foo::new(cnt));
+            Box::new(|cnt| {
+                Box::pin(async move {
+                    let foo_ptr = Box::new(Foo::new(cnt));
 
-                foo_ptr as Box<dyn IFoo>
+                    foo_ptr as Box<dyn IFoo>
+                })
             })
         })
         .await?;
@@ -88,13 +90,15 @@ async fn main() -> Result<()>
     di_container
         .bind::<dyn IPerson>()
         .to_async_default_factory(&|_| {
-            async_closure!(|| {
-                // Do some time demanding thing...
-                sleep(Duration::from_secs(1)).await;
+            Box::new(|| {
+                Box::pin(async {
+                    // Do some time demanding thing...
+                    sleep(Duration::from_secs(1)).await;
 
-                let person = TransientPtr::new(Person::new("Bob".to_string()));
+                    let person = TransientPtr::new(Person::new("Bob".to_string()));
 
-                person as TransientPtr<dyn IPerson>
+                    person as TransientPtr<dyn IPerson>
+                })
             })
         })
         .await?;
