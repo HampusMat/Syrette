@@ -70,6 +70,14 @@ where
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     Factory(FactoryPtr<Interface>),
+
+    /// A smart pointer to a interface in the singleton scope.
+    ThreadsafeSingleton(ThreadsafeSingletonPtr<Interface>),
+
+    /// A smart pointer to a factory.
+    #[cfg(feature = "factory")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
+    ThreadsafeFactory(ThreadsafeFactoryPtr<Interface>),
 }
 
 impl<Interface> SomePtr<Interface>
@@ -87,36 +95,11 @@ where
         cfg(feature = "factory"),
         cfg_attr(doc_cfg, doc(cfg(feature = "factory")))
     );
-}
 
-/// Some threadsafe smart pointer.
-#[derive(strum_macros::IntoStaticStr)]
-pub enum SomeThreadsafePtr<Interface>
-where
-    Interface: 'static + ?Sized,
-{
-    /// A smart pointer to a interface in the transient scope.
-    Transient(TransientPtr<Interface>),
-
-    /// A smart pointer to a interface in the singleton scope.
-    ThreadsafeSingleton(ThreadsafeSingletonPtr<Interface>),
-
-    /// A smart pointer to a factory.
-    #[cfg(feature = "factory")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    ThreadsafeFactory(ThreadsafeFactoryPtr<Interface>),
-}
-
-impl<Interface> SomeThreadsafePtr<Interface>
-where
-    Interface: 'static + ?Sized,
-{
-    create_as_variant_fn!(SomeThreadsafePtr, Transient, SomePtrError);
-
-    create_as_variant_fn!(SomeThreadsafePtr, ThreadsafeSingleton, SomePtrError);
+    create_as_variant_fn!(SomePtr, ThreadsafeSingleton, SomePtrError);
 
     create_as_variant_fn!(
-        SomeThreadsafePtr,
+        SomePtr,
         ThreadsafeFactory,
         SomePtrError,
         cfg(feature = "factory"),

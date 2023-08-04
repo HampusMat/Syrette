@@ -66,7 +66,7 @@ use crate::private::cast::arc::CastArc;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
-use crate::ptr::{SomeThreadsafePtr, TransientPtr};
+use crate::ptr::{SomePtr, TransientPtr};
 
 pub mod binding;
 pub mod prelude;
@@ -96,7 +96,7 @@ where
     /// - Casting the binding for `Interface` fails
     fn get<'a, 'b, Interface>(
         self: &'a Arc<Self>,
-    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
         Interface: 'static + 'b + ?Sized + Send + Sync,
         'a: 'b,
@@ -112,7 +112,7 @@ where
     fn get_named<'a, 'b, Interface>(
         self: &'a Arc<Self>,
         name: &'static str,
-    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
         Interface: 'static + 'b + ?Sized + Send + Sync,
         'a: 'b,
@@ -123,7 +123,7 @@ where
         self: &Arc<Self>,
         dependency_history: DependencyHistoryType,
         name: Option<&'static str>,
-    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync;
 }
@@ -161,7 +161,7 @@ impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
 
     fn get<'a, 'b, Interface>(
         self: &'a Arc<Self>,
-    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
         Interface: 'static + 'b + ?Sized + Send + Sync,
         'a: 'b,
@@ -176,7 +176,7 @@ impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
     fn get_named<'a, 'b, Interface>(
         self: &'a Arc<Self>,
         name: &'static str,
-    ) -> BoxFuture<'b, Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>>
+    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
         Interface: 'static + 'b + ?Sized + Send + Sync,
         'a: 'b,
@@ -192,7 +192,7 @@ impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
         self: &Arc<Self>,
         dependency_history: DependencyHistory,
         name: Option<&'static str>,
-    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -243,23 +243,21 @@ impl AsyncDIContainer
     async fn handle_binding_providable<Interface>(
         self: &Arc<Self>,
         binding_providable: AsyncProvidable<Self, DependencyHistory>,
-    ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
         match binding_providable {
-            AsyncProvidable::Transient(transient_binding) => {
-                Ok(SomeThreadsafePtr::Transient(
-                    transient_binding.cast::<Interface>().map_err(|_| {
-                        AsyncDIContainerError::CastFailed {
-                            interface: type_name::<Interface>(),
-                            binding_kind: "transient",
-                        }
-                    })?,
-                ))
-            }
+            AsyncProvidable::Transient(transient_binding) => Ok(SomePtr::Transient(
+                transient_binding.cast::<Interface>().map_err(|_| {
+                    AsyncDIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "transient",
+                    }
+                })?,
+            )),
             AsyncProvidable::Singleton(singleton_binding) => {
-                Ok(SomeThreadsafePtr::ThreadsafeSingleton(
+                Ok(SomePtr::ThreadsafeSingleton(
                     singleton_binding
                         .cast::<Interface>()
                         .map_err(|err| match err {
@@ -308,9 +306,7 @@ impl AsyncDIContainer
                         }
                     })?;
 
-                Ok(SomeThreadsafePtr::ThreadsafeFactory(
-                    factory(self.clone()).into(),
-                ))
+                Ok(SomePtr::ThreadsafeFactory(factory(self.clone()).into()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
@@ -323,7 +319,7 @@ impl AsyncDIContainer
                     >,
                 >(binding, "default factory")?;
 
-                Ok(SomeThreadsafePtr::Transient(default_factory(self.clone())()))
+                Ok(SomePtr::Transient(default_factory(self.clone())()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
@@ -340,7 +336,7 @@ impl AsyncDIContainer
                     binding, "async default factory"
                 )?;
 
-                Ok(SomeThreadsafePtr::Transient(
+                Ok(SomePtr::Transient(
                     async_default_factory(self.clone())().await,
                 ))
             }

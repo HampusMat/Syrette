@@ -375,7 +375,7 @@ pub mod mocks
         use crate::di_container::asynchronous::IAsyncDIContainer;
         use crate::errors::async_di_container::AsyncDIContainerError;
         use crate::provider::r#async::IAsyncProvider;
-        use crate::ptr::SomeThreadsafePtr;
+        use crate::ptr::SomePtr;
 
         mock! {
             pub AsyncDIContainer<DependencyHistoryType>
@@ -397,14 +397,14 @@ pub mod mocks
 
                 async fn get<Interface>(
                     self: &Arc<Self>,
-                ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
                 where
                     Interface: 'static + ?Sized + Send + Sync;
 
                 async fn get_named<Interface>(
                     self: &Arc<Self>,
                     name: &'static str,
-                ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
                 where
                     Interface: 'static + ?Sized + Send + Sync;
 
@@ -413,7 +413,7 @@ pub mod mocks
                     self: &Arc<Self>,
                     dependency_history: DependencyHistoryType,
                     name: Option<&'static str>,
-                ) -> Result<SomeThreadsafePtr<Interface>, AsyncDIContainerError>
+                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
                 where
                     Interface: 'static + ?Sized + Send + Sync;
             }

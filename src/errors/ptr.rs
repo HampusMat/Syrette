@@ -1,9 +1,8 @@
 //! Smart pointer alias errors.
 
-/// Error type for [`SomePtr`] and [`SomeThreadsafePtr`].
+/// Error type for [`SomePtr`].
 ///
 /// [`SomePtr`]: crate::ptr::SomePtr
-/// [`SomeThreadsafePtr`]: crate::ptr::SomeThreadsafePtr
 #[derive(thiserror::Error, Debug)]
 pub enum SomePtrError
 {

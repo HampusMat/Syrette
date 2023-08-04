@@ -223,6 +223,10 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         let self_type = &self.self_type;
         let constructor = &self.constructor_method.sig.ident;
 
+        let dependency_idents = (0..get_dep_method_calls.len())
+            .map(|index| format_ident!("dependency_{index}"))
+            .collect::<Vec<_>>();
+
         quote! {
             #maybe_doc_hidden
             impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
@@ -256,8 +260,14 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
                         #maybe_prevent_circular_deps
 
+                        // Dependencies can't be passed directly to the constructor
+                        // because the Rust compiler becomes sad about SomePtr having
+                        // a variant with a Rc inside of it and .await being called even
+                        // when the Rc variant isn't even being created
+                        #(let #dependency_idents = #get_dep_method_calls;)*
+
                         Ok(syrette::ptr::TransientPtr::new(Self::#constructor(
-                            #(#get_dep_method_calls),*
+                            #(#dependency_idents),*
                         )))
                     })
                 }
