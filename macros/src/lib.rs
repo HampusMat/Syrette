@@ -195,7 +195,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 
         abort!(
             is_async_flag.name().span(),
-            "The 'async' Cargo feature must be enabled to use this flag";
+            "The 'async' crate feature must be enabled to use this flag";
             suggestion = "In your Cargo.toml: syrette = {{ version = \"{}\", features = [\"async\"] }}",
             PACKAGE_VERSION
         );
