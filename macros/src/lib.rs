@@ -39,8 +39,9 @@ mod test_utils;
 #[allow(dead_code)]
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Makes a struct injectable. Thereby usable with [`DIContainer`] or
-/// [`AsyncDIContainer`].
+/// Makes a type injectable.
+///
+/// Generates an implementation of [`Injectable`].
 ///
 /// # Arguments
 /// * (Optional) A interface trait the struct implements.
@@ -59,9 +60,14 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// is given.
 ///
 /// #### `async`
+/// <span class="cf">Available on <strong>crate feature <code>async</code></strong> only.
+/// </span>
+///
 /// **Value:** boolean literal<br>
 /// **Default:** `false`<br>
-/// Mark as async.
+/// Generate an implementation of [`AsyncInjectable`] instead of [`Injectable`].
+///
+/// This flag must be set to `true` for the type to be usable with [`AsyncDIContainer`].
 ///
 /// #### `constructor`
 /// **Value:** identifier<br>
@@ -69,12 +75,10 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Constructor method name.
 ///
 /// # Important
-/// When no interface trait argument is given, you should either manually
-/// declare the interface with the [`declare_interface!`] macro or use
-/// the [`di_container_bind`] macro to create a DI container binding.
-///
-/// You can however also use the concrete type as the interface. As it is declared as such
-/// by default if the `no_declare_concrete_interface` flag is not set.
+/// When no interface trait argument is given, you have three options
+/// - Manually declare the interface with the [`declare_interface!`] macro.
+/// - Use the [`di_container_bind`] macro to create a DI container binding.
+/// - Use the concrete type as the interface.
 ///
 /// # Examples
 /// ```
@@ -96,8 +100,8 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Attributes specific to impls with this attribute macro.
 ///
 /// ### Named
-/// Used inside the `new` method before a dependency argument. Declares the name of the
-/// dependency. Should be given the name quoted inside parenthesis.
+/// Used inside the of constructor method before a dependency argument. Declares the name
+/// of the dependency. Should be given the name quoted inside parenthesis.
 ///
 /// The [`macro@named`] ghost attribute macro can be used for intellisense and
 /// autocompletion for this attribute.
@@ -135,10 +139,11 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// # impl IKnight for Knight {}
 /// ```
 ///
-/// [`DIContainer`]: https://docs.rs/syrette/latest/syrette/di_container/struct.DIContainer.html
-/// [`AsyncDIContainer`]: https://docs.rs/syrette/latest/syrette/async_di_container/struct.AsyncDIContainer.html
-/// [`Injectable`]: https://docs.rs/syrette/latest/syrette/interfaces/injectable/trait.Injectable.html
-/// [`di_container_bind`]: https://docs.rs/syrette/latest/syrette/macro.di_container_bind.html
+/// [`DIContainer`]: ../syrette/di_container/blocking/struct.DIContainer.html
+/// [`AsyncDIContainer`]: ../syrette/di_container/asynchronous/struct.AsyncDIContainer.html
+/// [`Injectable`]: ../syrette/interfaces/injectable/trait.Injectable.html
+/// [`AsyncInjectable`]: ../syrette/interfaces/async_injectable/trait.AsyncInjectable.html
+/// [`di_container_bind`]: ../syrette/macro.di_container_bind.html
 #[cfg(not(tarpaulin_include))]
 #[proc_macro_error]
 #[proc_macro_attribute]
