@@ -5,40 +5,39 @@ use std::any::type_name;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator;
 #[cfg(feature = "factory")]
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 /// Binding builder for type `Interface` inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct BindingBuilder<Interface, DIContainerType, DependencyHistoryType>
+pub struct BindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    DIContainerType: IDIContainer,
 {
     di_container: Rc<DIContainerType>,
-    dependency_history_factory: fn() -> DependencyHistoryType,
+    dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType, DependencyHistoryType>
-    BindingBuilder<Interface, DIContainerType, DependencyHistoryType>
+impl<Interface, DIContainerType> BindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + 'static,
+    DIContainerType: IDIContainer,
 {
     pub(crate) fn new(
         di_container: Rc<DIContainerType>,
-        dependency_history_factory: fn() -> DependencyHistoryType,
+        dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
         Self {
@@ -93,16 +92,11 @@ where
     pub fn to<Implementation>(
         self,
     ) -> Result<
-        BindingScopeConfigurator<
-            Interface,
-            Implementation,
-            DIContainerType,
-            DependencyHistoryType,
-        >,
+        BindingScopeConfigurator<Interface, Implementation, DIContainerType>,
         BindingBuilderError,
     >
     where
-        Implementation: Injectable<DIContainerType, DependencyHistoryType>,
+        Implementation: Injectable<DIContainerType>,
     {
         {
             if self.di_container.has_binding::<Interface>(None) {
@@ -194,10 +188,7 @@ where
     pub fn to_factory<Args, Return, Func>(
         self,
         factory_func: &'static Func,
-    ) -> Result<
-        BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
-        BindingBuilderError,
-    >
+    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
@@ -283,10 +274,7 @@ where
     pub fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<
-        BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
-        BindingBuilderError,
-    >
+    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
@@ -326,6 +314,7 @@ mod tests
     use mockall::predicate::eq;
 
     use super::*;
+    use crate::dependency_history::MockDependencyHistory;
     use crate::test_utils::{mocks, subjects};
 
     #[test]
@@ -345,14 +334,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = BindingBuilder::<
-            dyn subjects::INumber,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Rc::new(mock_di_container),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            BindingBuilder::<
+                dyn subjects::INumber,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
 
         binding_builder.to::<subjects::Number>()?;
 
@@ -384,14 +370,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = BindingBuilder::<
-            IUserManagerFactory,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Rc::new(mock_di_container),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            BindingBuilder::<
+                IUserManagerFactory,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
 
         binding_builder.to_factory(&|_| {
             Box::new(move |_num, _text| {
@@ -430,14 +413,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = BindingBuilder::<
-            dyn subjects::IUserManager,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Rc::new(mock_di_container),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            BindingBuilder::<
+                dyn subjects::IUserManager,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
 
         binding_builder.to_default_factory(&|_| {
             Box::new(move || {

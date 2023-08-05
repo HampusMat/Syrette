@@ -5,13 +5,15 @@ use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::dependency_history::IDependencyHistory;
 use crate::di_container::asynchronous::binding::scope_configurator::AsyncBindingScopeConfigurator;
 #[cfg(feature = "factory")]
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::async_di_container::AsyncBindingBuilderError;
 use crate::interfaces::async_injectable::AsyncInjectable;
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 /// Alias for a threadsafe boxed function.
 #[cfg(feature = "factory")]
@@ -22,28 +24,25 @@ pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct AsyncBindingBuilder<Interface, DIContainerType, DependencyHistoryType>
+pub struct AsyncBindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + Send + Sync,
+    DIContainerType: IAsyncDIContainer,
 {
     di_container: Arc<DIContainerType>,
-    dependency_history_factory: fn() -> DependencyHistoryType,
+    dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType, DependencyHistoryType>
-    AsyncBindingBuilder<Interface, DIContainerType, DependencyHistoryType>
+impl<Interface, DIContainerType> AsyncBindingBuilder<Interface, DIContainerType>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + Send + Sync + 'static,
+    DIContainerType: IAsyncDIContainer,
 {
     pub(crate) fn new(
         di_container: Arc<DIContainerType>,
-        dependency_history_factory: fn() -> DependencyHistoryType,
+        dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
         Self {
@@ -99,16 +98,11 @@ where
     pub async fn to<Implementation>(
         self,
     ) -> Result<
-        AsyncBindingScopeConfigurator<
-            Interface,
-            Implementation,
-            DIContainerType,
-            DependencyHistoryType,
-        >,
+        AsyncBindingScopeConfigurator<Interface, Implementation, DIContainerType>,
         AsyncBindingBuilderError,
     >
     where
-        Implementation: AsyncInjectable<DIContainerType, DependencyHistoryType>,
+        Implementation: AsyncInjectable<DIContainerType>,
     {
         if self.di_container.has_binding::<Interface>(None).await {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
@@ -182,7 +176,7 @@ where
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
         AsyncBindingBuilderError,
     >
     where
@@ -277,7 +271,7 @@ where
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
         AsyncBindingBuilderError,
     >
     where
@@ -370,7 +364,7 @@ where
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
         AsyncBindingBuilderError,
     >
     where
@@ -465,7 +459,7 @@ where
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
         AsyncBindingBuilderError,
     >
     where
@@ -510,14 +504,14 @@ mod tests
     use mockall::predicate::eq;
 
     use super::*;
+    use crate::dependency_history::MockDependencyHistory;
     use crate::test_utils::{mocks, subjects_async};
 
     #[tokio::test]
     async fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container_mock = mocks::async_di_container::MockAsyncDIContainer::<
-            mocks::MockDependencyHistory,
-        >::new();
+        let mut di_container_mock =
+            mocks::async_di_container::MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
@@ -531,14 +525,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = AsyncBindingBuilder::<
-            dyn subjects_async::IUserManager,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            AsyncBindingBuilder::<
+                dyn subjects_async::IUserManager,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_builder.to::<subjects_async::UserManager>().await?;
 
@@ -575,14 +566,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = AsyncBindingBuilder::<
-            IUserManagerFactory,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            AsyncBindingBuilder::<
+                IUserManagerFactory,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_builder
             .to_factory(&|_| {
@@ -624,14 +612,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = AsyncBindingBuilder::<
-            IUserManagerFactory,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            AsyncBindingBuilder::<
+                IUserManagerFactory,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_builder
             .to_async_factory(&|_| {
@@ -673,14 +658,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = AsyncBindingBuilder::<
-            dyn subjects_async::IUserManager,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            AsyncBindingBuilder::<
+                dyn subjects_async::IUserManager,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_builder
             .to_default_factory(&|_| {
@@ -723,14 +705,11 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder = AsyncBindingBuilder::<
-            dyn subjects_async::IUserManager,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_builder =
+            AsyncBindingBuilder::<
+                dyn subjects_async::IUserManager,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_builder
             .to_async_default_factory(&|_| {

@@ -57,7 +57,6 @@ use std::sync::Arc;
 use async_lock::Mutex;
 use async_trait::async_trait;
 
-use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::errors::async_di_container::AsyncDIContainerError;
@@ -67,6 +66,9 @@ use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
 use crate::ptr::{SomePtr, TransientPtr};
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 pub mod binding;
 pub mod prelude;
@@ -75,15 +77,11 @@ pub mod prelude;
 ///
 /// **This trait is sealed and cannot be implemented for types outside this crate.**
 #[async_trait]
-pub trait IAsyncDIContainer<DependencyHistoryType>:
-    Sized + 'static + Send + Sync + details::DIContainerInternals<DependencyHistoryType>
-where
-    DependencyHistoryType: IDependencyHistory + Send + Sync,
+pub trait IAsyncDIContainer:
+    Sized + 'static + Send + Sync + details::DIContainerInternals
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
-    fn bind<Interface>(
-        self: &mut Arc<Self>,
-    ) -> AsyncBindingBuilder<Interface, Self, DependencyHistoryType>
+    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized + Send + Sync;
 
@@ -121,7 +119,7 @@ where
     #[doc(hidden)]
     async fn get_bound<Interface>(
         self: &Arc<Self>,
-        dependency_history: DependencyHistoryType,
+        dependency_history: DependencyHistory,
         name: Option<&'static str>,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
@@ -131,8 +129,7 @@ where
 /// Async dependency injection container.
 pub struct AsyncDIContainer
 {
-    binding_storage:
-        Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self, DependencyHistory>>>,
+    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
 }
 
 impl AsyncDIContainer
@@ -148,11 +145,9 @@ impl AsyncDIContainer
 }
 
 #[async_trait]
-impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
+impl IAsyncDIContainer for AsyncDIContainer
 {
-    fn bind<Interface>(
-        self: &mut Arc<Self>,
-    ) -> AsyncBindingBuilder<Interface, Self, DependencyHistory>
+    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -205,7 +200,7 @@ impl IAsyncDIContainer<DependencyHistory> for AsyncDIContainer
 }
 
 #[async_trait]
-impl details::DIContainerInternals<DependencyHistory> for AsyncDIContainer
+impl details::DIContainerInternals for AsyncDIContainer
 {
     async fn has_binding<Interface>(self: &Arc<Self>, name: Option<&'static str>) -> bool
     where
@@ -217,7 +212,7 @@ impl details::DIContainerInternals<DependencyHistory> for AsyncDIContainer
     async fn set_binding<Interface>(
         self: &Arc<Self>,
         name: Option<&'static str>,
-        provider: Box<dyn IAsyncProvider<Self, DependencyHistory>>,
+        provider: Box<dyn IAsyncProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
     {
@@ -230,7 +225,7 @@ impl details::DIContainerInternals<DependencyHistory> for AsyncDIContainer
     async fn remove_binding<Interface>(
         self: &Arc<Self>,
         name: Option<&'static str>,
-    ) -> Option<Box<dyn IAsyncProvider<Self, DependencyHistory>>>
+    ) -> Option<Box<dyn IAsyncProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
@@ -242,7 +237,7 @@ impl AsyncDIContainer
 {
     async fn handle_binding_providable<Interface>(
         self: &Arc<Self>,
-        binding_providable: AsyncProvidable<Self, DependencyHistory>,
+        binding_providable: AsyncProvidable<Self>,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
@@ -369,7 +364,7 @@ impl AsyncDIContainer
         self: &Arc<Self>,
         name: Option<&'static str>,
         dependency_history: DependencyHistory,
-    ) -> Result<AsyncProvidable<Self, DependencyHistory>, AsyncDIContainerError>
+    ) -> Result<AsyncProvidable<Self>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -408,13 +403,10 @@ pub(crate) mod details
 
     use async_trait::async_trait;
 
-    use crate::dependency_history::IDependencyHistory;
     use crate::provider::r#async::IAsyncProvider;
 
     #[async_trait]
-    pub trait DIContainerInternals<DependencyHistoryType>
-    where
-        DependencyHistoryType: IDependencyHistory,
+    pub trait DIContainerInternals
     {
         async fn has_binding<Interface>(
             self: &Arc<Self>,
@@ -426,14 +418,14 @@ pub(crate) mod details
         async fn set_binding<Interface>(
             self: &Arc<Self>,
             name: Option<&'static str>,
-            provider: Box<dyn IAsyncProvider<Self, DependencyHistoryType>>,
+            provider: Box<dyn IAsyncProvider<Self>>,
         ) where
             Interface: 'static + ?Sized;
 
         async fn remove_binding<Interface>(
             self: &Arc<Self>,
             name: Option<&'static str>,
-        ) -> Option<Box<dyn IAsyncProvider<Self, DependencyHistoryType>>>
+        ) -> Option<Box<dyn IAsyncProvider<Self>>>
         where
             Interface: 'static + ?Sized;
     }

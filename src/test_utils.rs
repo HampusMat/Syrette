@@ -7,11 +7,12 @@ pub mod subjects
 
     use syrette_macros::declare_interface;
 
-    use crate::dependency_history::IDependencyHistory;
     use crate::di_container::blocking::IDIContainer;
     use crate::interfaces::injectable::Injectable;
     use crate::private::cast::CastFromArc;
     use crate::ptr::TransientPtr;
+
+    use_dependency_history!();
 
     pub trait IUserManager
     {
@@ -44,18 +45,17 @@ pub mod subjects
     }
 
     use crate as syrette;
+    use crate::util::use_dependency_history;
 
     declare_interface!(UserManager -> IUserManager);
 
-    impl<DIContainerType, DependencyHistoryType>
-        Injectable<DIContainerType, DependencyHistoryType> for UserManager
+    impl<DIContainerType> Injectable<DIContainerType> for UserManager
     where
-        DIContainerType: IDIContainer<DependencyHistoryType>,
-        DependencyHistoryType: IDependencyHistory,
+        DIContainerType: IDIContainer,
     {
         fn resolve(
             _di_container: &Rc<DIContainerType>,
-            _dependency_history: DependencyHistoryType,
+            _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
             Self: Sized,
@@ -115,15 +115,13 @@ pub mod subjects
 
     declare_interface!(Number -> INumber);
 
-    impl<DIContainerType, DependencyHistoryType>
-        Injectable<DIContainerType, DependencyHistoryType> for Number
+    impl<DIContainerType> Injectable<DIContainerType> for Number
     where
-        DIContainerType: IDIContainer<DependencyHistoryType>,
-        DependencyHistoryType: IDependencyHistory,
+        DIContainerType: IDIContainer,
     {
         fn resolve(
             _di_container: &Rc<DIContainerType>,
-            _dependency_history: DependencyHistoryType,
+            _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
             Self: Sized,
@@ -151,10 +149,11 @@ pub mod subjects_async
     use async_trait::async_trait;
     use syrette_macros::declare_interface;
 
-    use crate::dependency_history::IDependencyHistory;
     use crate::di_container::asynchronous::IAsyncDIContainer;
     use crate::interfaces::async_injectable::AsyncInjectable;
     use crate::ptr::TransientPtr;
+
+    use_dependency_history!();
 
     pub trait IUserManager: Send + Sync
     {
@@ -187,19 +186,18 @@ pub mod subjects_async
     }
 
     use crate as syrette;
+    use crate::util::use_dependency_history;
 
     declare_interface!(UserManager -> IUserManager);
 
     #[async_trait]
-    impl<DIContainerType, DependencyHistoryType>
-        AsyncInjectable<DIContainerType, DependencyHistoryType> for UserManager
+    impl<DIContainerType> AsyncInjectable<DIContainerType> for UserManager
     where
-        DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-        DependencyHistoryType: IDependencyHistory + Send + Sync + 'static,
+        DIContainerType: IAsyncDIContainer,
     {
         async fn resolve(
             _: &Arc<DIContainerType>,
-            _dependency_history: DependencyHistoryType,
+            _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
             Self: Sized,
@@ -260,15 +258,13 @@ pub mod subjects_async
     declare_interface!(Number -> INumber, threadsafe_sharable = true);
 
     #[async_trait]
-    impl<DIContainerType, DependencyHistoryType>
-        AsyncInjectable<DIContainerType, DependencyHistoryType> for Number
+    impl<DIContainerType> AsyncInjectable<DIContainerType> for Number
     where
-        DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-        DependencyHistoryType: IDependencyHistory + Send + Sync + 'static,
+        DIContainerType: IAsyncDIContainer,
     {
         async fn resolve(
             _: &Arc<DIContainerType>,
-            _dependency_history: DependencyHistoryType,
+            _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
             Self: Sized,
@@ -290,27 +286,22 @@ pub mod mocks
         use std::rc::Rc;
 
         use super::*;
-        use crate::dependency_history::IDependencyHistory;
         use crate::di_container::blocking::binding::builder::BindingBuilder;
         use crate::di_container::blocking::details::DIContainerInternals;
         use crate::di_container::blocking::IDIContainer;
         use crate::errors::di_container::DIContainerError;
         use crate::provider::blocking::IProvider;
         use crate::ptr::SomePtr;
+        use crate::util::use_dependency_history;
+
+        use_dependency_history!();
 
         mock! {
-            pub DIContainer<DependencyHistoryType>
-            where
-                DependencyHistoryType: IDependencyHistory + 'static
-            {}
+            pub DIContainer {}
 
-            impl<DependencyHistoryType> IDIContainer<DependencyHistoryType> for
-                DIContainer<DependencyHistoryType>
-            where
-                DependencyHistoryType: IDependencyHistory + 'static
+            impl IDIContainer for DIContainer
             {
-                fn bind<Interface>(self: &mut Rc<Self>) ->
-                    BindingBuilder<Interface, Self, DependencyHistoryType>
+                fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
                 where
                     Interface: 'static + ?Sized;
 
@@ -328,18 +319,14 @@ pub mod mocks
                 #[doc(hidden)]
                 fn get_bound<Interface>(
                     self: &Rc<Self>,
-                    dependency_history: DependencyHistoryType,
+                    dependency_history: DependencyHistory,
                     name: Option<&'static str>,
                 ) -> Result<SomePtr<Interface>, DIContainerError>
                 where
                     Interface: 'static + ?Sized;
             }
 
-            impl<DependencyHistoryType> DIContainerInternals<
-                DependencyHistoryType
-            > for DIContainer<DependencyHistoryType>
-                where
-                    DependencyHistoryType: IDependencyHistory
+            impl DIContainerInternals for DIContainer
             {
                 fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
                 where
@@ -349,14 +336,14 @@ pub mod mocks
                 fn set_binding<Interface>(
                     self: &Rc<Self>,
                     name: Option<&'static str>,
-                    provider: Box<dyn IProvider<Self, DependencyHistoryType>>,
+                    provider: Box<dyn IProvider<Self>>,
                 ) where
                     Interface: 'static + ?Sized;
 
                 fn remove_binding<Interface>(
                     self: &Rc<Self>,
                     name: Option<&'static str>,
-                ) -> Option<Box<dyn IProvider<Self, DependencyHistoryType>>>
+                ) -> Option<Box<dyn IProvider<Self>>>
                 where
                     Interface: 'static + ?Sized;
             }
@@ -369,29 +356,24 @@ pub mod mocks
         use std::sync::Arc;
 
         use super::*;
-        use crate::dependency_history::IDependencyHistory;
         use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
         use crate::di_container::asynchronous::details::DIContainerInternals;
         use crate::di_container::asynchronous::IAsyncDIContainer;
         use crate::errors::async_di_container::AsyncDIContainerError;
         use crate::provider::r#async::IAsyncProvider;
         use crate::ptr::SomePtr;
+        use crate::util::use_dependency_history;
+
+        use_dependency_history!();
 
         mock! {
-            pub AsyncDIContainer<DependencyHistoryType>
-                where
-                DependencyHistoryType: IDependencyHistory + 'static + Send + Sync
-            {}
+            pub AsyncDIContainer {}
 
             #[async_trait::async_trait]
-            impl<DependencyHistoryType> IAsyncDIContainer<
-                DependencyHistoryType
-            > for AsyncDIContainer<DependencyHistoryType>
-            where
-                DependencyHistoryType: IDependencyHistory + 'static + Send + Sync
+            impl IAsyncDIContainer for AsyncDIContainer
             {
                 fn bind<Interface>(self: &mut Arc<Self>) ->
-                    AsyncBindingBuilder<Interface, Self, DependencyHistoryType>
+                    AsyncBindingBuilder<Interface, Self>
                 where
                     Interface: 'static + ?Sized + Send + Sync;
 
@@ -411,7 +393,7 @@ pub mod mocks
                 #[doc(hidden)]
                 async fn get_bound<Interface>(
                     self: &Arc<Self>,
-                    dependency_history: DependencyHistoryType,
+                    dependency_history: DependencyHistory,
                     name: Option<&'static str>,
                 ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
                 where
@@ -419,11 +401,7 @@ pub mod mocks
             }
 
             #[async_trait::async_trait]
-            impl<DependencyHistoryType> DIContainerInternals<
-                DependencyHistoryType
-            > for AsyncDIContainer<DependencyHistoryType>
-            where
-                DependencyHistoryType: IDependencyHistory + 'static + Send + Sync
+            impl DIContainerInternals for AsyncDIContainer
             {
                 async fn has_binding<Interface>(
                     self: &Arc<Self>,
@@ -435,14 +413,14 @@ pub mod mocks
                 async fn set_binding<Interface>(
                     self: &Arc<Self>,
                     name: Option<&'static str>,
-                    provider: Box<dyn IAsyncProvider<Self, DependencyHistoryType>>,
+                    provider: Box<dyn IAsyncProvider<Self>>,
                 ) where
                     Interface: 'static + ?Sized;
 
                 async fn remove_binding<Interface>(
                     self: &Arc<Self>,
                     name: Option<&'static str>,
-                ) -> Option<Box<dyn IAsyncProvider<Self, DependencyHistoryType>>>
+                ) -> Option<Box<dyn IAsyncProvider<Self>>>
                 where
                     Interface: 'static + ?Sized;
             }
@@ -457,34 +435,31 @@ pub mod mocks
         use async_trait::async_trait;
 
         use super::*;
-        use crate::dependency_history::IDependencyHistory;
         use crate::di_container::asynchronous::IAsyncDIContainer;
         use crate::errors::injectable::InjectableError;
         use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
+        use crate::util::use_dependency_history;
+
+        use_dependency_history!();
 
         mock! {
-            pub AsyncProvider<
-                DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-                DependencyHistoryType: IDependencyHistory + Send + Sync
-            > {}
+            pub AsyncProvider<DIContainerType: IAsyncDIContainer> {}
 
             #[async_trait]
             impl<
-                DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-                DependencyHistoryType: IDependencyHistory + Send + Sync
-            > IAsyncProvider<DIContainerType, DependencyHistoryType> for AsyncProvider<
+                DIContainerType: IAsyncDIContainer,
+            > IAsyncProvider<DIContainerType> for AsyncProvider<
                 DIContainerType,
-                DependencyHistoryType
             >
             {
                 async fn provide(
                     &self,
                     di_container: &Arc<DIContainerType>,
-                    dependency_history: DependencyHistoryType
-                ) -> Result<AsyncProvidable<DIContainerType, DependencyHistoryType>, InjectableError>;
+                    dependency_history: DependencyHistory
+                ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>;
 
                 fn do_clone(&self) ->
-                    Box<dyn IAsyncProvider<DIContainerType, DependencyHistoryType>>;
+                    Box<dyn IAsyncProvider<DIContainerType>>;
             }
         }
     }
@@ -494,46 +469,30 @@ pub mod mocks
         use std::rc::Rc;
 
         use super::*;
-        use crate::dependency_history::IDependencyHistory;
         use crate::di_container::blocking::IDIContainer;
         use crate::errors::injectable::InjectableError;
         use crate::provider::blocking::{IProvider, Providable};
+        use crate::util::use_dependency_history;
+
+        use_dependency_history!();
 
         mock! {
-            pub Provider<DIContainerType, DependencyHistoryType>
+            pub Provider<DIContainerType>
             where
-                DIContainerType: IDIContainer<DependencyHistoryType>,
-                DependencyHistoryType: IDependencyHistory,
+                DIContainerType: IDIContainer
             {}
 
-            impl<DIContainerType, DependencyHistoryType> IProvider<
-                DIContainerType,
-                DependencyHistoryType
-            > for Provider<DIContainerType, DependencyHistoryType>
-                where
-                    DIContainerType: IDIContainer<DependencyHistoryType>,
-                    DependencyHistoryType: IDependencyHistory
+            impl<DIContainerType> IProvider<DIContainerType> for Provider<DIContainerType>
+            where
+                DIContainerType: IDIContainer,
             {
                 fn provide(
                     &self,
                     di_container: &Rc<DIContainerType>,
-                    dependency_history: DependencyHistoryType,
-                ) -> Result<Providable<DIContainerType, DependencyHistoryType>, InjectableError>;
+                    dependency_history: DependencyHistory,
+                ) -> Result<Providable<DIContainerType>, InjectableError>;
             }
         }
-    }
-
-    mock! {
-        pub DependencyHistory {}
-
-        impl crate::dependency_history::IDependencyHistory for DependencyHistory
-        {
-            fn push<Dependency: 'static + ?Sized>(&mut self);
-
-            fn contains<Dependency: 'static + ?Sized>(&self) -> bool;
-        }
-
-        impl crate::dependency_history::private::Sealed for DependencyHistory {}
     }
 }
 

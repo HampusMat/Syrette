@@ -54,7 +54,6 @@ use std::any::type_name;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::dependency_history::{DependencyHistory, IDependencyHistory};
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::errors::di_container::DIContainerError;
@@ -62,6 +61,9 @@ use crate::private::cast::boxed::CastBox;
 use crate::private::cast::rc::CastRc;
 use crate::provider::blocking::{IProvider, Providable};
 use crate::ptr::SomePtr;
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 pub mod binding;
 pub mod prelude;
@@ -69,15 +71,10 @@ pub mod prelude;
 /// Blocking dependency injection container interface.
 ///
 /// **This trait is sealed and cannot be implemented for types outside this crate.**
-pub trait IDIContainer<DependencyHistoryType>:
-    Sized + 'static + details::DIContainerInternals<DependencyHistoryType>
-where
-    DependencyHistoryType: IDependencyHistory,
+pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
 {
     /// Returns a new [`BindingBuilder`] for the given interface.
-    fn bind<Interface>(
-        self: &mut Rc<Self>,
-    ) -> BindingBuilder<Interface, Self, DependencyHistoryType>
+    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized;
 
@@ -109,7 +106,7 @@ where
     #[doc(hidden)]
     fn get_bound<Interface>(
         self: &Rc<Self>,
-        dependency_history: DependencyHistoryType,
+        dependency_history: DependencyHistory,
         name: Option<&'static str>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -119,8 +116,7 @@ where
 /// Blocking dependency injection container.
 pub struct DIContainer
 {
-    binding_storage:
-        RefCell<DIContainerBindingStorage<dyn IProvider<Self, DependencyHistory>>>,
+    binding_storage: RefCell<DIContainerBindingStorage<dyn IProvider<Self>>>,
 }
 
 impl DIContainer
@@ -135,11 +131,9 @@ impl DIContainer
     }
 }
 
-impl IDIContainer<DependencyHistory> for DIContainer
+impl IDIContainer for DIContainer
 {
-    fn bind<Interface>(
-        self: &mut Rc<Self>,
-    ) -> BindingBuilder<Interface, Self, DependencyHistory>
+    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
     where
         Interface: 'static + ?Sized,
     {
@@ -183,7 +177,7 @@ impl IDIContainer<DependencyHistory> for DIContainer
     }
 }
 
-impl details::DIContainerInternals<DependencyHistory> for DIContainer
+impl details::DIContainerInternals for DIContainer
 {
     fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
     where
@@ -195,7 +189,7 @@ impl details::DIContainerInternals<DependencyHistory> for DIContainer
     fn set_binding<Interface>(
         self: &Rc<Self>,
         name: Option<&'static str>,
-        provider: Box<dyn IProvider<Self, DependencyHistory>>,
+        provider: Box<dyn IProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
     {
@@ -207,7 +201,7 @@ impl details::DIContainerInternals<DependencyHistory> for DIContainer
     fn remove_binding<Interface>(
         self: &Rc<Self>,
         name: Option<&'static str>,
-    ) -> Option<Box<dyn IProvider<Self, DependencyHistory>>>
+    ) -> Option<Box<dyn IProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
@@ -219,7 +213,7 @@ impl DIContainer
 {
     fn handle_binding_providable<Interface>(
         #[cfg(feature = "factory")] self: &Rc<Self>,
-        binding_providable: Providable<Self, DependencyHistory>,
+        binding_providable: Providable<Self>,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -278,7 +272,7 @@ impl DIContainer
         self: &Rc<Self>,
         name: Option<&'static str>,
         dependency_history: DependencyHistory,
-    ) -> Result<Providable<Self, DependencyHistory>, DIContainerError>
+    ) -> Result<Providable<Self>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -306,12 +300,9 @@ pub(crate) mod details
 {
     use std::rc::Rc;
 
-    use crate::dependency_history::IDependencyHistory;
     use crate::provider::blocking::IProvider;
 
-    pub trait DIContainerInternals<DependencyHistoryType>
-    where
-        DependencyHistoryType: IDependencyHistory,
+    pub trait DIContainerInternals
     {
         fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
         where
@@ -320,14 +311,14 @@ pub(crate) mod details
         fn set_binding<Interface>(
             self: &Rc<Self>,
             name: Option<&'static str>,
-            provider: Box<dyn IProvider<Self, DependencyHistoryType>>,
+            provider: Box<dyn IProvider<Self>>,
         ) where
             Interface: 'static + ?Sized;
 
         fn remove_binding<Interface>(
             self: &Rc<Self>,
             name: Option<&'static str>,
-        ) -> Option<Box<dyn IProvider<Self, DependencyHistoryType>>>
+        ) -> Option<Box<dyn IProvider<Self>>>
         where
             Interface: 'static + ?Sized;
     }

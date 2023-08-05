@@ -195,8 +195,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     ) -> proc_macro2::TokenStream
     {
         quote! {
-            use syrette::dependency_history::IDependencyHistory;
-
             if #dependency_history_var.contains::<Self>() {
                 #dependency_history_var.push::<Self>();
 
@@ -231,7 +229,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             #maybe_doc_hidden
             impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
                 syrette::di_container::asynchronous::AsyncDIContainer,
-                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve<'di_container, 'fut>(
@@ -293,7 +290,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             #maybe_doc_hidden
             impl #generics syrette::interfaces::injectable::Injectable<
                 syrette::di_container::blocking::DIContainer,
-                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve(

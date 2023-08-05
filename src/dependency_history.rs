@@ -7,18 +7,6 @@ use std::fmt::{Debug, Display};
 const BOLD_MODE: &str = "\x1b[1m";
 const RESET_BOLD_MODE: &str = "\x1b[22m";
 
-/// Dependency history interface.
-///
-/// **This trait is sealed and cannot be implemented for types outside this crate.**
-pub trait IDependencyHistory: private::Sealed
-{
-    #[doc(hidden)]
-    fn push<Dependency: 'static + ?Sized>(&mut self);
-
-    #[doc(hidden)]
-    fn contains<Dependency: 'static + ?Sized>(&self) -> bool;
-}
-
 /// Dependency history.
 #[derive(Clone, Debug)]
 pub struct DependencyHistory
@@ -35,16 +23,18 @@ impl DependencyHistory
     }
 }
 
-impl IDependencyHistory for DependencyHistory
+#[cfg_attr(test, mockall::automock)]
+impl DependencyHistory
 {
     #[doc(hidden)]
-    fn push<Dependency: 'static + ?Sized>(&mut self)
+    pub fn push<Dependency: 'static + ?Sized>(&mut self)
     {
         self.inner.push(type_name::<Dependency>());
     }
 
     #[doc(hidden)]
-    fn contains<Dependency: 'static + ?Sized>(&self) -> bool
+    #[allow(clippy::must_use_candidate)]
+    pub fn contains<Dependency: 'static + ?Sized>(&self) -> bool
     {
         self.inner.contains(&type_name::<Dependency>())
     }

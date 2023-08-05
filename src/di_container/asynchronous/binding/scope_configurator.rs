@@ -4,51 +4,42 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::dependency_history::IDependencyHistory;
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::async_di_container::AsyncBindingScopeConfiguratorError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::provider::r#async::{AsyncSingletonProvider, AsyncTransientTypeProvider};
 use crate::ptr::ThreadsafeSingletonPtr;
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 /// Scope configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
 ///
 /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
-pub struct AsyncBindingScopeConfigurator<
-    Interface,
-    Implementation,
-    DIContainerType,
-    DependencyHistoryType,
-> where
+pub struct AsyncBindingScopeConfigurator<Interface, Implementation, DIContainerType>
+where
     Interface: 'static + ?Sized + Send + Sync,
-    Implementation: AsyncInjectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + Send + Sync,
+    Implementation: AsyncInjectable<DIContainerType>,
+    DIContainerType: IAsyncDIContainer,
 {
     di_container: Arc<DIContainerType>,
-    dependency_history_factory: fn() -> DependencyHistoryType,
+    dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation, DIContainerType, DependencyHistoryType>
-    AsyncBindingScopeConfigurator<
-        Interface,
-        Implementation,
-        DIContainerType,
-        DependencyHistoryType,
-    >
+impl<Interface, Implementation, DIContainerType>
+    AsyncBindingScopeConfigurator<Interface, Implementation, DIContainerType>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    Implementation: AsyncInjectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IAsyncDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + Send + Sync + 'static,
+    Implementation: AsyncInjectable<DIContainerType>,
+    DIContainerType: IAsyncDIContainer,
 {
     pub(crate) fn new(
         di_container: Arc<DIContainerType>,
-        dependency_history_factory: fn() -> DependencyHistoryType,
+        dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
         Self {
@@ -64,7 +55,7 @@ where
     /// This is the default.
     pub async fn in_transient_scope(
         self,
-    ) -> AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
+    ) -> AsyncBindingWhenConfigurator<Interface, DIContainerType>
     {
         self.set_in_transient_scope().await;
 
@@ -78,7 +69,7 @@ where
     pub async fn in_singleton_scope(
         self,
     ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
         AsyncBindingScopeConfiguratorError,
     >
     {
@@ -107,11 +98,9 @@ where
         self.di_container
             .set_binding::<Interface>(
                 None,
-                Box::new(AsyncTransientTypeProvider::<
-                    Implementation,
-                    DIContainerType,
-                    DependencyHistoryType,
-                >::new()),
+                Box::new(
+                    AsyncTransientTypeProvider::<Implementation, DIContainerType>::new(),
+                ),
             )
             .await;
     }
@@ -121,6 +110,7 @@ where
 mod tests
 {
     use super::*;
+    use crate::dependency_history::MockDependencyHistory;
     use crate::test_utils::{mocks, subjects_async};
 
     #[tokio::test]
@@ -135,15 +125,12 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator = AsyncBindingScopeConfigurator::<
-            dyn subjects_async::IUserManager,
-            subjects_async::UserManager,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_scope_configurator =
+            AsyncBindingScopeConfigurator::<
+                dyn subjects_async::IUserManager,
+                subjects_async::UserManager,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_scope_configurator.in_transient_scope().await;
     }
@@ -160,15 +147,12 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator = AsyncBindingScopeConfigurator::<
-            dyn subjects_async::IUserManager,
-            subjects_async::UserManager,
-            mocks::async_di_container::MockAsyncDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Arc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_scope_configurator =
+            AsyncBindingScopeConfigurator::<
+                dyn subjects_async::IUserManager,
+                subjects_async::UserManager,
+                mocks::async_di_container::MockAsyncDIContainer,
+            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
 
         assert!(binding_scope_configurator
             .in_singleton_scope()

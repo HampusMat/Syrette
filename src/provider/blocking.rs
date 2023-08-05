@@ -1,20 +1,21 @@
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{SingletonPtr, TransientPtr};
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 #[derive(strum_macros::Display, Debug)]
-pub enum Providable<DIContainerType, DependencyHistoryType>
+pub enum Providable<DIContainerType>
 where
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    DIContainerType: IDIContainer,
 {
-    Transient(TransientPtr<dyn Injectable<DIContainerType, DependencyHistoryType>>),
-    Singleton(SingletonPtr<dyn Injectable<DIContainerType, DependencyHistoryType>>),
+    Transient(TransientPtr<dyn Injectable<DIContainerType>>),
+    Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
     #[cfg(feature = "factory")]
     Factory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
     #[cfg(feature = "factory")]
@@ -22,35 +23,32 @@ where
 }
 
 #[cfg_attr(test, mockall::automock, allow(dead_code))]
-pub trait IProvider<DIContainerType, DependencyHistoryType>
+pub trait IProvider<DIContainerType>
 where
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
         di_container: &Rc<DIContainerType>,
-        dependency_history: DependencyHistoryType,
-    ) -> Result<Providable<DIContainerType, DependencyHistoryType>, InjectableError>;
+        dependency_history: DependencyHistory,
+    ) -> Result<Providable<DIContainerType>, InjectableError>;
 }
 
-pub struct TransientTypeProvider<InjectableType, DIContainerType, DependencyHistoryType>
+pub struct TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     injectable_phantom: PhantomData<InjectableType>,
     di_container_phantom: PhantomData<DIContainerType>,
-    dependency_history_phantom: PhantomData<DependencyHistoryType>,
+    dependency_history_phantom: PhantomData<DependencyHistory>,
 }
 
-impl<InjectableType, DIContainerType, DependencyHistoryType>
-    TransientTypeProvider<InjectableType, DIContainerType, DependencyHistoryType>
+impl<InjectableType, DIContainerType>
+    TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     pub fn new() -> Self
     {
@@ -62,19 +60,17 @@ where
     }
 }
 
-impl<InjectableType, DIContainerType, DependencyHistoryType>
-    IProvider<DIContainerType, DependencyHistoryType>
-    for TransientTypeProvider<InjectableType, DIContainerType, DependencyHistoryType>
+impl<InjectableType, DIContainerType> IProvider<DIContainerType>
+    for TransientTypeProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
         di_container: &Rc<DIContainerType>,
-        dependency_history: DependencyHistoryType,
-    ) -> Result<Providable<DIContainerType, DependencyHistoryType>, InjectableError>
+        dependency_history: DependencyHistory,
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(Providable::Transient(InjectableType::resolve(
             di_container,
@@ -83,24 +79,21 @@ where
     }
 }
 
-pub struct SingletonProvider<InjectableType, DIContainerType, DependencyHistoryType>
+pub struct SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     singleton: SingletonPtr<InjectableType>,
 
     di_container_phantom: PhantomData<DIContainerType>,
-    dependency_history_phantom: PhantomData<DependencyHistoryType>,
+    dependency_history_phantom: PhantomData<DependencyHistory>,
 }
 
-impl<InjectableType, DIContainerType, DependencyHistoryType>
-    SingletonProvider<InjectableType, DIContainerType, DependencyHistoryType>
+impl<InjectableType, DIContainerType> SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     pub fn new(singleton: SingletonPtr<InjectableType>) -> Self
     {
@@ -112,19 +105,17 @@ where
     }
 }
 
-impl<InjectableType, DIContainerType, DependencyHistoryType>
-    IProvider<DIContainerType, DependencyHistoryType>
-    for SingletonProvider<InjectableType, DIContainerType, DependencyHistoryType>
+impl<InjectableType, DIContainerType> IProvider<DIContainerType>
+    for SingletonProvider<InjectableType, DIContainerType>
 where
-    InjectableType: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    InjectableType: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
         _di_container: &Rc<DIContainerType>,
-        _dependency_history: DependencyHistoryType,
-    ) -> Result<Providable<DIContainerType, DependencyHistoryType>, InjectableError>
+        _dependency_history: DependencyHistory,
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(Providable::Singleton(self.singleton.clone()))
     }
@@ -153,17 +144,15 @@ impl FactoryProvider
 }
 
 #[cfg(feature = "factory")]
-impl<DIContainerType, DependencyHistoryType>
-    IProvider<DIContainerType, DependencyHistoryType> for FactoryProvider
+impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
 where
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
         _di_container: &Rc<DIContainerType>,
-        _dependency_history: DependencyHistoryType,
-    ) -> Result<Providable<DIContainerType, DependencyHistoryType>, InjectableError>
+        _dependency_history: DependencyHistory,
+    ) -> Result<Providable<DIContainerType>, InjectableError>
     {
         Ok(if self.is_default_factory {
             Providable::DefaultFactory(self.factory.clone())
@@ -179,6 +168,7 @@ mod tests
     use std::error::Error;
 
     use super::*;
+    use crate::dependency_history::MockDependencyHistory;
     use crate::test_utils::{mocks, subjects};
 
     #[test]
@@ -186,13 +176,12 @@ mod tests
     {
         let transient_type_provider = TransientTypeProvider::<
             subjects::UserManager,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
+            mocks::blocking_di_container::MockDIContainer,
         >::new();
 
         let di_container = mocks::blocking_di_container::MockDIContainer::new();
 
-        let dependency_history_mock = mocks::MockDependencyHistory::new();
+        let dependency_history_mock = MockDependencyHistory::new();
 
         assert!(
             matches!(
@@ -209,22 +198,18 @@ mod tests
     #[test]
     fn singleton_provider_works() -> Result<(), Box<dyn Error>>
     {
-        let singleton_provider = SingletonProvider::<
-            subjects::UserManager,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(SingletonPtr::new(
-            subjects::UserManager {},
-        ));
+        let singleton_provider =
+            SingletonProvider::<
+                subjects::UserManager,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(SingletonPtr::new(subjects::UserManager {}));
 
         let di_container = mocks::blocking_di_container::MockDIContainer::new();
 
         assert!(
             matches!(
-                singleton_provider.provide(
-                    &Rc::new(di_container),
-                    mocks::MockDependencyHistory::new()
-                )?,
+                singleton_provider
+                    .provide(&Rc::new(di_container), MockDependencyHistory::new())?,
                 Providable::Singleton(_)
             ),
             "The provided type is not a singleton"
@@ -253,8 +238,7 @@ mod tests
 
         assert!(
             matches!(
-                factory_provider
-                    .provide(&di_container, mocks::MockDependencyHistory::new())?,
+                factory_provider.provide(&di_container, MockDependencyHistory::new())?,
                 Providable::Factory(_)
             ),
             "The provided type is not a factory"
@@ -263,7 +247,7 @@ mod tests
         assert!(
             matches!(
                 default_factory_provider
-                    .provide(&di_container, mocks::MockDependencyHistory::new())?,
+                    .provide(&di_container, MockDependencyHistory::new())?,
                 Providable::DefaultFactory(_)
             ),
             "The provided type is not a default factory"

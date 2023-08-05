@@ -4,51 +4,42 @@
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::dependency_history::IDependencyHistory;
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingScopeConfiguratorError;
 use crate::interfaces::injectable::Injectable;
 use crate::provider::blocking::{SingletonProvider, TransientTypeProvider};
 use crate::ptr::SingletonPtr;
+use crate::util::use_dependency_history;
+
+use_dependency_history!();
 
 /// Scope configurator for a binding for type `Interface` inside a [`IDIContainer`].
 ///
 /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
-pub struct BindingScopeConfigurator<
-    Interface,
-    Implementation,
-    DIContainerType,
-    DependencyHistoryType,
-> where
+pub struct BindingScopeConfigurator<Interface, Implementation, DIContainerType>
+where
     Interface: 'static + ?Sized,
-    Implementation: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory,
+    Implementation: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     di_container: Rc<DIContainerType>,
-    dependency_history_factory: fn() -> DependencyHistoryType,
+    dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation, DIContainerType, DependencyHistoryType>
-    BindingScopeConfigurator<
-        Interface,
-        Implementation,
-        DIContainerType,
-        DependencyHistoryType,
-    >
+impl<Interface, Implementation, DIContainerType>
+    BindingScopeConfigurator<Interface, Implementation, DIContainerType>
 where
     Interface: 'static + ?Sized,
-    Implementation: Injectable<DIContainerType, DependencyHistoryType>,
-    DIContainerType: IDIContainer<DependencyHistoryType>,
-    DependencyHistoryType: IDependencyHistory + 'static,
+    Implementation: Injectable<DIContainerType>,
+    DIContainerType: IDIContainer,
 {
     pub(crate) fn new(
         di_container: Rc<DIContainerType>,
-        dependency_history_factory: fn() -> DependencyHistoryType,
+        dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
         Self {
@@ -63,9 +54,8 @@ where
     ///
     /// This is the default.
     #[allow(clippy::must_use_candidate)]
-    pub fn in_transient_scope(
-        self,
-    ) -> BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>
+    pub fn in_transient_scope(self)
+        -> BindingWhenConfigurator<Interface, DIContainerType>
     {
         self.set_in_transient_scope();
 
@@ -79,7 +69,7 @@ where
     pub fn in_singleton_scope(
         self,
     ) -> Result<
-        BindingWhenConfigurator<Interface, DIContainerType, DependencyHistoryType>,
+        BindingWhenConfigurator<Interface, DIContainerType>,
         BindingScopeConfiguratorError,
     >
     {
@@ -101,11 +91,7 @@ where
     {
         self.di_container.set_binding::<Interface>(
             None,
-            Box::new(TransientTypeProvider::<
-                Implementation,
-                DIContainerType,
-                DependencyHistoryType,
-            >::new()),
+            Box::new(TransientTypeProvider::<Implementation, DIContainerType>::new()),
         );
     }
 }
@@ -114,6 +100,7 @@ where
 mod tests
 {
     use super::*;
+    use crate::dependency_history::MockDependencyHistory;
     use crate::test_utils::{mocks, subjects};
 
     #[test]
@@ -127,15 +114,12 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator = BindingScopeConfigurator::<
-            dyn subjects::IUserManager,
-            subjects::UserManager,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Rc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_scope_configurator =
+            BindingScopeConfigurator::<
+                dyn subjects::IUserManager,
+                subjects::UserManager,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(Rc::new(di_container_mock), MockDependencyHistory::new);
 
         binding_scope_configurator.in_transient_scope();
     }
@@ -151,15 +135,12 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator = BindingScopeConfigurator::<
-            dyn subjects::IUserManager,
-            subjects::UserManager,
-            mocks::blocking_di_container::MockDIContainer<mocks::MockDependencyHistory>,
-            mocks::MockDependencyHistory,
-        >::new(
-            Rc::new(di_container_mock),
-            mocks::MockDependencyHistory::new,
-        );
+        let binding_scope_configurator =
+            BindingScopeConfigurator::<
+                dyn subjects::IUserManager,
+                subjects::UserManager,
+                mocks::blocking_di_container::MockDIContainer,
+            >::new(Rc::new(di_container_mock), MockDependencyHistory::new);
 
         assert!(binding_scope_configurator.in_singleton_scope().is_ok());
     }

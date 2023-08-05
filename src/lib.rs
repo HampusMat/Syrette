@@ -112,6 +112,7 @@ pub use syrette_macros::{declare_interface, injectable, named};
 pub mod private;
 
 mod provider;
+mod util;
 
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]
