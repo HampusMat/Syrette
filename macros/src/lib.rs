@@ -482,6 +482,9 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
         .map_or_else(|| Ok(false), MacroFlag::get_bool)
         .unwrap_or_abort();
 
+    #[cfg(syrette_macros_logging)]
+    init_logging();
+
     let interface_type = if interface == implementation {
         Type::Path(interface)
     } else {
@@ -544,4 +547,19 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
 pub fn named(_: TokenStream, _: TokenStream) -> TokenStream
 {
     TokenStream::new()
+}
+
+#[cfg(syrette_macros_logging)]
+fn init_logging()
+{
+    use tracing::Level;
+    use tracing_subscriber::FmtSubscriber;
+
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::DEBUG)
+        .finish();
+
+    // The error can be ignored because it doesn't matter if the global default
+    // has already been set
+    tracing::subscriber::set_global_default(subscriber).ok();
 }

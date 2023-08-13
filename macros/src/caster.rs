@@ -18,16 +18,27 @@ use quote::{format_ident, quote, ToTokens};
 use uuid::adapter::Simple;
 use uuid::Uuid;
 
+#[cfg(syrette_macros_logging)]
+use crate::util::tokens::ToTokensExt;
+
 const CASTER_FN_NAME_PREFIX: &[u8] = b"__";
 
 const FN_BUF_LEN: usize = CASTER_FN_NAME_PREFIX.len() + Simple::LENGTH;
 
+#[cfg_attr(syrette_macros_logging, tracing::instrument(skip(ty, dst_trait)))]
 pub fn generate_caster(
     ty: &impl ToTokens,
     dst_trait: &impl ToTokens,
     sync: bool,
 ) -> TokenStream
 {
+    #[cfg(syrette_macros_logging)]
+    tracing::debug!(
+        source = %ty.to_str_pretty(),
+        destination = %ty.to_str_pretty(),
+        "Generating caster",
+    );
+
     let fn_ident = create_caster_fn_ident(Uuid::new_v4());
 
     let new_caster = if sync {
