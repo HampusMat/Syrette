@@ -147,7 +147,7 @@ where
     /// # impl Foo for Bar {}
     /// #
     /// # #[factory(threadsafe = true)]
-    /// # type FooFactory = dyn Fn(i32, String) -> dyn Foo;
+    /// # type FooFactory = dyn Fn(i32, String) -> TransientPtr<dyn Foo> + Send + Sync;
     /// #
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn Error>>
@@ -226,6 +226,7 @@ where
     /// # use syrette::{factory};
     /// # use syrette::di_container::asynchronous::prelude::*;
     /// # use syrette::ptr::TransientPtr;
+    /// # use syrette::future::BoxFuture;
     /// #
     /// # trait Foo: Send + Sync {}
     /// #
@@ -238,7 +239,10 @@ where
     /// # impl Foo for Bar {}
     /// #
     /// # #[factory(async = true)]
-    /// # type FooFactory = dyn Fn(i32, String) -> dyn Foo;
+    /// # type FooFactory = dyn Fn(i32, String) -> BoxFuture<
+    /// #   'static,
+    /// #   TransientPtr<dyn Foo>
+    /// # > + Send + Sync;
     /// #
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn Error>>
@@ -546,10 +550,12 @@ mod tests
 
         #[factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(
-            String,
-            i32,
-            subjects_async::Number,
-        ) -> dyn subjects_async::IUserManager;
+                String,
+                i32,
+                subjects_async::Number,
+            ) -> TransientPtr<dyn subjects_async::IUserManager>
+            + Send
+            + Sync;
 
         let mut di_container_mock =
             mocks::async_di_container::MockAsyncDIContainer::new();
@@ -590,12 +596,17 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_async_factory() -> Result<(), Box<dyn Error>>
     {
+        use crate::future::BoxFuture;
         use crate::ptr::TransientPtr;
         use crate::test_utils::async_closure;
         use crate::{self as syrette, factory};
 
+        #[rustfmt::skip]
         #[factory(async = true)]
-        type IUserManagerFactory = dyn Fn(String) -> dyn subjects_async::IUserManager;
+        type IUserManagerFactory = dyn Fn(String) -> BoxFuture<
+            'static,
+            TransientPtr<dyn subjects_async::IUserManager>
+        > + Send + Sync;
 
         let mut di_container_mock =
             mocks::async_di_container::MockAsyncDIContainer::new();

@@ -1,7 +1,6 @@
 use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
-use syn::{parse2, ItemType, Token, Type};
+use syn::{parse2, ItemType};
 
 use crate::fn_trait::FnTrait;
 
@@ -9,8 +8,6 @@ pub struct FactoryTypeAlias
 {
     pub type_alias: ItemType,
     pub factory_interface: FnTrait,
-    pub arg_types: Punctuated<Type, Token![,]>,
-    pub return_type: Type,
 }
 
 impl Parse for FactoryTypeAlias
@@ -27,8 +24,6 @@ impl Parse for FactoryTypeAlias
         Ok(Self {
             type_alias,
             factory_interface: aliased_fn_trait.clone(),
-            arg_types: aliased_fn_trait.inputs,
-            return_type: aliased_fn_trait.output,
         })
     }
 }
@@ -39,8 +34,9 @@ mod tests
     use std::error::Error;
 
     use quote::{format_ident, quote};
+    use syn::punctuated::Punctuated;
     use syn::token::And;
-    use syn::TypeReference;
+    use syn::{Type, TypeReference};
 
     use super::*;
     use crate::test_utils;
@@ -55,7 +51,7 @@ mod tests
         let factory_type_alias = parse2::<FactoryTypeAlias>(input_args)?;
 
         assert_eq!(
-            factory_type_alias.arg_types,
+            factory_type_alias.factory_interface.inputs,
             Punctuated::from_iter(vec![
                 test_utils::create_type(test_utils::create_path(&[
                     test_utils::create_path_segment(format_ident!("String"), &[])

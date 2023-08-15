@@ -657,7 +657,8 @@ mod tests
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
         #[crate::factory(threadsafe = true)]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
+        type IUserManagerFactory =
+            dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 
         let di_container = AsyncDIContainer::new();
 
@@ -752,7 +753,8 @@ mod tests
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
         #[crate::factory(threadsafe = true)]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
+        type IUserManagerFactory =
+            dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 
         let di_container = AsyncDIContainer::new();
 

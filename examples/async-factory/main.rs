@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use syrette::di_container::asynchronous::prelude::*;
+use syrette::future::BoxFuture;
 use syrette::ptr::TransientPtr;
 use syrette::{declare_default_factory, factory};
 use tokio::time::sleep;
@@ -16,7 +17,8 @@ trait IFoo: Send + Sync
 }
 
 #[factory(async = true)]
-type IFooFactory = dyn Fn(i32) -> dyn IFoo;
+type IFooFactory =
+    dyn Fn(i32) -> BoxFuture<'static, TransientPtr<dyn IFoo>> + Send + Sync;
 
 struct Foo
 {

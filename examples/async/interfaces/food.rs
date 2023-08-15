@@ -1,4 +1,5 @@
 use syrette::factory;
+use syrette::ptr::TransientPtr;
 
 pub trait IFood: Send + Sync
 {
@@ -6,4 +7,4 @@ pub trait IFood: Send + Sync
 }
 
 #[factory(threadsafe = true)]
-pub type IFoodFactory = dyn Fn() -> dyn IFood;
+pub type IFoodFactory = dyn Fn() -> TransientPtr<dyn IFood> + Send + Sync;

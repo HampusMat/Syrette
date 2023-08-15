@@ -151,10 +151,10 @@ where
     /// # impl ICustomer for Customer {}
     /// #
     /// # #[factory]
-    /// # type ICustomerFactory = dyn Fn(String, u32) -> dyn ICustomer;
+    /// # type ICustomerFactory = dyn Fn(String, u32) -> TransientPtr<dyn ICustomer>;
     /// #
     /// # #[factory]
-    /// # type ICustomerIDFactory = dyn Fn(u32) -> dyn ICustomerID;
+    /// # type ICustomerIDFactory = dyn Fn(u32) -> TransientPtr<dyn ICustomerID>;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>>
     /// # {
@@ -354,7 +354,8 @@ mod tests
         use crate::ptr::TransientPtr;
 
         #[factory]
-        type IUserManagerFactory = dyn Fn(i32, String) -> dyn subjects::IUserManager;
+        type IUserManagerFactory =
+            dyn Fn(i32, String) -> TransientPtr<dyn subjects::IUserManager>;
 
         let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
 

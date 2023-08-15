@@ -493,28 +493,22 @@ mod tests
             }
         }
 
-        type FactoryFunc = dyn Fn<
-            (std::rc::Rc<DIContainer>,),
-            Output = Box<
-                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
-            >,
-        >;
-
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         let di_container = DIContainer::new();
 
-        let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
-            Box::new(move |users| {
-                let user_manager: TransientPtr<dyn IUserManager> =
-                    TransientPtr::new(UserManager::new(users));
+        let factory_func: &dyn Fn(Rc<DIContainer>) -> Box<IUserManagerFactory> =
+            &|_: Rc<DIContainer>| {
+                Box::new(move |users| {
+                    let user_manager: TransientPtr<dyn IUserManager> =
+                        TransientPtr::new(UserManager::new(users));
 
-                user_manager
-            })
-        };
+                    user_manager
+                })
+            };
 
         let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 
@@ -577,28 +571,22 @@ mod tests
             }
         }
 
-        type FactoryFunc = dyn Fn<
-            (std::rc::Rc<DIContainer>,),
-            Output = Box<
-                dyn Fn<(Vec<i128>,), Output = crate::ptr::TransientPtr<dyn IUserManager>>,
-            >,
-        >;
-
         use crate as syrette;
 
         #[crate::factory]
-        type IUserManagerFactory = dyn Fn(Vec<i128>) -> dyn IUserManager;
+        type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         let di_container = DIContainer::new();
 
-        let factory_func: &'static FactoryFunc = &|_: Rc<DIContainer>| {
-            Box::new(move |users| {
-                let user_manager: TransientPtr<dyn IUserManager> =
-                    TransientPtr::new(UserManager::new(users));
+        let factory_func: &dyn Fn(Rc<DIContainer>) -> Box<IUserManagerFactory> =
+            &|_: Rc<DIContainer>| {
+                Box::new(move |users| {
+                    let user_manager: TransientPtr<dyn IUserManager> =
+                        TransientPtr::new(UserManager::new(users));
 
-                user_manager
-            })
-        };
+                    user_manager
+                })
+            };
 
         let mut mock_provider = mocks::blocking_provider::MockProvider::new();
 

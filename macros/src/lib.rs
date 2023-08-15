@@ -248,15 +248,12 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 
 /// Makes a type alias usable as a factory interface.
 ///
-/// The return type is automatically put inside of a [`TransientPtr`].
-///
 /// # Arguments
 /// * (Zero or more) Flags. Like `a = true, b = false`
 ///
 /// # Flags
 /// - `threadsafe` - Mark as threadsafe.
-/// - `async` - Mark as async. Infers the `threadsafe` flag. The return type is
-///   automatically put inside of a pinned boxed future.
+/// - `async` - Mark as async. Infers the `threadsafe` flag.
 ///
 /// # Examples
 /// ```
@@ -277,7 +274,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 /// # impl IConfigurator for Configurator {}
 /// #
 /// #[factory]
-/// type IConfiguratorFactory = dyn Fn(Vec<String>) -> dyn IConfigurator;
+/// type IConfiguratorFactory = dyn Fn(Vec<String>) -> TransientPtr<dyn IConfigurator>;
 /// ```
 ///
 /// [`TransientPtr`]: https://docs.rs/syrette/latest/syrette/ptr/type.TransientPtr.html
@@ -288,16 +285,11 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 #[proc_macro_attribute]
 pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStream
 {
-    use quote::ToTokens;
-    use syn::{parse2, parse_str};
-
     use crate::factory::build_declare_interfaces::build_declare_factory_interfaces;
     use crate::factory::macro_args::FactoryMacroArgs;
     use crate::factory::type_alias::FactoryTypeAlias;
 
-    let input_stream: proc_macro2::TokenStream = input_stream.into();
-
-    set_dummy(input_stream.clone());
+    set_dummy(input_stream.clone().into());
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap_or_abort();
 
@@ -318,34 +310,9 @@ pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStre
     }
 
     let FactoryTypeAlias {
-        mut type_alias,
-        mut factory_interface,
-        arg_types: _,
-        return_type: _,
-    } = parse2(input_stream).unwrap_or_abort();
-
-    let output = factory_interface.output.clone();
-
-    factory_interface.output = parse(
-        if is_async {
-            quote! {
-                syrette::future::BoxFuture<'static, syrette::ptr::TransientPtr<#output>>
-            }
-        } else {
-            quote! {
-                syrette::ptr::TransientPtr<#output>
-            }
-        }
-        .into(),
-    )
-    .unwrap_or_abort();
-
-    if is_threadsafe {
-        factory_interface.add_trait_bound(parse_str("Send").unwrap_or_abort());
-        factory_interface.add_trait_bound(parse_str("Sync").unwrap_or_abort());
-    }
-
-    type_alias.ty = Box::new(Type::Verbatim(factory_interface.to_token_stream()));
+        type_alias,
+        factory_interface,
+    } = parse(input_stream).unwrap_or_abort();
 
     let decl_interfaces =
         build_declare_factory_interfaces(&factory_interface, is_threadsafe);
