@@ -65,7 +65,7 @@ use crate::private::cast::arc::CastArc;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
-use crate::ptr::{SomePtr, TransientPtr};
+use crate::ptr::SomePtr;
 use crate::util::use_dependency_history;
 
 use_dependency_history!();
@@ -306,6 +306,7 @@ impl AsyncDIContainer
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
                 use crate::private::factory::IThreadsafeFactory;
+                use crate::ptr::TransientPtr;
 
                 let default_factory = Self::cast_factory_binding::<
                     dyn IThreadsafeFactory<
@@ -319,6 +320,7 @@ impl AsyncDIContainer
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
                 use crate::private::factory::IThreadsafeFactory;
+                use crate::ptr::TransientPtr;
 
                 let async_default_factory = Self::cast_factory_binding::<
                     dyn IThreadsafeFactory<

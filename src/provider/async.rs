@@ -188,6 +188,7 @@ where
     }
 }
 
+#[cfg(feature = "factory")]
 #[derive(Clone, Copy)]
 pub enum AsyncFactoryVariant
 {

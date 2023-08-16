@@ -496,7 +496,7 @@ pub mod mocks
     }
 }
 
-#[cfg(feature = "async")]
+#[cfg(all(feature = "async", feature = "factory"))]
 macro_rules! async_closure {
     (|$($args: ident),*| { $($inner: stmt);* }) => {
         Box::new(|$($args),*| {
@@ -510,5 +510,5 @@ macro_rules! async_closure {
     };
 }
 
-#[cfg(feature = "async")]
+#[cfg(all(feature = "async", feature = "factory"))]
 pub(crate) use async_closure;
