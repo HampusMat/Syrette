@@ -258,6 +258,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 /// # Examples
 /// ```
 /// # use syrette::factory;
+/// # use syrette::ptr::TransientPtr;
 /// #
 /// # trait IConfigurator {}
 /// #
