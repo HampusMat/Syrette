@@ -35,10 +35,6 @@ required-features = ["async", "factory"]
 name = "async-factory"
 required-features = ["async", "factory"]
 
-[[example]]
-name = "prevent-circular"
-required-features = ["prevent-circular"]
-
 [dependencies]
 syrette_macros = { path = "./macros", version = "0.4.2" }
 linkme = "0.3.0"
