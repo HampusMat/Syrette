@@ -5,7 +5,7 @@ use syn::Token;
 use crate::macro_flag::MacroFlag;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const FACTORY_MACRO_FLAGS: &[&str] = &["threadsafe", "async"];
+pub const FACTORY_MACRO_FLAGS: &[&str] = &["threadsafe"];
 
 pub struct FactoryMacroArgs
 {
@@ -59,7 +59,7 @@ mod tests
     fn can_parse_with_single_flag() -> Result<(), Box<dyn Error>>
     {
         let input_args = quote! {
-            async = true
+            threadsafe = true
         };
 
         let factory_macro_args = parse2::<FactoryMacroArgs>(input_args)?;
@@ -67,7 +67,7 @@ mod tests
         assert_eq!(
             factory_macro_args.flags,
             Punctuated::from_iter(vec![MacroFlag {
-                name: format_ident!("async"),
+                name: format_ident!("threadsafe"),
                 value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
                     true,
                     Span::call_site()
@@ -79,42 +79,10 @@ mod tests
     }
 
     #[test]
-    fn can_parse_with_multiple_flags() -> Result<(), Box<dyn Error>>
-    {
-        let input_args = quote! {
-            async = true, threadsafe = false
-        };
-
-        let factory_macro_args = parse2::<FactoryMacroArgs>(input_args)?;
-
-        assert_eq!(
-            factory_macro_args.flags,
-            Punctuated::from_iter(vec![
-                MacroFlag {
-                    name: format_ident!("async"),
-                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
-                        true,
-                        Span::call_site()
-                    )))
-                },
-                MacroFlag {
-                    name: format_ident!("threadsafe"),
-                    value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
-                        false,
-                        Span::call_site()
-                    )))
-                }
-            ])
-        );
-
-        Ok(())
-    }
-
-    #[test]
     fn cannot_parse_with_invalid_flag()
     {
         let input_args = quote! {
-            async = true, threadsafe = false, foo = true
+            threadsafe = false, foo = true
         };
 
         assert!(parse2::<FactoryMacroArgs>(input_args).is_err());
@@ -126,7 +94,7 @@ mod tests
         assert!(
             // Formatting is weird without this comment
             parse2::<FactoryMacroArgs>(quote! {
-                async = true, threadsafe = false, async = true
+                threadsafe = true, threadsafe = true
             })
             .is_err()
         );
@@ -134,7 +102,7 @@ mod tests
         assert!(
             // Formatting is weird without this comment
             parse2::<FactoryMacroArgs>(quote! {
-                async = true, threadsafe = false, async = false
+                threadsafe = true, threadsafe = false
             })
             .is_err()
         );

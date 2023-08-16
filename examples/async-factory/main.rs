@@ -16,7 +16,7 @@ trait IFoo: Send + Sync
     fn bar(&self);
 }
 
-#[factory(async = true)]
+#[factory]
 type IFooFactory =
     dyn Fn(i32) -> BoxFuture<'static, TransientPtr<dyn IFoo>> + Send + Sync;
 

@@ -253,7 +253,6 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 ///
 /// # Flags
 /// - `threadsafe` - Mark as threadsafe.
-/// - `async` - Mark as async. Infers the `threadsafe` flag.
 ///
 /// # Examples
 /// ```
@@ -294,21 +293,11 @@ pub fn factory(args_stream: TokenStream, input_stream: TokenStream) -> TokenStre
 
     let FactoryMacroArgs { flags } = parse(args_stream).unwrap_or_abort();
 
-    let mut is_threadsafe = flags
+    let is_threadsafe = flags
         .iter()
         .find(|flag| flag.name() == "threadsafe")
         .map_or(Ok(false), MacroFlag::get_bool)
         .unwrap_or_abort();
-
-    let is_async = flags
-        .iter()
-        .find(|flag| flag.name() == "async")
-        .map_or(Ok(false), MacroFlag::get_bool)
-        .unwrap_or_abort();
-
-    if is_async {
-        is_threadsafe = true;
-    }
 
     let FactoryTypeAlias {
         type_alias,

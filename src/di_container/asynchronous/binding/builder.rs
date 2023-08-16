@@ -238,7 +238,7 @@ where
     /// #
     /// # impl Foo for Bar {}
     /// #
-    /// # #[factory(async = true)]
+    /// # #[factory]
     /// # type FooFactory = dyn Fn(i32, String) -> BoxFuture<
     /// #   'static,
     /// #   TransientPtr<dyn Foo>
@@ -602,7 +602,7 @@ mod tests
         use crate::{self as syrette, factory};
 
         #[rustfmt::skip]
-        #[factory(async = true)]
+        #[factory]
         type IUserManagerFactory = dyn Fn(String) -> BoxFuture<
             'static,
             TransientPtr<dyn subjects_async::IUserManager>
