@@ -55,7 +55,7 @@ macro_rules! create_as_variant_fn {
 }
 
 /// Some smart pointer.
-#[derive(strum_macros::IntoStaticStr)]
+#[derive(Debug, strum_macros::IntoStaticStr)]
 pub enum SomePtr<Interface>
 where
     Interface: 'static + ?Sized,
