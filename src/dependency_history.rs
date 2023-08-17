@@ -16,7 +16,7 @@ const RESET_BOLD_MODE: &str = "\x1b[22m";
 /// [`Injectable`]: crate::interfaces::injectable::Injectable
 /// [`AsyncInjectable`]: crate::interfaces::async_injectable::AsyncInjectable
 /// [`injectable`]: crate::injectable
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DependencyHistory
 {
     inner: Vec<&'static str>,
@@ -91,14 +91,6 @@ impl Display for DependencyHistory
         }
 
         Ok(())
-    }
-}
-
-impl Default for DependencyHistory
-{
-    fn default() -> Self
-    {
-        Self::new()
     }
 }
 
