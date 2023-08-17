@@ -94,13 +94,6 @@ impl Display for DependencyHistory
     }
 }
 
-impl private::Sealed for DependencyHistory {}
-
-pub(crate) mod private
-{
-    pub trait Sealed {}
-}
-
 #[cfg(test)]
 mod tests
 {
