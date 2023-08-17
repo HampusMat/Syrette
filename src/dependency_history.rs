@@ -24,8 +24,9 @@ pub struct DependencyHistory
 
 impl DependencyHistory
 {
+    /// Returns a new `DependencyHistory`.
     #[must_use]
-    pub(crate) fn new() -> Self
+    pub fn new() -> Self
     {
         Self { inner: vec![] }
     }
@@ -34,13 +35,13 @@ impl DependencyHistory
 #[cfg_attr(test, mockall::automock)]
 impl DependencyHistory
 {
-    #[doc(hidden)]
+    /// Adds a dependency to the history.
     pub fn push<Dependency: 'static + ?Sized>(&mut self)
     {
         self.inner.push(type_name::<Dependency>());
     }
 
-    #[doc(hidden)]
+    /// Returns whether or not a dependency is present in the history.
     #[allow(clippy::must_use_candidate)]
     pub fn contains<Dependency: 'static + ?Sized>(&self) -> bool
     {
