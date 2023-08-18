@@ -174,8 +174,7 @@ pub enum DependencyError
 #[cfg(test)]
 mod tests
 {
-    use proc_macro::TokenStream;
-    use proc_macro2::Span;
+    use proc_macro2::{Span, TokenStream};
     use quote::{format_ident, quote};
     use syn::punctuated::Punctuated;
     use syn::token::{And, Bang, Bracket, Colon, Paren, Pound, SelfValue};
@@ -200,7 +199,7 @@ mod tests
         assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![],
-                pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+                pat: Box::new(Pat::Verbatim(TokenStream::default())),
                 colon_token: Colon::default(),
                 ty: Box::new(test_utils::create_type(test_utils::create_path(&[
                     test_utils::create_path_segment(
@@ -223,7 +222,7 @@ mod tests
         assert!(matches!(
             Dependency::build(&FnArg::Typed(PatType {
                 attrs: vec![],
-                pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+                pat: Box::new(Pat::Verbatim(TokenStream::default())),
                 colon_token: Colon::default(),
                 ty: Box::new(test_utils::create_type(test_utils::create_path(&[
                     test_utils::create_path_segment(format_ident!("syrette"), &[]),
@@ -261,7 +260,7 @@ mod tests
                     )]),
                     tokens: quote! { ("cool") }
                 }],
-                pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+                pat: Box::new(Pat::Verbatim(TokenStream::default())),
                 colon_token: Colon::default(),
                 ty: Box::new(test_utils::create_type(test_utils::create_path(&[
                     test_utils::create_path_segment(
@@ -293,7 +292,7 @@ mod tests
                     )]),
                     tokens: quote! { ("awesome") }
                 }],
-                pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+                pat: Box::new(Pat::Verbatim(TokenStream::default())),
                 colon_token: Colon::default(),
                 ty: Box::new(test_utils::create_type(test_utils::create_path(&[
                     test_utils::create_path_segment(format_ident!("syrette"), &[]),
@@ -333,7 +332,7 @@ mod tests
     {
         assert!(Dependency::build(&FnArg::Typed(PatType {
             attrs: vec![],
-            pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+            pat: Box::new(Pat::Verbatim(TokenStream::default())),
             colon_token: Colon::default(),
             ty: Box::new(Type::Tuple(TypeTuple {
                 paren_token: Paren::default(),
@@ -349,7 +348,7 @@ mod tests
 
         assert!(Dependency::build(&FnArg::Typed(PatType {
             attrs: vec![],
-            pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+            pat: Box::new(Pat::Verbatim(TokenStream::default())),
             colon_token: Colon::default(),
             ty: Box::new(Type::Reference(TypeReference {
                 and_token: And::default(),
@@ -368,7 +367,7 @@ mod tests
     {
         assert!(Dependency::build(&FnArg::Typed(PatType {
             attrs: vec![],
-            pat: Box::new(Pat::Verbatim(TokenStream::default().into())),
+            pat: Box::new(Pat::Verbatim(TokenStream::default())),
             colon_token: Colon::default(),
             ty: Box::new(test_utils::create_type(test_utils::create_path(&[
                 test_utils::create_path_segment(format_ident!("TransientPtr"), &[]),
