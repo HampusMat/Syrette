@@ -11,9 +11,9 @@ use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingW
 use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::async_di_container::AsyncBindingBuilderError;
 use crate::interfaces::async_injectable::AsyncInjectable;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Alias for a threadsafe boxed function.
 #[cfg(feature = "factory")]

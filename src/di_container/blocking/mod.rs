@@ -61,9 +61,9 @@ use crate::private::cast::boxed::CastBox;
 use crate::private::cast::rc::CastRc;
 use crate::provider::blocking::{IProvider, Providable};
 use crate::ptr::SomePtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 pub mod binding;
 pub mod prelude;

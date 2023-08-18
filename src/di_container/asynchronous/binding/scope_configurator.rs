@@ -10,9 +10,9 @@ use crate::errors::async_di_container::AsyncBindingScopeConfiguratorError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::provider::r#async::{AsyncSingletonProvider, AsyncTransientTypeProvider};
 use crate::ptr::ThreadsafeSingletonPtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Scope configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
 ///

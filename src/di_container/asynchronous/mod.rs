@@ -66,9 +66,9 @@ use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
 use crate::ptr::SomePtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 pub mod binding;
 pub mod prelude;

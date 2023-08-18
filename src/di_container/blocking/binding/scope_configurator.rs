@@ -10,9 +10,9 @@ use crate::errors::di_container::BindingScopeConfiguratorError;
 use crate::interfaces::injectable::Injectable;
 use crate::provider::blocking::{SingletonProvider, TransientTypeProvider};
 use crate::ptr::SingletonPtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Scope configurator for a binding for type `Interface` inside a [`IDIContainer`].
 ///

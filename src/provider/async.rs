@@ -7,9 +7,9 @@ use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 #[derive(strum_macros::Display, Debug)]
 pub enum AsyncProvidable<DIContainerType>

@@ -11,9 +11,9 @@ use crate::di_container::blocking::binding::when_configurator::BindingWhenConfig
 use crate::di_container::blocking::IDIContainer;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Binding builder for type `Interface` inside a [`IDIContainer`].
 ///

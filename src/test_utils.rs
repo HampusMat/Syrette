@@ -12,7 +12,7 @@ pub mod subjects
     use crate::private::cast::CastFromArc;
     use crate::ptr::TransientPtr;
 
-    use_dependency_history!();
+    use_double!(crate::dependency_history::DependencyHistory);
 
     pub trait IUserManager
     {
@@ -45,7 +45,7 @@ pub mod subjects
     }
 
     use crate as syrette;
-    use crate::util::use_dependency_history;
+    use crate::util::use_double;
 
     declare_interface!(UserManager -> IUserManager);
 
@@ -153,7 +153,7 @@ pub mod subjects_async
     use crate::interfaces::async_injectable::AsyncInjectable;
     use crate::ptr::TransientPtr;
 
-    use_dependency_history!();
+    use_double!(crate::dependency_history::DependencyHistory);
 
     pub trait IUserManager: Send + Sync
     {
@@ -186,7 +186,7 @@ pub mod subjects_async
     }
 
     use crate as syrette;
-    use crate::util::use_dependency_history;
+    use crate::util::use_double;
 
     declare_interface!(UserManager -> IUserManager);
 
@@ -292,9 +292,9 @@ pub mod mocks
         use crate::errors::di_container::DIContainerError;
         use crate::provider::blocking::IProvider;
         use crate::ptr::SomePtr;
-        use crate::util::use_dependency_history;
+        use crate::util::use_double;
 
-        use_dependency_history!();
+        use_double!(crate::dependency_history::DependencyHistory);
 
         mock! {
             pub DIContainer {}
@@ -362,9 +362,9 @@ pub mod mocks
         use crate::errors::async_di_container::AsyncDIContainerError;
         use crate::provider::r#async::IAsyncProvider;
         use crate::ptr::SomePtr;
-        use crate::util::use_dependency_history;
+        use crate::util::use_double;
 
-        use_dependency_history!();
+        use_double!(crate::dependency_history::DependencyHistory);
 
         mock! {
             pub AsyncDIContainer {}
@@ -438,9 +438,9 @@ pub mod mocks
         use crate::di_container::asynchronous::IAsyncDIContainer;
         use crate::errors::injectable::InjectableError;
         use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
-        use crate::util::use_dependency_history;
+        use crate::util::use_double;
 
-        use_dependency_history!();
+        use_double!(crate::dependency_history::DependencyHistory);
 
         mock! {
             pub AsyncProvider<DIContainerType: IAsyncDIContainer> {}
@@ -472,9 +472,9 @@ pub mod mocks
         use crate::di_container::blocking::IDIContainer;
         use crate::errors::injectable::InjectableError;
         use crate::provider::blocking::{IProvider, Providable};
-        use crate::util::use_dependency_history;
+        use crate::util::use_double;
 
-        use_dependency_history!();
+        use_double!(crate::dependency_history::DependencyHistory);
 
         mock! {
             pub Provider<DIContainerType>

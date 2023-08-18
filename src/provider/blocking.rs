@@ -5,9 +5,9 @@ use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{SingletonPtr, TransientPtr};
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 #[derive(strum_macros::Display, Debug)]
 pub enum Providable<DIContainerType>

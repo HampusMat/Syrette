@@ -7,9 +7,9 @@ use crate::errors::injectable::InjectableError;
 use crate::future::BoxFuture;
 use crate::private::cast::CastFromArc;
 use crate::ptr::TransientPtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Interface for structs that can be injected into or be injected to.
 pub trait AsyncInjectable<DIContainerType>: CastFromArc

@@ -6,9 +6,9 @@ use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
-use crate::util::use_dependency_history;
+use crate::util::use_double;
 
-use_dependency_history!();
+use_double!(crate::dependency_history::DependencyHistory);
 
 /// Interface for structs that can be injected into or be injected to.
 pub trait Injectable<DIContainerType>: CastFrom
