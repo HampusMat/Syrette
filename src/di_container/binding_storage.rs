@@ -6,7 +6,7 @@ pub struct DIContainerBindingStorage<Provider>
 where
     Provider: 'static + ?Sized,
 {
-    inner: AHashMap<BindingIdentification, Box<Provider>>,
+    inner: AHashMap<BindingIdentification<'static>, Box<Provider>>,
 }
 
 impl<Provider> DIContainerBindingStorage<Provider>
@@ -21,7 +21,10 @@ where
     }
 
     #[allow(clippy::borrowed_box)]
-    pub fn get<Interface>(&self, name: Option<&'static str>) -> Option<&Box<Provider>>
+    pub fn get<'me, Interface>(
+        &'me self,
+        name: Option<&'me str>,
+    ) -> Option<&'me Box<Provider>>
     where
         Interface: 'static + ?Sized,
     {
@@ -77,10 +80,10 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct BindingIdentification
+struct BindingIdentification<'a>
 {
     type_id: TypeId,
-    name: Option<&'static str>,
+    name: Option<&'a str>,
 }
 
 #[cfg(test)]

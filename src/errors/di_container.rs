@@ -38,7 +38,7 @@ pub enum DIContainerError
     /// No binding exists for a interface (and optionally a name).
     #[error(
         "No binding exists for interface '{interface}' {}",
-        .name.map_or_else(String::new, |name| format!("with name '{name}'"))
+        name.as_ref().map(|name| format!("with name '{name}'")).unwrap_or_default()
     )]
     BindingNotFound
     {
@@ -46,7 +46,7 @@ pub enum DIContainerError
         interface: &'static str,
 
         /// The name of the binding if one exists.
-        name: Option<&'static str>,
+        name: Option<String>,
     },
 }
 

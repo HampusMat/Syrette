@@ -59,6 +59,7 @@ use async_trait::async_trait;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
+use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncDIContainerError;
 use crate::future::BoxFuture;
 use crate::private::cast::arc::CastArc;
@@ -116,14 +117,50 @@ pub trait IAsyncDIContainer:
         'a: 'b,
         Self: 'b;
 
-    #[doc(hidden)]
-    async fn get_bound<Interface>(
-        self: &Arc<Self>,
+    /// Returns the type bound with `Interface` where the binding has the specified
+    /// options.
+    ///
+    /// `dependency_history` is passed to the bound type when it is being resolved.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::di_container::asynchronous::AsyncDIContainer;
+    /// # use syrette::di_container::asynchronous::IAsyncDIContainer;
+    /// # use syrette::dependency_history::DependencyHistory;
+    /// # use syrette::di_container::BindingOptions;
+    /// #
+    /// # struct EventHandler {}
+    /// # struct Button {}
+    /// #
+    /// # Box::pin(async {
+    /// # let di_container = AsyncDIContainer::new();
+    /// #
+    /// let mut dependency_history = DependencyHistory::new();
+    ///
+    /// dependency_history.push::<EventHandler>();
+    ///
+    /// di_container
+    ///     .get_bound::<Button>(dependency_history, BindingOptions::new().name("huge"))
+    ///     .await?;
+    /// #
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
+    /// # });
+    /// ```
+    fn get_bound<'this, 'fut, Interface>(
+        self: &'this Arc<Self>,
         dependency_history: DependencyHistory,
-        name: Option<&'static str>,
-    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
+        binding_options: BindingOptions<'static>,
+    ) -> BoxFuture<'fut, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
-        Interface: 'static + ?Sized + Send + Sync;
+        Interface: 'static + 'this + ?Sized + Send + Sync,
+        'this: 'fut,
+        Self: 'fut;
 }
 
 /// Async dependency injection container.
@@ -163,7 +200,7 @@ impl IAsyncDIContainer for AsyncDIContainer
         Self: 'b,
     {
         Box::pin(async {
-            self.get_bound::<Interface>(DependencyHistory::new(), None)
+            self.get_bound::<Interface>(DependencyHistory::new(), BindingOptions::new())
                 .await
         })
     }
@@ -178,24 +215,34 @@ impl IAsyncDIContainer for AsyncDIContainer
         Self: 'b,
     {
         Box::pin(async {
-            self.get_bound::<Interface>(DependencyHistory::new(), Some(name))
-                .await
+            self.get_bound::<Interface>(
+                DependencyHistory::new(),
+                BindingOptions::new().name(name),
+            )
+            .await
         })
     }
 
-    async fn get_bound<Interface>(
-        self: &Arc<Self>,
+    fn get_bound<'this, 'fut, Interface>(
+        self: &'this Arc<Self>,
         dependency_history: DependencyHistory,
-        name: Option<&'static str>,
-    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
+        binding_options: BindingOptions<'static>,
+    ) -> BoxFuture<'fut, Result<SomePtr<Interface>, AsyncDIContainerError>>
     where
-        Interface: 'static + ?Sized + Send + Sync,
+        Interface: 'static + 'this + ?Sized + Send + Sync,
+        'this: 'fut,
+        Self: 'fut,
     {
-        let binding_providable = self
-            .get_binding_providable::<Interface>(name, dependency_history)
-            .await?;
+        Box::pin(async move {
+            let binding_providable = self
+                .get_binding_providable::<Interface>(
+                    binding_options.name,
+                    dependency_history,
+                )
+                .await?;
 
-        self.handle_binding_providable(binding_providable).await
+            self.handle_binding_providable(binding_providable).await
+        })
     }
 }
 

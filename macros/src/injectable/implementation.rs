@@ -420,14 +420,18 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         let method_call = parse_str::<ExprMethodCall>(
             format!(
-                "{}.get_bound::<{}>({}.clone(), {})",
+                concat!(
+                    "{}.get_bound::<{}>({}.clone(), ",
+                    "syrette::di_container::BindingOptions::new(){})"
+                ),
                 DI_CONTAINER_VAR_NAME,
                 dep_interface_str,
                 DEPENDENCY_HISTORY_VAR_NAME,
-                dependency.get_name().as_ref().map_or_else(
-                    || "None".to_string(),
-                    |name| format!("Some(\"{}\")", name.value())
-                )
+                dependency
+                    .get_name()
+                    .as_ref()
+                    .map(|name| format!(".name(\"{}\")", name.value()))
+                    .unwrap_or_default()
             )
             .as_str(),
         )?;
@@ -900,7 +904,10 @@ mod tests
             parse2::<Expr>(output)?,
             parse2::<Expr>(quote! {
                 #di_container_var_ident
-                    .get_bound::<Foo>(#dep_history_var_ident.clone(), None)
+                    .get_bound::<Foo>(
+                        #dep_history_var_ident.clone(),
+                        syrette::di_container::BindingOptions::new()
+                    )
                     .map_err(|err| InjectableError::ResolveFailed {
                         reason: Box::new(err),
                         affected: self_type_name
@@ -948,7 +955,10 @@ mod tests
             parse2::<Expr>(output)?,
             parse2::<Expr>(quote! {
                 #di_container_var_ident
-                    .get_bound::<Foo>(#dep_history_var_ident.clone(), Some("special"))
+                    .get_bound::<Foo>(
+                        #dep_history_var_ident.clone(),
+                        syrette::di_container::BindingOptions::new().name("special")
+                    )
                     .map_err(|err| InjectableError::ResolveFailed {
                         reason: Box::new(err),
                         affected: self_type_name
@@ -994,7 +1004,10 @@ mod tests
             parse2::<Expr>(output)?,
             parse2::<Expr>(quote! {
                 #di_container_var_ident
-                    .get_bound::<Foo>(#dep_history_var_ident.clone(), None)
+                    .get_bound::<Foo>(
+                        #dep_history_var_ident.clone(),
+                        syrette::di_container::BindingOptions::new()
+                    )
                     .await
                     .map_err(|err| InjectableError::AsyncResolveFailed {
                         reason: Box::new(err),
@@ -1044,7 +1057,10 @@ mod tests
             parse2::<Expr>(output)?,
             parse2::<Expr>(quote! {
                 #di_container_var_ident
-                    .get_bound::<Foo>(#dep_history_var_ident.clone(), Some("foobar"))
+                    .get_bound::<Foo>(
+                        #dep_history_var_ident.clone(),
+                        syrette::di_container::BindingOptions::new().name("foobar")
+                    )
                     .await
                     .map_err(|err| InjectableError::AsyncResolveFailed {
                         reason: Box::new(err),

@@ -288,7 +288,7 @@ pub mod mocks
         use super::*;
         use crate::di_container::blocking::binding::builder::BindingBuilder;
         use crate::di_container::blocking::details::DIContainerInternals;
-        use crate::di_container::blocking::IDIContainer;
+        use crate::di_container::blocking::{BindingOptionsWithLt, IDIContainer};
         use crate::errors::di_container::DIContainerError;
         use crate::provider::blocking::IProvider;
         use crate::ptr::SomePtr;
@@ -317,10 +317,10 @@ pub mod mocks
                     Interface: 'static + ?Sized;
 
                 #[doc(hidden)]
-                fn get_bound<Interface>(
+                fn get_bound<'opts, Interface>(
                     self: &Rc<Self>,
                     dependency_history: DependencyHistory,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptionsWithLt,
                 ) -> Result<SomePtr<Interface>, DIContainerError>
                 where
                     Interface: 'static + ?Sized;
@@ -359,6 +359,7 @@ pub mod mocks
         use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
         use crate::di_container::asynchronous::details::DIContainerInternals;
         use crate::di_container::asynchronous::IAsyncDIContainer;
+        use crate::di_container::BindingOptions;
         use crate::errors::async_di_container::AsyncDIContainerError;
         use crate::provider::r#async::IAsyncProvider;
         use crate::ptr::SomePtr;
@@ -394,7 +395,7 @@ pub mod mocks
                 async fn get_bound<Interface>(
                     self: &Arc<Self>,
                     dependency_history: DependencyHistory,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>
                 ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
                 where
                     Interface: 'static + ?Sized + Send + Sync;

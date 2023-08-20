@@ -56,6 +56,7 @@ use std::rc::Rc;
 
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
+use crate::di_container::BindingOptions;
 use crate::errors::di_container::DIContainerError;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::rc::CastRc;
@@ -103,15 +104,56 @@ pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
     where
         Interface: 'static + ?Sized;
 
-    #[doc(hidden)]
+    /// Returns the type bound with `Interface` where the binding has the specified
+    /// options.
+    ///
+    /// `dependency_history` is passed to the bound type when it is being resolved.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```no_run
+    /// # use syrette::di_container::blocking::DIContainer;
+    /// # use syrette::di_container::blocking::IDIContainer;
+    /// # use syrette::dependency_history::DependencyHistory;
+    /// # use syrette::di_container::BindingOptions;
+    /// #
+    /// # struct EventHandler {}
+    /// # struct Button {}
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let di_container = DIContainer::new();
+    /// #
+    /// let mut dependency_history = DependencyHistory::new();
+    ///
+    /// dependency_history.push::<EventHandler>();
+    ///
+    /// di_container.get_bound::<Button>(
+    ///     dependency_history,
+    ///     BindingOptions::new().name("huge_red"),
+    /// )?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     fn get_bound<Interface>(
         self: &Rc<Self>,
         dependency_history: DependencyHistory,
-        name: Option<&'static str>,
+        binding_options: BindingOptionsWithLt,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized;
 }
+
+#[cfg(not(test))]
+pub(crate) type BindingOptionsWithLt<'a> = BindingOptions<'a>;
+
+#[cfg(test)]
+pub(crate) type BindingOptionsWithLt = BindingOptions<'static>;
 
 /// Blocking dependency injection container.
 pub struct DIContainer
@@ -144,7 +186,7 @@ impl IDIContainer for DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.get_bound::<Interface>(DependencyHistory::new(), None)
+        self.get_bound::<Interface>(DependencyHistory::new(), BindingOptions::new())
     }
 
     fn get_named<Interface>(
@@ -154,20 +196,24 @@ impl IDIContainer for DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        self.get_bound::<Interface>(DependencyHistory::new(), Some(name))
+        self.get_bound::<Interface>(
+            DependencyHistory::new(),
+            BindingOptions::new().name(name),
+        )
     }
 
-    #[doc(hidden)]
     fn get_bound<Interface>(
         self: &Rc<Self>,
         dependency_history: DependencyHistory,
-        name: Option<&'static str>,
+        binding_options: BindingOptions,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
-        let binding_providable =
-            self.get_binding_providable::<Interface>(name, dependency_history)?;
+        let binding_providable = self.get_binding_providable::<Interface>(
+            binding_options.name,
+            dependency_history,
+        )?;
 
         #[cfg(feature = "factory")]
         return self.handle_binding_providable(binding_providable);
@@ -270,7 +316,7 @@ impl DIContainer
 
     fn get_binding_providable<Interface>(
         self: &Rc<Self>,
-        name: Option<&'static str>,
+        name: Option<&str>,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<Self>, DIContainerError>
     where
@@ -283,7 +329,7 @@ impl DIContainer
                 || {
                     Err(DIContainerError::BindingNotFound {
                         interface: type_name::<Interface>(),
-                        name,
+                        name: name.as_ref().map(ToString::to_string),
                     })
                 },
                 Ok,
