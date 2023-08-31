@@ -8,6 +8,7 @@ repository = "https://github.com/HampusMat/Syrette"
 keywords = ["di", "dependency-injection", "ioc", "inversion-of-control"]
 edition = "2021"
 rust-version = "1.62.1"
+exclude = ["/.chglog", "/.circleci", "examples", "rustfmt.toml"]
 
 [package.metadata.docs.rs]
 all-features = true
