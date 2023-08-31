@@ -14,7 +14,7 @@ pub mod blocking;
 /// #
 /// BindingOptions::new().name("foo");
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct BindingOptions<'a>
 {
     name: Option<&'a str>,
@@ -24,7 +24,7 @@ impl<'a> BindingOptions<'a>
 {
     /// Returns a new `BindingOptions`.
     #[must_use]
-    pub fn new() -> Self
+    pub const fn new() -> Self
     {
         Self { name: None }
     }

@@ -9,6 +9,7 @@ use crate::di_container::asynchronous::binding::scope_configurator::AsyncBinding
 #[cfg(feature = "factory")]
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::asynchronous::IAsyncDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingBuilderError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::util::use_double;
@@ -104,7 +105,11 @@ where
     where
         Implementation: AsyncInjectable<DIContainerType>,
     {
-        if self.di_container.has_binding::<Interface>(None).await {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+            .await
+        {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -189,7 +194,11 @@ where
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
-        if self.di_container.has_binding::<Interface>(None).await {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+            .await
+        {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -200,7 +209,7 @@ where
 
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                     crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
                     AsyncFactoryVariant::Normal,
@@ -292,7 +301,11 @@ where
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
-        if self.di_container.has_binding::<Interface>(None).await {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+            .await
+        {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -303,7 +316,7 @@ where
 
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                     crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
                     AsyncFactoryVariant::Normal,
@@ -382,7 +395,11 @@ where
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
-        if self.di_container.has_binding::<Interface>(None).await {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+            .await
+        {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -393,7 +410,7 @@ where
 
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                     crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
                     AsyncFactoryVariant::Default,
@@ -477,7 +494,11 @@ where
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
-        if self.di_container.has_binding::<Interface>(None).await {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+            .await
+        {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >(
@@ -488,7 +509,7 @@ where
 
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
                     crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
                     AsyncFactoryVariant::AsyncDefault,
@@ -519,13 +540,13 @@ mod tests
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| false)
             .once();
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -562,13 +583,13 @@ mod tests
 
         di_container_mock
             .expect_has_binding::<IUserManagerFactory>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| false)
             .once();
 
         di_container_mock
             .expect_set_binding::<IUserManagerFactory>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -613,13 +634,13 @@ mod tests
 
         di_container_mock
             .expect_has_binding::<IUserManagerFactory>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| false)
             .once();
 
         di_container_mock
             .expect_set_binding::<IUserManagerFactory>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -659,13 +680,13 @@ mod tests
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| false)
             .once();
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -706,13 +727,13 @@ mod tests
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| false)
             .once();
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 

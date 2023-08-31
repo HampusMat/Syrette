@@ -210,10 +210,8 @@ impl IDIContainer for DIContainer
     where
         Interface: 'static + ?Sized,
     {
-        let binding_providable = self.get_binding_providable::<Interface>(
-            binding_options.name,
-            dependency_history,
-        )?;
+        let binding_providable = self
+            .get_binding_providable::<Interface>(binding_options, dependency_history)?;
 
         #[cfg(feature = "factory")]
         return self.handle_binding_providable(binding_providable);
@@ -225,33 +223,37 @@ impl IDIContainer for DIContainer
 
 impl details::DIContainerInternals for DIContainer
 {
-    fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
+    fn has_binding<Interface>(self: &Rc<Self>, binding_options: BindingOptions) -> bool
     where
         Interface: ?Sized + 'static,
     {
-        self.binding_storage.borrow().has::<Interface>(name)
+        self.binding_storage
+            .borrow()
+            .has::<Interface>(binding_options)
     }
 
     fn set_binding<Interface>(
         self: &Rc<Self>,
-        name: Option<&'static str>,
+        binding_options: BindingOptions<'static>,
         provider: Box<dyn IProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
     {
         self.binding_storage
             .borrow_mut()
-            .set::<Interface>(name, provider);
+            .set::<Interface>(binding_options, provider);
     }
 
     fn remove_binding<Interface>(
         self: &Rc<Self>,
-        name: Option<&'static str>,
+        binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
-        self.binding_storage.borrow_mut().remove::<Interface>(name)
+        self.binding_storage
+            .borrow_mut()
+            .remove::<Interface>(binding_options)
     }
 }
 
@@ -316,15 +318,17 @@ impl DIContainer
 
     fn get_binding_providable<Interface>(
         self: &Rc<Self>,
-        name: Option<&str>,
+        binding_options: BindingOptions,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<Self>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
+        let name = binding_options.name;
+
         self.binding_storage
             .borrow()
-            .get::<Interface>(name)
+            .get::<Interface>(binding_options)
             .map_or_else(
                 || {
                     Err(DIContainerError::BindingNotFound {
@@ -346,24 +350,29 @@ pub(crate) mod details
 {
     use std::rc::Rc;
 
+    use crate::di_container::blocking::BindingOptionsWithLt;
+    use crate::di_container::BindingOptions;
     use crate::provider::blocking::IProvider;
 
     pub trait DIContainerInternals
     {
-        fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
+        fn has_binding<Interface>(
+            self: &Rc<Self>,
+            binding_options: BindingOptionsWithLt,
+        ) -> bool
         where
             Interface: ?Sized + 'static;
 
         fn set_binding<Interface>(
             self: &Rc<Self>,
-            name: Option<&'static str>,
+            binding_options: BindingOptions<'static>,
             provider: Box<dyn IProvider<Self>>,
         ) where
             Interface: 'static + ?Sized;
 
         fn remove_binding<Interface>(
             self: &Rc<Self>,
-            name: Option<&'static str>,
+            binding_options: BindingOptions<'static>,
         ) -> Option<Box<dyn IProvider<Self>>>
         where
             Interface: 'static + ?Sized;
@@ -395,7 +404,10 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<dyn subjects::IUserManager>(None, Box::new(mock_provider));
+            .set::<dyn subjects::IUserManager>(
+                BindingOptions::new(),
+                Box::new(mock_provider),
+            );
 
         di_container
             .get::<dyn subjects::IUserManager>()?
@@ -420,7 +432,10 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<dyn subjects::IUserManager>(Some("special"), Box::new(mock_provider));
+            .set::<dyn subjects::IUserManager>(
+                BindingOptions::new().name("special"),
+                Box::new(mock_provider),
+            );
 
         di_container
             .get_named::<dyn subjects::IUserManager>("special")?
@@ -447,7 +462,7 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<dyn subjects::INumber>(None, Box::new(mock_provider));
+            .set::<dyn subjects::INumber>(BindingOptions::new(), Box::new(mock_provider));
 
         let first_number_rc = di_container.get::<dyn subjects::INumber>()?.singleton()?;
 
@@ -479,7 +494,10 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<dyn subjects::INumber>(Some("cool"), Box::new(mock_provider));
+            .set::<dyn subjects::INumber>(
+                BindingOptions::new().name("cool"),
+                Box::new(mock_provider),
+            );
 
         let first_number_rc = di_container
             .get_named::<dyn subjects::INumber>("cool")?
@@ -567,7 +585,7 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<IUserManagerFactory>(None, Box::new(mock_provider));
+            .set::<IUserManagerFactory>(BindingOptions::new(), Box::new(mock_provider));
 
         di_container.get::<IUserManagerFactory>()?.factory()?;
 
@@ -645,7 +663,10 @@ mod tests
         di_container
             .binding_storage
             .borrow_mut()
-            .set::<IUserManagerFactory>(Some("special"), Box::new(mock_provider));
+            .set::<IUserManagerFactory>(
+                BindingOptions::new().name("special"),
+                Box::new(mock_provider),
+            );
 
         di_container
             .get_named::<IUserManagerFactory>("special")?

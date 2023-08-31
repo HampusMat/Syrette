@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::di_container::asynchronous::IAsyncDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingWhenConfiguratorError;
 
 /// When configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
@@ -45,7 +46,7 @@ where
     {
         let binding = self
             .di_container
-            .remove_binding::<Interface>(None)
+            .remove_binding::<Interface>(BindingOptions::new())
             .await
             .map_or_else(
                 || {
@@ -57,7 +58,7 @@ where
             )?;
 
         self.di_container
-            .set_binding::<Interface>(Some(name), binding)
+            .set_binding::<Interface>(BindingOptions::new().name(name), binding)
             .await;
 
         Ok(())
@@ -81,13 +82,13 @@ mod tests
 
         di_container_mock
             .expect_remove_binding::<dyn subjects_async::INumber>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| Some(Box::new(MockIAsyncProvider::new())))
             .once();
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::INumber>()
-            .withf(|name, _provider| name == &Some("awesome"))
+            .withf(|binding_options, _provider| binding_options.name == Some("awesome"))
             .return_once(|_name, _provider| ())
             .once();
 

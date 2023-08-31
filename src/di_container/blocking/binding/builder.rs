@@ -9,6 +9,7 @@ use crate::di_container::blocking::binding::scope_configurator::BindingScopeConf
 #[cfg(feature = "factory")]
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::blocking::IDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
 use crate::util::use_double;
@@ -99,7 +100,10 @@ where
         Implementation: Injectable<DIContainerType>,
     {
         {
-            if self.di_container.has_binding::<Interface>(None) {
+            if self
+                .di_container
+                .has_binding::<Interface>(BindingOptions::new())
+            {
                 return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                     Interface,
                 >(
@@ -197,7 +201,10 @@ where
     {
         use crate::private::castable_factory::blocking::CastableFactory;
 
-        if self.di_container.has_binding::<Interface>(None) {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+        {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >()));
@@ -206,7 +213,7 @@ where
         let factory_impl = CastableFactory::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
-            None,
+            BindingOptions::new(),
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
                 false,
@@ -286,7 +293,10 @@ where
     {
         use crate::private::castable_factory::blocking::CastableFactory;
 
-        if self.di_container.has_binding::<Interface>(None) {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
+        {
             return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
             >()));
@@ -295,7 +305,7 @@ where
         let factory_impl = CastableFactory::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
-            None,
+            BindingOptions::new(),
             Box::new(crate::provider::blocking::FactoryProvider::new(
                 crate::ptr::FactoryPtr::new(factory_impl),
                 true,
@@ -324,14 +334,14 @@ mod tests
 
         mock_di_container
             .expect_has_binding::<dyn subjects::INumber>()
-            .with(eq(None))
-            .return_once(|_name| false)
+            .with(eq(BindingOptions::new()))
+            .return_once(|_options| false)
             .once();
 
         mock_di_container
             .expect_set_binding::<dyn subjects::INumber>()
-            .withf(|name, _provider| name.is_none())
-            .return_once(|_name, _provider| ())
+            .withf(|options, _provider| options.name.is_none())
+            .return_once(|_options, _provider| ())
             .once();
 
         let binding_builder =
@@ -361,14 +371,14 @@ mod tests
 
         mock_di_container
             .expect_has_binding::<IUserManagerFactory>()
-            .with(eq(None))
-            .return_once(|_name| false)
+            .with(eq(BindingOptions::new()))
+            .return_once(|_| false)
             .once();
 
         mock_di_container
             .expect_set_binding::<IUserManagerFactory>()
-            .withf(|name, _provider| name.is_none())
-            .return_once(|_name, _provider| ())
+            .withf(|options, _provider| options.name.is_none())
+            .return_once(|_, _provider| ())
             .once();
 
         let binding_builder =
@@ -404,14 +414,14 @@ mod tests
 
         mock_di_container
             .expect_has_binding::<dyn subjects::IUserManager>()
-            .with(eq(None))
-            .return_once(|_name| false)
+            .with(eq(BindingOptions::new()))
+            .return_once(|_| false)
             .once();
 
         mock_di_container
             .expect_set_binding::<dyn subjects::IUserManager>()
-            .withf(|name, _provider| name.is_none())
-            .return_once(|_name, _provider| ())
+            .withf(|options, _provider| options.name.is_none())
+            .return_once(|_, _provider| ())
             .once();
 
         let binding_builder =

@@ -235,10 +235,7 @@ impl IAsyncDIContainer for AsyncDIContainer
     {
         Box::pin(async move {
             let binding_providable = self
-                .get_binding_providable::<Interface>(
-                    binding_options.name,
-                    dependency_history,
-                )
+                .get_binding_providable::<Interface>(binding_options, dependency_history)
                 .await?;
 
             self.handle_binding_providable(binding_providable).await
@@ -249,16 +246,22 @@ impl IAsyncDIContainer for AsyncDIContainer
 #[async_trait]
 impl details::DIContainerInternals for AsyncDIContainer
 {
-    async fn has_binding<Interface>(self: &Arc<Self>, name: Option<&'static str>) -> bool
+    async fn has_binding<Interface>(
+        self: &Arc<Self>,
+        binding_options: BindingOptions<'static>,
+    ) -> bool
     where
         Interface: ?Sized + 'static,
     {
-        self.binding_storage.lock().await.has::<Interface>(name)
+        self.binding_storage
+            .lock()
+            .await
+            .has::<Interface>(binding_options)
     }
 
     async fn set_binding<Interface>(
         self: &Arc<Self>,
-        name: Option<&'static str>,
+        binding_options: BindingOptions<'static>,
         provider: Box<dyn IAsyncProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
@@ -266,17 +269,20 @@ impl details::DIContainerInternals for AsyncDIContainer
         self.binding_storage
             .lock()
             .await
-            .set::<Interface>(name, provider);
+            .set::<Interface>(binding_options, provider);
     }
 
     async fn remove_binding<Interface>(
         self: &Arc<Self>,
-        name: Option<&'static str>,
+        binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IAsyncProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
-        self.binding_storage.lock().await.remove::<Interface>(name)
+        self.binding_storage
+            .lock()
+            .await
+            .remove::<Interface>(binding_options)
     }
 }
 
@@ -411,7 +417,7 @@ impl AsyncDIContainer
 
     async fn get_binding_providable<Interface>(
         self: &Arc<Self>,
-        name: Option<&'static str>,
+        binding_options: BindingOptions<'static>,
         dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<Self>, AsyncDIContainerError>
     where
@@ -423,12 +429,12 @@ impl AsyncDIContainer
             let bindings_lock = self.binding_storage.lock().await;
 
             provider = bindings_lock
-                .get::<Interface>(name)
+                .get::<Interface>(binding_options.clone())
                 .map_or_else(
                     || {
                         Err(AsyncDIContainerError::BindingNotFound {
                             interface: type_name::<Interface>(),
-                            name,
+                            name: binding_options.name,
                         })
                     },
                     Ok,
@@ -452,6 +458,7 @@ pub(crate) mod details
 
     use async_trait::async_trait;
 
+    use crate::di_container::BindingOptions;
     use crate::provider::r#async::IAsyncProvider;
 
     #[async_trait]
@@ -459,21 +466,21 @@ pub(crate) mod details
     {
         async fn has_binding<Interface>(
             self: &Arc<Self>,
-            name: Option<&'static str>,
+            binding_options: BindingOptions<'static>,
         ) -> bool
         where
             Interface: ?Sized + 'static;
 
         async fn set_binding<Interface>(
             self: &Arc<Self>,
-            name: Option<&'static str>,
+            binding_options: BindingOptions<'static>,
             provider: Box<dyn IAsyncProvider<Self>>,
         ) where
             Interface: 'static + ?Sized;
 
         async fn remove_binding<Interface>(
             self: &Arc<Self>,
-            name: Option<&'static str>,
+            binding_options: BindingOptions<'static>,
         ) -> Option<Box<dyn IAsyncProvider<Self>>>
         where
             Interface: 'static + ?Sized;
@@ -514,7 +521,10 @@ mod tests
                 .binding_storage
                 .lock()
                 .await
-                .set::<dyn subjects_async::IUserManager>(None, Box::new(mock_provider));
+                .set::<dyn subjects_async::IUserManager>(
+                    BindingOptions::new(),
+                    Box::new(mock_provider),
+                );
         }
 
         di_container
@@ -550,7 +560,7 @@ mod tests
                 .lock()
                 .await
                 .set::<dyn subjects_async::IUserManager>(
-                    Some("special"),
+                    BindingOptions::new().name("special"),
                     Box::new(mock_provider),
                 );
         }
@@ -591,7 +601,10 @@ mod tests
                 .binding_storage
                 .lock()
                 .await
-                .set::<dyn subjects_async::INumber>(None, Box::new(mock_provider));
+                .set::<dyn subjects_async::INumber>(
+                    BindingOptions::new(),
+                    Box::new(mock_provider),
+                );
         }
 
         let first_number_rc = di_container
@@ -640,7 +653,7 @@ mod tests
                 .lock()
                 .await
                 .set::<dyn subjects_async::INumber>(
-                    Some("cool"),
+                    BindingOptions::new().name("cool"),
                     Box::new(mock_provider),
                 );
         }
@@ -747,7 +760,10 @@ mod tests
                 .binding_storage
                 .lock()
                 .await
-                .set::<IUserManagerFactory>(None, Box::new(mock_provider));
+                .set::<IUserManagerFactory>(
+                    BindingOptions::new(),
+                    Box::new(mock_provider),
+                );
         }
 
         di_container
@@ -843,7 +859,10 @@ mod tests
                 .binding_storage
                 .lock()
                 .await
-                .set::<IUserManagerFactory>(Some("special"), Box::new(mock_provider));
+                .set::<IUserManagerFactory>(
+                    BindingOptions::new().name("special"),
+                    Box::new(mock_provider),
+                );
         }
 
         di_container

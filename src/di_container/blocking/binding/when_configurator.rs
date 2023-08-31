@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 
 use crate::di_container::blocking::IDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingWhenConfiguratorError;
 
 /// When configurator for a binding for type `Interface` inside a [`IDIContainer`].
@@ -45,7 +46,7 @@ where
     {
         let binding = self
             .di_container
-            .remove_binding::<Interface>(None)
+            .remove_binding::<Interface>(BindingOptions::new())
             .map_or_else(
                 || {
                     Err(BindingWhenConfiguratorError::BindingNotFound(type_name::<
@@ -57,7 +58,7 @@ where
             )?;
 
         self.di_container
-            .set_binding::<Interface>(Some(name), binding);
+            .set_binding::<Interface>(BindingOptions::new().name(name), binding);
 
         Ok(())
     }
@@ -79,13 +80,13 @@ mod tests
 
         di_container_mock
             .expect_remove_binding::<dyn subjects::INumber>()
-            .with(eq(None))
+            .with(eq(BindingOptions::new()))
             .return_once(|_name| Some(Box::new(MockIProvider::new())))
             .once();
 
         di_container_mock
             .expect_set_binding::<dyn subjects::INumber>()
-            .withf(|name, _provider| name == &Some("cool"))
+            .withf(|options, _provider| options.name == Some("cool"))
             .return_once(|_name, _provider| ())
             .once();
 

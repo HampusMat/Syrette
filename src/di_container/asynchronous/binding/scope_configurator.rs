@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::asynchronous::IAsyncDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingScopeConfiguratorError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::provider::r#async::{AsyncSingletonProvider, AsyncTransientTypeProvider};
@@ -85,7 +86,7 @@ where
 
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(AsyncSingletonProvider::new(singleton)),
             )
             .await;
@@ -97,7 +98,7 @@ where
     {
         self.di_container
             .set_binding::<Interface>(
-                None,
+                BindingOptions::new(),
                 Box::new(
                     AsyncTransientTypeProvider::<Implementation, DIContainerType>::new(),
                 ),
@@ -121,7 +122,7 @@ mod tests
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -143,7 +144,7 @@ mod tests
 
         di_container_mock
             .expect_set_binding::<dyn subjects_async::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|binding_options, _provider| binding_options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 

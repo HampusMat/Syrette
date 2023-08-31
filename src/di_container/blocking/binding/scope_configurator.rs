@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::blocking::IDIContainer;
+use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingScopeConfiguratorError;
 use crate::interfaces::injectable::Injectable;
 use crate::provider::blocking::{SingletonProvider, TransientTypeProvider};
@@ -81,8 +82,10 @@ where
             .map_err(BindingScopeConfiguratorError::SingletonResolveFailed)?,
         );
 
-        self.di_container
-            .set_binding::<Interface>(None, Box::new(SingletonProvider::new(singleton)));
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(SingletonProvider::new(singleton)),
+        );
 
         Ok(BindingWhenConfigurator::new(self.di_container))
     }
@@ -90,7 +93,7 @@ where
     pub(crate) fn set_in_transient_scope(&self)
     {
         self.di_container.set_binding::<Interface>(
-            None,
+            BindingOptions::new(),
             Box::new(TransientTypeProvider::<Implementation, DIContainerType>::new()),
         );
     }
@@ -110,7 +113,7 @@ mod tests
 
         di_container_mock
             .expect_set_binding::<dyn subjects::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|options, _provider| options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 
@@ -131,7 +134,7 @@ mod tests
 
         di_container_mock
             .expect_set_binding::<dyn subjects::IUserManager>()
-            .withf(|name, _provider| name.is_none())
+            .withf(|options, _provider| options.name.is_none())
             .return_once(|_name, _provider| ())
             .once();
 

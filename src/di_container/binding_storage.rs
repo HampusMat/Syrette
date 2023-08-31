@@ -2,11 +2,13 @@ use std::any::TypeId;
 
 use ahash::AHashMap;
 
+use crate::di_container::BindingOptions;
+
 pub struct DIContainerBindingStorage<Provider>
 where
     Provider: 'static + ?Sized,
 {
-    inner: AHashMap<BindingIdentification<'static>, Box<Provider>>,
+    inner: AHashMap<BindingId<'static>, Box<Provider>>,
 }
 
 impl<Provider> DIContainerBindingStorage<Provider>
@@ -21,69 +23,64 @@ where
     }
 
     #[allow(clippy::borrowed_box)]
-    pub fn get<'me, Interface>(
-        &'me self,
-        name: Option<&'me str>,
-    ) -> Option<&'me Box<Provider>>
+    pub fn get<'this, Interface>(
+        &'this self,
+        options: BindingOptions<'this>,
+    ) -> Option<&'this Box<Provider>>
     where
         Interface: 'static + ?Sized,
     {
-        let interface_typeid = TypeId::of::<Interface>();
-
-        self.inner.get(&BindingIdentification {
-            type_id: interface_typeid,
-            name,
-        })
+        self.inner.get(&BindingId::new::<Interface>(options))
     }
 
-    pub fn set<Interface>(&mut self, name: Option<&'static str>, provider: Box<Provider>)
-    where
+    pub fn set<Interface>(
+        &mut self,
+        options: BindingOptions<'static>,
+        provider: Box<Provider>,
+    ) where
         Interface: 'static + ?Sized,
     {
-        let interface_typeid = TypeId::of::<Interface>();
-
-        self.inner.insert(
-            BindingIdentification {
-                type_id: interface_typeid,
-                name,
-            },
-            provider,
-        );
+        self.inner
+            .insert(BindingId::new::<Interface>(options), provider);
     }
 
     pub fn remove<Interface>(
         &mut self,
-        name: Option<&'static str>,
+        options: BindingOptions<'static>,
     ) -> Option<Box<Provider>>
     where
         Interface: 'static + ?Sized,
     {
-        let interface_typeid = TypeId::of::<Interface>();
-
-        self.inner.remove(&BindingIdentification {
-            type_id: interface_typeid,
-            name,
-        })
+        self.inner.remove(&BindingId::new::<Interface>(options))
     }
 
-    pub fn has<Interface>(&self, name: Option<&'static str>) -> bool
+    pub fn has<Interface>(&self, options: BindingOptions) -> bool
     where
         Interface: 'static + ?Sized,
     {
-        let interface_typeid = TypeId::of::<Interface>();
-
-        self.inner.contains_key(&BindingIdentification {
-            type_id: interface_typeid,
-            name,
-        })
+        self.inner
+            .contains_key(&BindingId::new::<Interface>(options))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-struct BindingIdentification<'a>
+struct BindingId<'opts>
 {
     type_id: TypeId,
-    name: Option<&'a str>,
+    options: BindingOptions<'opts>,
+}
+
+impl<'opts> BindingId<'opts>
+{
+    fn new<Interface>(options: BindingOptions<'opts>) -> Self
+    where
+        Interface: ?Sized + 'static,
+    {
+        Self {
+            type_id: TypeId::of::<Interface>(),
+            options,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,15 +118,12 @@ mod tests
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: None,
-            },
+            BindingId::new::<Interface>(BindingOptions::new()),
             Box::new(subjects::SomeProviderImpl { id: 20 }),
         );
 
         assert!(binding_map
-            .get::<Interface>(None)
+            .get::<Interface>(BindingOptions::new())
             .map_or_else(|| false, |provider| provider.get_id() == 20));
     }
 
@@ -142,18 +136,17 @@ mod tests
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: Some("hello"),
-            },
+            BindingId::new::<Interface>(BindingOptions::new().name("hello")),
             Box::new(subjects::SomeProviderImpl { id: 11 }),
         );
 
         assert!(binding_map
-            .get::<Interface>(Some("hello"))
+            .get::<Interface>(BindingOptions::new().name("hello"))
             .map_or_else(|| false, |provider| provider.get_id() == 11));
 
-        assert!(binding_map.get::<Interface>(None).is_none());
+        assert!(binding_map
+            .get::<Interface>(BindingOptions::new())
+            .is_none());
     }
 
     #[test]
@@ -164,17 +157,16 @@ mod tests
         let mut binding_map =
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
-        binding_map
-            .set::<Interface>(None, Box::new(subjects::SomeProviderImpl { id: 65 }));
+        binding_map.set::<Interface>(
+            BindingOptions::new(),
+            Box::new(subjects::SomeProviderImpl { id: 65 }),
+        );
 
-        let expected_key = &BindingIdentification {
-            type_id: TypeId::of::<Interface>(),
-            name: None,
-        };
+        let expected_key = BindingId::new::<Interface>(BindingOptions::new());
 
-        assert!(binding_map.inner.contains_key(expected_key));
+        assert!(binding_map.inner.contains_key(&expected_key));
 
-        assert_eq!(binding_map.inner[expected_key].get_id(), 65);
+        assert_eq!(binding_map.inner[&expected_key].get_id(), 65);
     }
 
     #[test]
@@ -186,18 +178,16 @@ mod tests
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
         binding_map.set::<Interface>(
-            Some("special"),
+            BindingOptions::new().name("special"),
             Box::new(subjects::SomeProviderImpl { id: 3 }),
         );
 
-        let expected_key = &BindingIdentification {
-            type_id: TypeId::of::<Interface>(),
-            name: Some("special"),
-        };
+        let expected_key =
+            BindingId::new::<Interface>(BindingOptions::new().name("special"));
 
-        assert!(binding_map.inner.contains_key(expected_key));
+        assert!(binding_map.inner.contains_key(&expected_key));
 
-        assert_eq!(binding_map.inner[expected_key].get_id(), 3);
+        assert_eq!(binding_map.inner[&expected_key].get_id(), 3);
     }
 
     #[test]
@@ -209,21 +199,15 @@ mod tests
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: None,
-            },
+            BindingId::new::<Interface>(BindingOptions::new()),
             Box::new(subjects::SomeProviderImpl { id: 103 }),
         );
 
-        binding_map.remove::<Interface>(None);
+        binding_map.remove::<Interface>(BindingOptions::new());
 
-        let expected_key = &BindingIdentification {
-            type_id: TypeId::of::<Interface>(),
-            name: None,
-        };
-
-        assert!(!binding_map.inner.contains_key(expected_key));
+        assert!(!binding_map
+            .inner
+            .contains_key(&BindingId::new::<Interface>(BindingOptions::new())));
     }
 
     #[test]
@@ -235,21 +219,17 @@ mod tests
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: Some("cool"),
-            },
+            BindingId::new::<Interface>(BindingOptions::new().name("cool")),
             Box::new(subjects::SomeProviderImpl { id: 42 }),
         );
 
-        binding_map.remove::<Interface>(Some("cool"));
+        binding_map.remove::<Interface>(BindingOptions::new().name("cool"));
 
-        let expected_key = &BindingIdentification {
-            type_id: TypeId::of::<Interface>(),
-            name: Some("cool"),
-        };
-
-        assert!(!binding_map.inner.contains_key(expected_key));
+        assert!(
+            !binding_map.inner.contains_key(&BindingId::new::<Interface>(
+                BindingOptions::new().name("cool")
+            ))
+        );
     }
 
     #[test]
@@ -260,17 +240,14 @@ mod tests
         let mut binding_map =
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
-        assert!(!binding_map.has::<Interface>(None));
+        assert!(!binding_map.has::<Interface>(BindingOptions::new()));
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: None,
-            },
+            BindingId::new::<Interface>(BindingOptions::new()),
             Box::new(subjects::SomeProviderImpl { id: 103 }),
         );
 
-        assert!(binding_map.has::<Interface>(None));
+        assert!(binding_map.has::<Interface>(BindingOptions::new()));
     }
 
     #[test]
@@ -281,16 +258,13 @@ mod tests
         let mut binding_map =
             DIContainerBindingStorage::<dyn subjects::SomeProvider>::new();
 
-        assert!(!binding_map.has::<Interface>(Some("awesome")));
+        assert!(!binding_map.has::<Interface>(BindingOptions::new().name("awesome")));
 
         binding_map.inner.insert(
-            BindingIdentification {
-                type_id: TypeId::of::<Interface>(),
-                name: Some("awesome"),
-            },
+            BindingId::new::<Interface>(BindingOptions::new().name("awesome")),
             Box::new(subjects::SomeProviderImpl { id: 101 }),
         );
 
-        assert!(binding_map.has::<Interface>(Some("awesome")));
+        assert!(binding_map.has::<Interface>(BindingOptions::new().name("awesome")));
     }
 }

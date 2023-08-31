@@ -289,6 +289,7 @@ pub mod mocks
         use crate::di_container::blocking::binding::builder::BindingBuilder;
         use crate::di_container::blocking::details::DIContainerInternals;
         use crate::di_container::blocking::{BindingOptionsWithLt, IDIContainer};
+        use crate::di_container::BindingOptions;
         use crate::errors::di_container::DIContainerError;
         use crate::provider::blocking::IProvider;
         use crate::ptr::SomePtr;
@@ -328,21 +329,24 @@ pub mod mocks
 
             impl DIContainerInternals for DIContainer
             {
-                fn has_binding<Interface>(self: &Rc<Self>, name: Option<&'static str>) -> bool
+                fn has_binding<Interface>(
+                    self: &Rc<Self>,
+                    binding_options: BindingOptionsWithLt
+                ) -> bool
                 where
                     Interface: ?Sized + 'static;
 
                 #[doc(hidden)]
                 fn set_binding<Interface>(
                     self: &Rc<Self>,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>,
                     provider: Box<dyn IProvider<Self>>,
                 ) where
                     Interface: 'static + ?Sized;
 
                 fn remove_binding<Interface>(
                     self: &Rc<Self>,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>,
                 ) -> Option<Box<dyn IProvider<Self>>>
                 where
                     Interface: 'static + ?Sized;
@@ -406,21 +410,21 @@ pub mod mocks
             {
                 async fn has_binding<Interface>(
                     self: &Arc<Self>,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>,
                 ) -> bool
                 where
                     Interface: ?Sized + 'static;
 
                 async fn set_binding<Interface>(
                     self: &Arc<Self>,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>,
                     provider: Box<dyn IAsyncProvider<Self>>,
                 ) where
                     Interface: 'static + ?Sized;
 
                 async fn remove_binding<Interface>(
                     self: &Arc<Self>,
-                    name: Option<&'static str>,
+                    binding_options: BindingOptions<'static>,
                 ) -> Option<Box<dyn IAsyncProvider<Self>>>
                 where
                     Interface: 'static + ?Sized;
