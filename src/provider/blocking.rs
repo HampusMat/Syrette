@@ -41,7 +41,6 @@ where
 {
     injectable_phantom: PhantomData<InjectableType>,
     di_container_phantom: PhantomData<DIContainerType>,
-    dependency_history_phantom: PhantomData<DependencyHistory>,
 }
 
 impl<InjectableType, DIContainerType>
@@ -55,7 +54,6 @@ where
         Self {
             injectable_phantom: PhantomData,
             di_container_phantom: PhantomData,
-            dependency_history_phantom: PhantomData,
         }
     }
 }
@@ -87,7 +85,6 @@ where
     singleton: SingletonPtr<InjectableType>,
 
     di_container_phantom: PhantomData<DIContainerType>,
-    dependency_history_phantom: PhantomData<DependencyHistory>,
 }
 
 impl<InjectableType, DIContainerType> SingletonProvider<InjectableType, DIContainerType>
@@ -100,7 +97,6 @@ where
         Self {
             singleton,
             di_container_phantom: PhantomData,
-            dependency_history_phantom: PhantomData,
         }
     }
 }
