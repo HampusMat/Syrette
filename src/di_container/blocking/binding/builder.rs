@@ -99,16 +99,13 @@ where
     where
         Implementation: Injectable<DIContainerType>,
     {
+        if self
+            .di_container
+            .has_binding::<Interface>(BindingOptions::new())
         {
-            if self
-                .di_container
-                .has_binding::<Interface>(BindingOptions::new())
-            {
-                return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
-                    Interface,
-                >(
-                )));
-            }
+            return Err(BindingBuilderError::BindingAlreadyExists(type_name::<
+                Interface,
+            >()));
         }
 
         let binding_scope_configurator = BindingScopeConfigurator::new(
