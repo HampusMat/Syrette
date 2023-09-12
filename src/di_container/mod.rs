@@ -31,7 +31,7 @@ impl<'a> BindingOptions<'a>
 
     /// Returns `Self` with the specified name set.
     #[must_use]
-    pub fn name(mut self, name: &'a str) -> Self
+    pub const fn name(mut self, name: &'a str) -> Self
     {
         self.name = Some(name);
 
