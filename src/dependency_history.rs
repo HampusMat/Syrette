@@ -26,9 +26,9 @@ impl DependencyHistory
 {
     /// Returns a new `DependencyHistory`.
     #[must_use]
-    pub fn new() -> Self
+    pub const fn new() -> Self
     {
-        Self { inner: vec![] }
+        Self { inner: Vec::new() }
     }
 }
 
