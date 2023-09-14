@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::rc::Rc;
 
-use syrette::di_container::blocking::prelude::*;
+use syrette::DIContainer;
 
 use crate::animals::cat::Cat;
 use crate::animals::dog::Dog;

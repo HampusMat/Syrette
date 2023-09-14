@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use anyhow::Result;
-use syrette::di_container::blocking::prelude::*;
+use syrette::DIContainer;
 
 use crate::interfaces::ninja::INinja;
 use crate::interfaces::weapon::IWeapon;

@@ -13,9 +13,8 @@
 //! ```
 //! use std::error::Error;
 //!
-//! use syrette::di_container::blocking::prelude::*;
-//! use syrette::injectable;
 //! use syrette::ptr::TransientPtr;
+//! use syrette::{injectable, DIContainer};
 //!
 //! trait IWeapon
 //! {

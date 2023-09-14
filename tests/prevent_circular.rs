@@ -1,11 +1,10 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(clippy::disallowed_names)]
 
-use syrette::di_container::blocking::prelude::*;
 use syrette::errors::di_container::DIContainerError;
 use syrette::errors::injectable::InjectableError;
-use syrette::injectable;
 use syrette::ptr::TransientPtr;
+use syrette::{injectable, DIContainer};
 
 #[derive(Debug)]
 struct Foo

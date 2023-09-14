@@ -92,7 +92,7 @@ The goal of Syrette is to be a simple, useful, convenient and familiar DI & IoC 
 use std::error::Error;
 
 use syrette::injectable;
-use syrette::di_container::blocking::prelude::*;
+use syrette::DIContainer;
 use syrette::ptr::TransientPtr;
 
 trait IWeapon

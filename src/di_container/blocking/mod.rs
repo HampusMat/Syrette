@@ -66,7 +66,6 @@ use crate::util::use_double;
 use_double!(crate::dependency_history::DependencyHistory);
 
 pub mod binding;
-pub mod prelude;
 
 #[cfg(not(test))]
 pub(crate) type BindingOptionsWithLt<'a> = BindingOptions<'a>;
