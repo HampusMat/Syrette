@@ -5,7 +5,6 @@
 //! use std::collections::HashMap;
 //! use std::error::Error;
 //!
-//! use syrette::di_container::blocking::IDIContainer;
 //! use syrette::{injectable, DIContainer};
 //!
 //! trait IDatabaseService
@@ -69,86 +68,6 @@ use_double!(crate::dependency_history::DependencyHistory);
 pub mod binding;
 pub mod prelude;
 
-/// Blocking dependency injection container interface.
-///
-/// **This trait is sealed and cannot be implemented for types outside this crate.**
-pub trait IDIContainer: Sized + 'static + details::DIContainerInternals
-{
-    /// Returns a new [`BindingBuilder`] for the given interface.
-    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
-    where
-        Interface: 'static + ?Sized;
-
-    /// Returns the type bound with `Interface`.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized;
-
-    /// Returns the type bound with `Interface` and the specified name.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` with name `name` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    fn get_named<Interface>(
-        self: &Rc<Self>,
-        name: &'static str,
-    ) -> Result<SomePtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized;
-
-    /// Returns the type bound with `Interface` where the binding has the specified
-    /// options.
-    ///
-    /// `dependency_history` is passed to the bound type when it is being resolved.
-    ///
-    /// # Errors
-    /// Will return `Err` if:
-    /// - No binding for `Interface` exists
-    /// - Resolving the binding for `Interface` fails
-    /// - Casting the binding for `Interface` fails
-    ///
-    /// # Examples
-    /// ```no_run
-    /// # use syrette::di_container::blocking::DIContainer;
-    /// # use syrette::di_container::blocking::IDIContainer;
-    /// # use syrette::dependency_history::DependencyHistory;
-    /// # use syrette::di_container::BindingOptions;
-    /// #
-    /// # struct EventHandler {}
-    /// # struct Button {}
-    /// #
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let di_container = DIContainer::new();
-    /// #
-    /// let mut dependency_history = DependencyHistory::new();
-    ///
-    /// dependency_history.push::<EventHandler>();
-    ///
-    /// di_container.get_bound::<Button>(
-    ///     dependency_history,
-    ///     BindingOptions::new().name("huge_red"),
-    /// )?;
-    /// #
-    /// # Ok(())
-    /// # }
-    /// ```
-    fn get_bound<Interface>(
-        self: &Rc<Self>,
-        dependency_history: DependencyHistory,
-        binding_options: BindingOptionsWithLt,
-    ) -> Result<SomePtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized;
-}
-
 #[cfg(not(test))]
 pub(crate) type BindingOptionsWithLt<'a> = BindingOptions<'a>;
 
@@ -173,23 +92,44 @@ impl DIContainer
     }
 }
 
-impl IDIContainer for DIContainer
+#[cfg_attr(test, mockall::automock)]
+impl DIContainer
 {
-    fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface, Self>
+    /// Returns a new [`BindingBuilder`] for the given interface.
+    #[allow(clippy::missing_panics_doc)]
+    pub fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface>
     where
         Interface: 'static + ?Sized,
     {
+        #[cfg(test)]
+        panic!("Nope");
+
+        #[cfg(not(test))]
         BindingBuilder::new(self.clone(), DependencyHistory::new)
     }
 
-    fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
+    /// Returns the type bound with `Interface`.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    pub fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
         self.get_bound::<Interface>(DependencyHistory::new(), BindingOptions::new())
     }
 
-    fn get_named<Interface>(
+    /// Returns the type bound with `Interface` and the specified name.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` with name `name` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    pub fn get_named<Interface>(
         self: &Rc<Self>,
         name: &'static str,
     ) -> Result<SomePtr<Interface>, DIContainerError>
@@ -202,10 +142,45 @@ impl IDIContainer for DIContainer
         )
     }
 
-    fn get_bound<Interface>(
+    /// Returns the type bound with `Interface` where the binding has the specified
+    /// options.
+    ///
+    /// `dependency_history` is passed to the bound type when it is being resolved.
+    ///
+    /// # Errors
+    /// Will return `Err` if:
+    /// - No binding for `Interface` exists
+    /// - Resolving the binding for `Interface` fails
+    /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```no_run
+    /// # use syrette::di_container::blocking::DIContainer;
+    /// # use syrette::dependency_history::DependencyHistory;
+    /// # use syrette::di_container::BindingOptions;
+    /// #
+    /// # struct EventHandler {}
+    /// # struct Button {}
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let di_container = DIContainer::new();
+    /// #
+    /// let mut dependency_history = DependencyHistory::new();
+    ///
+    /// dependency_history.push::<EventHandler>();
+    ///
+    /// di_container.get_bound::<Button>(
+    ///     dependency_history,
+    ///     BindingOptions::new().name("huge_red"),
+    /// )?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_bound<Interface>(
         self: &Rc<Self>,
         dependency_history: DependencyHistory,
-        binding_options: BindingOptions,
+        binding_options: BindingOptionsWithLt,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -213,59 +188,6 @@ impl IDIContainer for DIContainer
         let binding_providable = self
             .get_binding_providable::<Interface>(binding_options, dependency_history)?;
 
-        #[cfg(feature = "factory")]
-        return self.handle_binding_providable(binding_providable);
-
-        #[cfg(not(feature = "factory"))]
-        Self::handle_binding_providable(binding_providable)
-    }
-}
-
-impl details::DIContainerInternals for DIContainer
-{
-    fn has_binding<Interface>(self: &Rc<Self>, binding_options: BindingOptions) -> bool
-    where
-        Interface: ?Sized + 'static,
-    {
-        self.binding_storage
-            .borrow()
-            .has::<Interface>(binding_options)
-    }
-
-    fn set_binding<Interface>(
-        self: &Rc<Self>,
-        binding_options: BindingOptions<'static>,
-        provider: Box<dyn IProvider<Self>>,
-    ) where
-        Interface: 'static + ?Sized,
-    {
-        self.binding_storage
-            .borrow_mut()
-            .set::<Interface>(binding_options, provider);
-    }
-
-    fn remove_binding<Interface>(
-        self: &Rc<Self>,
-        binding_options: BindingOptions<'static>,
-    ) -> Option<Box<dyn IProvider<Self>>>
-    where
-        Interface: 'static + ?Sized,
-    {
-        self.binding_storage
-            .borrow_mut()
-            .remove::<Interface>(binding_options)
-    }
-}
-
-impl DIContainer
-{
-    fn handle_binding_providable<Interface>(
-        #[cfg(feature = "factory")] self: &Rc<Self>,
-        binding_providable: Providable<Self>,
-    ) -> Result<SomePtr<Interface>, DIContainerError>
-    where
-        Interface: 'static + ?Sized,
-    {
         match binding_providable {
             Providable::Transient(transient_binding) => Ok(SomePtr::Transient(
                 transient_binding.cast::<Interface>().map_err(|_| {
@@ -318,7 +240,7 @@ impl DIContainer
 
     fn get_binding_providable<Interface>(
         self: &Rc<Self>,
-        binding_options: BindingOptions,
+        binding_options: BindingOptionsWithLt,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<Self>, DIContainerError>
     where
@@ -344,38 +266,41 @@ impl DIContainer
                 interface: type_name::<Interface>(),
             })
     }
-}
 
-pub(crate) mod details
-{
-    use std::rc::Rc;
-
-    use crate::di_container::blocking::BindingOptionsWithLt;
-    use crate::di_container::BindingOptions;
-    use crate::provider::blocking::IProvider;
-
-    pub trait DIContainerInternals
+    fn has_binding<Interface>(
+        self: &Rc<Self>,
+        binding_options: BindingOptionsWithLt,
+    ) -> bool
+    where
+        Interface: ?Sized + 'static,
     {
-        fn has_binding<Interface>(
-            self: &Rc<Self>,
-            binding_options: BindingOptionsWithLt,
-        ) -> bool
-        where
-            Interface: ?Sized + 'static;
+        self.binding_storage
+            .borrow()
+            .has::<Interface>(binding_options)
+    }
 
-        fn set_binding<Interface>(
-            self: &Rc<Self>,
-            binding_options: BindingOptions<'static>,
-            provider: Box<dyn IProvider<Self>>,
-        ) where
-            Interface: 'static + ?Sized;
+    fn set_binding<Interface>(
+        self: &Rc<Self>,
+        binding_options: BindingOptions<'static>,
+        provider: Box<dyn IProvider<Self>>,
+    ) where
+        Interface: 'static + ?Sized,
+    {
+        self.binding_storage
+            .borrow_mut()
+            .set::<Interface>(binding_options, provider);
+    }
 
-        fn remove_binding<Interface>(
-            self: &Rc<Self>,
-            binding_options: BindingOptions<'static>,
-        ) -> Option<Box<dyn IProvider<Self>>>
-        where
-            Interface: 'static + ?Sized;
+    fn remove_binding<Interface>(
+        self: &Rc<Self>,
+        binding_options: BindingOptions<'static>,
+    ) -> Option<Box<dyn IProvider<Self>>>
+    where
+        Interface: 'static + ?Sized,
+    {
+        self.binding_storage
+            .borrow_mut()
+            .remove::<Interface>(binding_options)
     }
 }
 
@@ -385,15 +310,16 @@ mod tests
     use std::error::Error;
 
     use super::*;
+    use crate::provider::blocking::MockIProvider;
     use crate::ptr::{SingletonPtr, TransientPtr};
-    use crate::test_utils::{mocks, subjects};
+    use crate::test_utils::subjects;
 
     #[test]
     fn can_get() -> Result<(), Box<dyn Error>>
     {
         let di_container = DIContainer::new();
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Transient(TransientPtr::new(
@@ -421,7 +347,7 @@ mod tests
     {
         let di_container = DIContainer::new();
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning(|_, _| {
             Ok(Providable::Transient(TransientPtr::new(
@@ -449,7 +375,7 @@ mod tests
     {
         let di_container = DIContainer::new();
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         let mut singleton = SingletonPtr::new(subjects::Number::new());
 
@@ -481,7 +407,7 @@ mod tests
     {
         let di_container = DIContainer::new();
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         let mut singleton = SingletonPtr::new(subjects::Number::new());
 
@@ -574,7 +500,7 @@ mod tests
                 })
             };
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
             Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
@@ -652,7 +578,7 @@ mod tests
                 })
             };
 
-        let mut mock_provider = mocks::blocking_provider::MockProvider::new();
+        let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
             Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
@@ -673,5 +599,69 @@ mod tests
             .factory()?;
 
         Ok(())
+    }
+
+    #[test]
+    fn has_binding_works()
+    {
+        let di_container = DIContainer::new();
+
+        // No binding is present yet
+        assert!(!di_container.has_binding::<subjects::Ninja>(BindingOptions::new()));
+
+        di_container
+            .binding_storage
+            .borrow_mut()
+            .set::<subjects::Ninja>(
+                BindingOptions::new(),
+                Box::new(MockIProvider::new()),
+            );
+
+        assert!(di_container.has_binding::<subjects::Ninja>(BindingOptions::new()));
+    }
+
+    #[test]
+    fn set_binding_works()
+    {
+        let di_container = DIContainer::new();
+
+        di_container.set_binding::<subjects::Ninja>(
+            BindingOptions::new(),
+            Box::new(MockIProvider::new()),
+        );
+
+        assert!(di_container
+            .binding_storage
+            .borrow_mut()
+            .has::<subjects::Ninja>(BindingOptions::new()));
+    }
+
+    #[test]
+    fn remove_binding_works()
+    {
+        let di_container = DIContainer::new();
+
+        di_container
+            .binding_storage
+            .borrow_mut()
+            .set::<subjects::Ninja>(
+                BindingOptions::new(),
+                Box::new(MockIProvider::new()),
+            );
+
+        assert!(
+            // Formatting is weird without this comment
+            di_container
+                .remove_binding::<subjects::Ninja>(BindingOptions::new())
+                .is_some()
+        );
+
+        assert!(
+            // Formatting is weird without this comment
+            !di_container
+                .binding_storage
+                .borrow_mut()
+                .has::<subjects::Ninja>(BindingOptions::new())
+        );
     }
 }

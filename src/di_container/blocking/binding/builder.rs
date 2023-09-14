@@ -1,6 +1,4 @@
-//! Binding builder for types inside of a [`IDIContainer`].
-//!
-//! [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+//! Binding builder for types inside of a [`DIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -8,36 +6,32 @@ use std::rc::Rc;
 use crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator;
 #[cfg(feature = "factory")]
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
-use crate::di_container::blocking::IDIContainer;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
+use_double!(crate::di_container::blocking::DIContainer);
 
-/// Binding builder for type `Interface` inside a [`IDIContainer`].
-///
-/// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+/// Binding builder for type `Interface` inside a [`DIContainer`].
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct BindingBuilder<Interface, DIContainerType>
+pub struct BindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
 {
-    di_container: Rc<DIContainerType>,
+    di_container: Rc<DIContainer>,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType> BindingBuilder<Interface, DIContainerType>
+impl<Interface> BindingBuilder<Interface>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
 {
     pub(crate) fn new(
-        di_container: Rc<DIContainerType>,
+        di_container: Rc<DIContainer>,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -49,13 +43,13 @@ where
     }
 
     /// Creates a binding of type `Interface` to type `Implementation` inside of the
-    /// associated [`IDIContainer`].
+    /// associated [`DIContainer`].
     ///
     /// The scope of the binding is transient. But that can be changed by using the
     /// returned [`BindingScopeConfigurator`]
     ///
     /// # Errors
-    /// Will return Err if the associated [`IDIContainer`] already have a binding for
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -63,7 +57,6 @@ where
     /// # use std::error::Error;
     /// #
     /// # use syrette::{DIContainer, injectable};
-    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait Foo {}
     /// #
@@ -88,16 +81,11 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     pub fn to<Implementation>(
         self,
-    ) -> Result<
-        BindingScopeConfigurator<Interface, Implementation, DIContainerType>,
-        BindingBuilderError,
-    >
+    ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
     where
-        Implementation: Injectable<DIContainerType>,
+        Implementation: Injectable<DIContainer>,
     {
         if self
             .di_container
@@ -119,10 +107,10 @@ where
     }
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
-    /// associated [`IDIContainer`].
+    /// associated [`DIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IDIContainer`] already have a binding for
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -131,7 +119,6 @@ where
     /// #
     /// # use syrette::{DIContainer, factory};
     /// # use syrette::ptr::TransientPtr;
-    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait ICustomerID {}
     /// # trait ICustomer {}
@@ -182,19 +169,17 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_factory<Args, Return, Func>(
         self,
         factory_func: &'static Func,
-    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
-        Func: Fn<(std::rc::Rc<DIContainerType>,), Output = Box<Interface>>,
+        Func: Fn<(std::rc::Rc<DIContainer>,), Output = Box<Interface>>,
     {
         use crate::private::castable_factory::blocking::CastableFactory;
 
@@ -221,10 +206,10 @@ where
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
-    /// inside of the associated [`IDIContainer`].
+    /// inside of the associated [`DIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IDIContainer`] already have a binding for
+    /// Will return Err if the associated [`DIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -233,7 +218,6 @@ where
     /// #
     /// # use syrette::{DIContainer, factory};
     /// # use syrette::ptr::TransientPtr;
-    /// # use syrette::di_container::blocking::IDIContainer;
     /// #
     /// # trait IBuffer {}
     /// #
@@ -271,18 +255,16 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<BindingWhenConfigurator<Interface, DIContainerType>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
-            (Rc<DIContainerType>,),
+            (Rc<DIContainer>,),
             Output = crate::ptr::TransientPtr<
                 dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
             >,
@@ -322,12 +304,13 @@ mod tests
 
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
-    use crate::test_utils::{mocks, subjects};
+    use crate::di_container::blocking::MockDIContainer;
+    use crate::test_utils::subjects;
 
     #[test]
     fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
+        let mut mock_di_container = MockDIContainer::new();
 
         mock_di_container
             .expect_has_binding::<dyn subjects::INumber>()
@@ -341,11 +324,10 @@ mod tests
             .return_once(|_options, _provider| ())
             .once();
 
-        let binding_builder =
-            BindingBuilder::<
-                dyn subjects::INumber,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
+        let binding_builder = BindingBuilder::<dyn subjects::INumber>::new(
+            Rc::new(mock_di_container),
+            MockDependencyHistory::new,
+        );
 
         binding_builder.to::<subjects::Number>()?;
 
@@ -364,7 +346,7 @@ mod tests
         type IUserManagerFactory =
             dyn Fn(i32, String) -> TransientPtr<dyn subjects::IUserManager>;
 
-        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
+        let mut mock_di_container = MockDIContainer::new();
 
         mock_di_container
             .expect_has_binding::<IUserManagerFactory>()
@@ -378,11 +360,10 @@ mod tests
             .return_once(|_, _provider| ())
             .once();
 
-        let binding_builder =
-            BindingBuilder::<
-                IUserManagerFactory,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
+        let binding_builder = BindingBuilder::<IUserManagerFactory>::new(
+            Rc::new(mock_di_container),
+            MockDependencyHistory::new,
+        );
 
         binding_builder.to_factory(&|_| {
             Box::new(move |_num, _text| {
@@ -407,7 +388,7 @@ mod tests
 
         declare_default_factory!(dyn subjects::IUserManager);
 
-        let mut mock_di_container = mocks::blocking_di_container::MockDIContainer::new();
+        let mut mock_di_container = MockDIContainer::new();
 
         mock_di_container
             .expect_has_binding::<dyn subjects::IUserManager>()
@@ -421,11 +402,10 @@ mod tests
             .return_once(|_, _provider| ())
             .once();
 
-        let binding_builder =
-            BindingBuilder::<
-                dyn subjects::IUserManager,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(Rc::new(mock_di_container), MockDependencyHistory::new);
+        let binding_builder = BindingBuilder::<dyn subjects::IUserManager>::new(
+            Rc::new(mock_di_container),
+            MockDependencyHistory::new,
+        );
 
         binding_builder.to_default_factory(&|_| {
             Box::new(move || {

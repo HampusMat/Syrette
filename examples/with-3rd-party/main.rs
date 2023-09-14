@@ -8,8 +8,6 @@ mod ninja;
 
 use std::error::Error;
 
-use syrette::di_container::blocking::prelude::*;
-
 use crate::bootstrap::bootstrap;
 use crate::interfaces::ninja::INinja;
 

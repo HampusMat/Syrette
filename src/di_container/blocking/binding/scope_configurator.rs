@@ -1,11 +1,8 @@
-//! Scope configurator for a binding for types inside of a [`IDIContainer`].
-//!
-//! [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+//! Scope configurator for a binding for types inside of a [`DIContainer`].
 use std::marker::PhantomData;
 use std::rc::Rc;
 
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
-use crate::di_container::blocking::IDIContainer;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingScopeConfiguratorError;
 use crate::interfaces::injectable::Injectable;
@@ -14,32 +11,28 @@ use crate::ptr::SingletonPtr;
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
+use_double!(crate::di_container::blocking::DIContainer);
 
-/// Scope configurator for a binding for type `Interface` inside a [`IDIContainer`].
-///
-/// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
-pub struct BindingScopeConfigurator<Interface, Implementation, DIContainerType>
+/// Scope configurator for a binding for type `Interface` inside a [`DIContainer`].
+pub struct BindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
-    Implementation: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
+    Implementation: Injectable<DIContainer>,
 {
-    di_container: Rc<DIContainerType>,
+    di_container: Rc<DIContainer>,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation, DIContainerType>
-    BindingScopeConfigurator<Interface, Implementation, DIContainerType>
+impl<Interface, Implementation> BindingScopeConfigurator<Interface, Implementation>
 where
     Interface: 'static + ?Sized,
-    Implementation: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
+    Implementation: Injectable<DIContainer>,
 {
     pub(crate) fn new(
-        di_container: Rc<DIContainerType>,
+        di_container: Rc<DIContainer>,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -55,8 +48,7 @@ where
     ///
     /// This is the default.
     #[allow(clippy::must_use_candidate)]
-    pub fn in_transient_scope(self)
-        -> BindingWhenConfigurator<Interface, DIContainerType>
+    pub fn in_transient_scope(self) -> BindingWhenConfigurator<Interface>
     {
         self.set_in_transient_scope();
 
@@ -69,10 +61,7 @@ where
     /// Will return Err if resolving the implementation fails.
     pub fn in_singleton_scope(
         self,
-    ) -> Result<
-        BindingWhenConfigurator<Interface, DIContainerType>,
-        BindingScopeConfiguratorError,
-    >
+    ) -> Result<BindingWhenConfigurator<Interface>, BindingScopeConfiguratorError>
     {
         let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
             Implementation::resolve(
@@ -94,7 +83,7 @@ where
     {
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(TransientTypeProvider::<Implementation, DIContainerType>::new()),
+            Box::new(TransientTypeProvider::<Implementation, DIContainer>::new()),
         );
     }
 }
@@ -104,12 +93,13 @@ mod tests
 {
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
-    use crate::test_utils::{mocks, subjects};
+    use crate::di_container::blocking::MockDIContainer;
+    use crate::test_utils::subjects;
 
     #[test]
     fn in_transient_scope_works()
     {
-        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+        let mut di_container_mock = MockDIContainer::new();
 
         di_container_mock
             .expect_set_binding::<dyn subjects::IUserManager>()
@@ -117,12 +107,13 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator =
-            BindingScopeConfigurator::<
-                dyn subjects::IUserManager,
-                subjects::UserManager,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(Rc::new(di_container_mock), MockDependencyHistory::new);
+        let binding_scope_configurator = BindingScopeConfigurator::<
+            dyn subjects::IUserManager,
+            subjects::UserManager,
+        >::new(
+            Rc::new(di_container_mock),
+            MockDependencyHistory::new,
+        );
 
         binding_scope_configurator.in_transient_scope();
     }
@@ -130,7 +121,7 @@ mod tests
     #[test]
     fn in_singleton_scope_works()
     {
-        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+        let mut di_container_mock = MockDIContainer::new();
 
         di_container_mock
             .expect_set_binding::<dyn subjects::IUserManager>()
@@ -138,12 +129,13 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_scope_configurator =
-            BindingScopeConfigurator::<
-                dyn subjects::IUserManager,
-                subjects::UserManager,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(Rc::new(di_container_mock), MockDependencyHistory::new);
+        let binding_scope_configurator = BindingScopeConfigurator::<
+            dyn subjects::IUserManager,
+            subjects::UserManager,
+        >::new(
+            Rc::new(di_container_mock),
+            MockDependencyHistory::new,
+        );
 
         assert!(binding_scope_configurator.in_singleton_scope().is_ok());
     }

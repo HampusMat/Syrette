@@ -11,7 +11,6 @@ mod interfaces;
 use bootstrap::bootstrap;
 use interfaces::dog::IDog;
 use interfaces::human::IHuman;
-use syrette::di_container::blocking::prelude::*;
 
 fn main() -> Result<(), Box<dyn Error>>
 {

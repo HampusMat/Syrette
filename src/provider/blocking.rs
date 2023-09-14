@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{SingletonPtr, TransientPtr};
@@ -11,8 +10,6 @@ use_double!(crate::dependency_history::DependencyHistory);
 
 #[derive(strum_macros::Display, Debug)]
 pub enum Providable<DIContainerType>
-where
-    DIContainerType: IDIContainer,
 {
     Transient(TransientPtr<dyn Injectable<DIContainerType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
@@ -22,10 +19,8 @@ where
     DefaultFactory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
 }
 
-#[cfg_attr(test, mockall::automock, allow(dead_code))]
+#[cfg_attr(test, mockall::automock)]
 pub trait IProvider<DIContainerType>
-where
-    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
@@ -37,7 +32,6 @@ where
 pub struct TransientTypeProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     injectable_phantom: PhantomData<InjectableType>,
     di_container_phantom: PhantomData<DIContainerType>,
@@ -47,7 +41,6 @@ impl<InjectableType, DIContainerType>
     TransientTypeProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     pub fn new() -> Self
     {
@@ -62,7 +55,6 @@ impl<InjectableType, DIContainerType> IProvider<DIContainerType>
     for TransientTypeProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
@@ -80,7 +72,6 @@ where
 pub struct SingletonProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     singleton: SingletonPtr<InjectableType>,
 
@@ -90,7 +81,6 @@ where
 impl<InjectableType, DIContainerType> SingletonProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     pub fn new(singleton: SingletonPtr<InjectableType>) -> Self
     {
@@ -105,7 +95,6 @@ impl<InjectableType, DIContainerType> IProvider<DIContainerType>
     for SingletonProvider<InjectableType, DIContainerType>
 where
     InjectableType: Injectable<DIContainerType>,
-    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
@@ -141,8 +130,6 @@ impl FactoryProvider
 
 #[cfg(feature = "factory")]
 impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
-where
-    DIContainerType: IDIContainer,
 {
     fn provide(
         &self,
@@ -165,17 +152,16 @@ mod tests
 
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
-    use crate::test_utils::{mocks, subjects};
+    use crate::di_container::blocking::MockDIContainer;
+    use crate::test_utils::subjects;
 
     #[test]
     fn transient_type_provider_works() -> Result<(), Box<dyn Error>>
     {
-        let transient_type_provider = TransientTypeProvider::<
-            subjects::UserManager,
-            mocks::blocking_di_container::MockDIContainer,
-        >::new();
+        let transient_type_provider =
+            TransientTypeProvider::<subjects::UserManager, MockDIContainer>::new();
 
-        let di_container = mocks::blocking_di_container::MockDIContainer::new();
+        let di_container = MockDIContainer::new();
 
         let dependency_history_mock = MockDependencyHistory::new();
 
@@ -195,12 +181,11 @@ mod tests
     fn singleton_provider_works() -> Result<(), Box<dyn Error>>
     {
         let singleton_provider =
-            SingletonProvider::<
-                subjects::UserManager,
-                mocks::blocking_di_container::MockDIContainer,
-            >::new(SingletonPtr::new(subjects::UserManager {}));
+            SingletonProvider::<subjects::UserManager, MockDIContainer>::new(
+                SingletonPtr::new(subjects::UserManager {}),
+            );
 
-        let di_container = mocks::blocking_di_container::MockDIContainer::new();
+        let di_container = MockDIContainer::new();
 
         assert!(
             matches!(
@@ -230,7 +215,7 @@ mod tests
         let default_factory_provider =
             FactoryProvider::new(FactoryPtr::new(FooFactory), true);
 
-        let di_container = Rc::new(mocks::blocking_di_container::MockDIContainer::new());
+        let di_container = Rc::new(MockDIContainer::new());
 
         assert!(
             matches!(

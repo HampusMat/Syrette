@@ -1,33 +1,29 @@
-//! When configurator for a binding for types inside of a [`IDIContainer`].
-//!
-//! [`IDIContainer`]: crate::di_container::blocking::IDIContainer
+//! When configurator for a binding for types inside of a [`DIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::di_container::blocking::IDIContainer;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingWhenConfiguratorError;
+use crate::util::use_double;
 
-/// When configurator for a binding for type `Interface` inside a [`IDIContainer`].
-///
-/// [`IDIContainer`]: crate::di_container::blocking::IDIContainer
-pub struct BindingWhenConfigurator<Interface, DIContainerType>
+use_double!(crate::di_container::blocking::DIContainer);
+
+/// When configurator for a binding for type `Interface` inside a [`DIContainer`].
+pub struct BindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
 {
-    di_container: Rc<DIContainerType>,
+    di_container: Rc<DIContainer>,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType> BindingWhenConfigurator<Interface, DIContainerType>
+impl<Interface> BindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized,
-    DIContainerType: IDIContainer,
 {
-    pub(crate) fn new(di_container: Rc<DIContainerType>) -> Self
+    pub(crate) fn new(di_container: Rc<DIContainer>) -> Self
     {
         Self {
             di_container,
@@ -70,13 +66,14 @@ mod tests
     use mockall::predicate::eq;
 
     use super::*;
+    use crate::di_container::blocking::MockDIContainer;
     use crate::provider::blocking::MockIProvider;
-    use crate::test_utils::{mocks, subjects};
+    use crate::test_utils::subjects;
 
     #[test]
     fn when_named_works()
     {
-        let mut di_container_mock = mocks::blocking_di_container::MockDIContainer::new();
+        let mut di_container_mock = MockDIContainer::new();
 
         di_container_mock
             .expect_remove_binding::<dyn subjects::INumber>()
@@ -90,10 +87,10 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_when_configurator = BindingWhenConfigurator::<
-            dyn subjects::INumber,
-            mocks::blocking_di_container::MockDIContainer,
-        >::new(Rc::new(di_container_mock));
+        let binding_when_configurator =
+            BindingWhenConfigurator::<dyn subjects::INumber>::new(Rc::new(
+                di_container_mock,
+            ));
 
         assert!(binding_when_configurator.when_named("cool").is_ok());
     }

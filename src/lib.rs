@@ -131,7 +131,6 @@ mod test_utils;
 /// # Examples
 /// ```
 /// # use syrette::{di_container_bind, DIContainer, injectable};
-/// # use syrette::di_container::blocking::IDIContainer;
 /// #
 /// # trait INinja {}
 /// #

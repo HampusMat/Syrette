@@ -289,7 +289,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         quote! {
             #maybe_doc_hidden
             impl #generics syrette::interfaces::injectable::Injectable<
-                syrette::di_container::blocking::DIContainer,
+                ::syrette::di_container::blocking::DIContainer
             > for #self_type
             {
                 fn resolve(
@@ -303,7 +303,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                 {
                     use std::any::type_name;
 
-                    use syrette::di_container::blocking::IDIContainer;
                     use syrette::errors::injectable::InjectableError;
 
                     let self_type_name = type_name::<#self_type>();

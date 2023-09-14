@@ -9,8 +9,6 @@ mod user_manager;
 
 use std::error::Error;
 
-use syrette::di_container::blocking::prelude::*;
-
 use crate::bootstrap::bootstrap;
 use crate::interfaces::user_manager::IUserManager;
 

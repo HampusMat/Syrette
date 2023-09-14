@@ -4,8 +4,6 @@ mod printer;
 
 use std::error::Error;
 
-use syrette::di_container::blocking::prelude::*;
-
 use crate::bootstrap::bootstrap;
 use crate::interfaces::printer::IPrinter;
 

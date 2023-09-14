@@ -2,7 +2,6 @@
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use crate::di_container::blocking::IDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
@@ -11,25 +10,21 @@ use crate::util::use_double;
 use_double!(crate::dependency_history::DependencyHistory);
 
 /// Interface for structs that can be injected into or be injected to.
-pub trait Injectable<DIContainerType>: CastFrom
-where
-    DIContainerType: IDIContainer,
+pub trait Injectable<DIContainerT>: CastFrom
 {
     /// Resolves the dependencies of the injectable.
     ///
     /// # Errors
     /// Will return `Err` if resolving the dependencies fails.
     fn resolve(
-        di_container: &Rc<DIContainerType>,
+        di_container: &Rc<DIContainerT>,
         dependency_history: DependencyHistory,
     ) -> Result<TransientPtr<Self>, InjectableError>
     where
         Self: Sized;
 }
 
-impl<DIContainerType> Debug for dyn Injectable<DIContainerType>
-where
-    DIContainerType: IDIContainer,
+impl<DIContainerT> Debug for dyn Injectable<DIContainerT>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
