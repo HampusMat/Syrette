@@ -237,35 +237,6 @@ impl DIContainer
         }
     }
 
-    fn get_binding_providable<Interface>(
-        self: &Rc<Self>,
-        binding_options: BindingOptionsWithLt,
-        dependency_history: DependencyHistory,
-    ) -> Result<Providable<Self>, DIContainerError>
-    where
-        Interface: 'static + ?Sized,
-    {
-        let name = binding_options.name;
-
-        self.binding_storage
-            .borrow()
-            .get::<Interface>(binding_options)
-            .map_or_else(
-                || {
-                    Err(DIContainerError::BindingNotFound {
-                        interface: type_name::<Interface>(),
-                        name: name.as_ref().map(ToString::to_string),
-                    })
-                },
-                Ok,
-            )?
-            .provide(self, dependency_history)
-            .map_err(|err| DIContainerError::BindingResolveFailed {
-                reason: err,
-                interface: type_name::<Interface>(),
-            })
-    }
-
     fn has_binding<Interface>(
         self: &Rc<Self>,
         binding_options: BindingOptionsWithLt,
@@ -300,6 +271,38 @@ impl DIContainer
         self.binding_storage
             .borrow_mut()
             .remove::<Interface>(binding_options)
+    }
+}
+
+impl DIContainer
+{
+    fn get_binding_providable<Interface>(
+        self: &Rc<Self>,
+        binding_options: BindingOptionsWithLt,
+        dependency_history: DependencyHistory,
+    ) -> Result<Providable<Self>, DIContainerError>
+    where
+        Interface: 'static + ?Sized,
+    {
+        let name = binding_options.name;
+
+        self.binding_storage
+            .borrow()
+            .get::<Interface>(binding_options)
+            .map_or_else(
+                || {
+                    Err(DIContainerError::BindingNotFound {
+                        interface: type_name::<Interface>(),
+                        name: name.as_ref().map(ToString::to_string),
+                    })
+                },
+                Ok,
+            )?
+            .provide(self, dependency_history)
+            .map_err(|err| DIContainerError::BindingResolveFailed {
+                reason: err,
+                interface: type_name::<Interface>(),
+            })
     }
 }
 
