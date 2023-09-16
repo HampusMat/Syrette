@@ -209,7 +209,7 @@ impl DIContainer
                 use crate::private::factory::IFactory;
 
                 let factory = factory_binding
-                    .cast::<dyn IFactory<(Rc<DIContainer>,), Interface>>()
+                    .cast::<dyn IFactory<Interface, Self>>()
                     .map_err(|_| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "factory",
@@ -222,11 +222,13 @@ impl DIContainer
                 use crate::private::factory::IFactory;
                 use crate::ptr::TransientPtr;
 
+                type DefaultFactoryFn<Interface> = dyn IFactory<
+                    dyn Fn<(), Output = TransientPtr<Interface>>,
+                    DIContainer,
+                >;
+
                 let default_factory = factory_binding
-                    .cast::<dyn IFactory<
-                        (Rc<DIContainer>,),
-                        dyn Fn<(), Output = TransientPtr<Interface>>,
-                    >>()
+                    .cast::<DefaultFactoryFn<Interface>>()
                     .map_err(|_| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "default factory",

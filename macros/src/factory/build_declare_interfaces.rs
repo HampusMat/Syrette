@@ -33,18 +33,18 @@ pub fn build_declare_factory_interfaces(
         quote! {
             syrette::declare_interface!(
                 syrette::private::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::DIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::blocking::DIContainer
                 > -> syrette::private::factory::IFactory<
-                    (std::rc::Rc<syrette::DIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::blocking::DIContainer
                 >
             );
 
             syrette::declare_interface!(
                 syrette::private::castable_factory::blocking::CastableFactory<
-                    (std::rc::Rc<syrette::DIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::blocking::DIContainer
                 > -> syrette::private::any_factory::AnyFactory
             );
         }

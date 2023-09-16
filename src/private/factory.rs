@@ -1,13 +1,12 @@
-use std::marker::Tuple;
+use std::rc::Rc;
 
 use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
 
 /// Interface for a factory.
-pub trait IFactory<Args, ReturnInterface>:
-    Fn<Args, Output = TransientPtr<ReturnInterface>> + CastFrom
+pub trait IFactory<ReturnInterface, DIContainerT>:
+    Fn<(Rc<DIContainerT>,), Output = TransientPtr<ReturnInterface>> + CastFrom
 where
-    Args: Tuple,
     ReturnInterface: 'static + ?Sized,
 {
 }
@@ -17,7 +16,7 @@ where
 pub trait IThreadsafeFactory<Args, ReturnInterface>:
     Fn<Args, Output = TransientPtr<ReturnInterface>> + crate::private::cast::CastFromArc
 where
-    Args: Tuple,
+    Args: std::marker::Tuple,
     ReturnInterface: 'static + ?Sized,
 {
 }
