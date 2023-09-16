@@ -5,8 +5,7 @@
 //! use std::collections::HashMap;
 //! use std::error::Error;
 //!
-//! use syrette::di_container::asynchronous::prelude::*;
-//! use syrette::injectable;
+//! use syrette::{injectable, AsyncDIContainer};
 //!
 //! trait IDatabaseService: Send + Sync
 //! {
@@ -70,7 +69,6 @@ use crate::util::use_double;
 use_double!(crate::dependency_history::DependencyHistory);
 
 pub mod binding;
-pub mod prelude;
 
 /// Async dependency injection container.
 pub struct AsyncDIContainer

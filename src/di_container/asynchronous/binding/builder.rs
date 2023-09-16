@@ -62,7 +62,7 @@ where
     /// # use std::error::Error;
     /// #
     /// # use syrette::injectable;
-    /// # use syrette::di_container::asynchronous::prelude::*;
+    /// # use syrette::AsyncDIContainer;
     /// #
     /// # trait Foo: Send + Sync {}
     /// #
@@ -130,7 +130,7 @@ where
     /// # use std::error::Error;
     /// #
     /// # use syrette::{factory};
-    /// # use syrette::di_container::asynchronous::prelude::*;
+    /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
     /// # trait Foo: Send + Sync {}
@@ -220,7 +220,7 @@ where
     /// # use std::time::Duration;
     /// #
     /// # use syrette::{factory};
-    /// # use syrette::di_container::asynchronous::prelude::*;
+    /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// # use syrette::future::BoxFuture;
     /// #
@@ -320,7 +320,7 @@ where
     /// ```
     /// # use std::error::Error;
     /// #
-    /// # use syrette::di_container::asynchronous::prelude::*;
+    /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
     /// # trait Foo: Send + Sync {}
@@ -410,7 +410,7 @@ where
     /// # use std::error::Error;
     /// # use std::time::Duration;
     /// #
-    /// # use syrette::di_container::asynchronous::prelude::*;
+    /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
     /// # trait Foo: Send + Sync {}

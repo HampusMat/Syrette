@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use syrette::declare_default_factory;
-use syrette::di_container::asynchronous::prelude::*;
 use syrette::ptr::TransientPtr;
+use syrette::{declare_default_factory, AsyncDIContainer};
 
 use crate::animals::cat::Cat;
 use crate::animals::dog::Dog;
