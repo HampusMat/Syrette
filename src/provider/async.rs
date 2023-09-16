@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
@@ -12,12 +11,10 @@ use crate::util::use_double;
 use_double!(crate::dependency_history::DependencyHistory);
 
 #[derive(strum_macros::Display, Debug)]
-pub enum AsyncProvidable<DIContainerType>
-where
-    DIContainerType: IAsyncDIContainer,
+pub enum AsyncProvidable<DIContainerT>
 {
-    Transient(TransientPtr<dyn AsyncInjectable<DIContainerType>>),
-    Singleton(ThreadsafeSingletonPtr<dyn AsyncInjectable<DIContainerType>>),
+    Transient(TransientPtr<dyn AsyncInjectable<DIContainerT>>),
+    Singleton(ThreadsafeSingletonPtr<dyn AsyncInjectable<DIContainerT>>),
     #[cfg(feature = "factory")]
     Factory(
         crate::ptr::ThreadsafeFactoryPtr<
@@ -40,22 +37,22 @@ where
 
 #[async_trait]
 #[cfg_attr(test, mockall::automock, allow(dead_code))]
-pub trait IAsyncProvider<DIContainerType>: Send + Sync
+pub trait IAsyncProvider<DIContainerT>: Send + Sync
 where
-    DIContainerType: IAsyncDIContainer,
+    DIContainerT: Send + Sync,
 {
     async fn provide(
         &self,
-        di_container: &Arc<DIContainerType>,
+        di_container: &Arc<DIContainerT>,
         dependency_history: DependencyHistory,
-    ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>;
+    ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>;
 
-    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerType>>;
+    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerT>>;
 }
 
-impl<DIContainerType> Clone for Box<dyn IAsyncProvider<DIContainerType>>
+impl<DIContainerT> Clone for Box<dyn IAsyncProvider<DIContainerT>>
 where
-    DIContainerType: IAsyncDIContainer,
+    DIContainerT: Send + Sync,
 {
     fn clone(&self) -> Self
     {
@@ -63,20 +60,17 @@ where
     }
 }
 
-pub struct AsyncTransientTypeProvider<InjectableType, DIContainerType>
+pub struct AsyncTransientTypeProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
-    injectable_phantom: PhantomData<InjectableType>,
-    di_container_phantom: PhantomData<DIContainerType>,
+    injectable_phantom: PhantomData<InjectableT>,
+    di_container_phantom: PhantomData<DIContainerT>,
 }
 
-impl<InjectableType, DIContainerType>
-    AsyncTransientTypeProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> AsyncTransientTypeProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
     pub fn new() -> Self
     {
@@ -88,34 +82,33 @@ where
 }
 
 #[async_trait]
-impl<InjectableType, DIContainerType> IAsyncProvider<DIContainerType>
-    for AsyncTransientTypeProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> IAsyncProvider<DIContainerT>
+    for AsyncTransientTypeProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
+    DIContainerT: Send + Sync + 'static,
 {
     async fn provide(
         &self,
-        di_container: &Arc<DIContainerType>,
+        di_container: &Arc<DIContainerT>,
         dependency_history: DependencyHistory,
-    ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>
+    ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
         Ok(AsyncProvidable::Transient(
-            InjectableType::resolve(di_container, dependency_history).await?,
+            InjectableT::resolve(di_container, dependency_history).await?,
         ))
     }
 
-    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerType>>
+    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerT>>
     {
         Box::new(self.clone())
     }
 }
 
-impl<InjectableType, DIContainerType> Clone
-    for AsyncTransientTypeProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> Clone
+    for AsyncTransientTypeProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
     fn clone(&self) -> Self
     {
@@ -126,23 +119,20 @@ where
     }
 }
 
-pub struct AsyncSingletonProvider<InjectableType, DIContainerType>
+pub struct AsyncSingletonProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
-    singleton: ThreadsafeSingletonPtr<InjectableType>,
+    singleton: ThreadsafeSingletonPtr<InjectableT>,
 
-    di_container_phantom: PhantomData<DIContainerType>,
+    di_container_phantom: PhantomData<DIContainerT>,
 }
 
-impl<InjectableType, DIContainerType>
-    AsyncSingletonProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> AsyncSingletonProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
-    pub fn new(singleton: ThreadsafeSingletonPtr<InjectableType>) -> Self
+    pub fn new(singleton: ThreadsafeSingletonPtr<InjectableT>) -> Self
     {
         Self {
             singleton,
@@ -152,32 +142,31 @@ where
 }
 
 #[async_trait]
-impl<InjectableType, DIContainerType> IAsyncProvider<DIContainerType>
-    for AsyncSingletonProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> IAsyncProvider<DIContainerT>
+    for AsyncSingletonProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
+    DIContainerT: Send + Sync + 'static,
 {
     async fn provide(
         &self,
-        _di_container: &Arc<DIContainerType>,
+        _di_container: &Arc<DIContainerT>,
         _dependency_history: DependencyHistory,
-    ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>
+    ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
         Ok(AsyncProvidable::Singleton(self.singleton.clone()))
     }
 
-    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerType>>
+    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerT>>
     {
         Box::new(self.clone())
     }
 }
 
-impl<InjectableType, DIContainerType> Clone
-    for AsyncSingletonProvider<InjectableType, DIContainerType>
+impl<InjectableT, DIContainerT> Clone
+    for AsyncSingletonProvider<InjectableT, DIContainerT>
 where
-    InjectableType: AsyncInjectable<DIContainerType>,
-    DIContainerType: IAsyncDIContainer,
+    InjectableT: AsyncInjectable<DIContainerT>,
 {
     fn clone(&self) -> Self
     {
@@ -222,15 +211,15 @@ impl AsyncFactoryProvider
 
 #[cfg(feature = "factory")]
 #[async_trait]
-impl<DIContainerType> IAsyncProvider<DIContainerType> for AsyncFactoryProvider
+impl<DIContainerT> IAsyncProvider<DIContainerT> for AsyncFactoryProvider
 where
-    DIContainerType: IAsyncDIContainer,
+    DIContainerT: Send + Sync,
 {
     async fn provide(
         &self,
-        _di_container: &Arc<DIContainerType>,
+        _di_container: &Arc<DIContainerT>,
         _dependency_history: DependencyHistory,
-    ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>
+    ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
         Ok(match self.variant {
             AsyncFactoryVariant::Normal => AsyncProvidable::Factory(self.factory.clone()),
@@ -243,7 +232,7 @@ where
         })
     }
 
-    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerType>>
+    fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerT>>
     {
         Box::new(self.clone())
     }
@@ -268,17 +257,18 @@ mod tests
 
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
-    use crate::test_utils::{mocks, subjects_async};
+    use crate::di_container::asynchronous::MockAsyncDIContainer;
+    use crate::test_utils::subjects_async;
 
     #[tokio::test]
     async fn async_transient_type_provider_works() -> Result<(), Box<dyn Error>>
     {
         let transient_type_provider = AsyncTransientTypeProvider::<
             subjects_async::UserManager,
-            mocks::async_di_container::MockAsyncDIContainer,
+            MockAsyncDIContainer,
         >::new();
 
-        let di_container = mocks::async_di_container::MockAsyncDIContainer::new();
+        let di_container = MockAsyncDIContainer::new();
 
         assert!(
             matches!(
@@ -298,12 +288,12 @@ mod tests
     {
         let singleton_provider = AsyncSingletonProvider::<
             subjects_async::UserManager,
-            mocks::async_di_container::MockAsyncDIContainer,
+            MockAsyncDIContainer,
         >::new(ThreadsafeSingletonPtr::new(
             subjects_async::UserManager {},
         ));
 
-        let di_container = mocks::async_di_container::MockAsyncDIContainer::new();
+        let di_container = MockAsyncDIContainer::new();
 
         assert!(
             matches!(
@@ -345,8 +335,7 @@ mod tests
             AsyncFactoryVariant::AsyncDefault,
         );
 
-        let di_container =
-            Arc::new(mocks::async_di_container::MockAsyncDIContainer::new());
+        let di_container = Arc::new(MockAsyncDIContainer::new());
 
         assert!(
             matches!(

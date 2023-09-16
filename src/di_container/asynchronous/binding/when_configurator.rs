@@ -1,33 +1,29 @@
-//! When configurator for a binding for types inside of a [`IAsyncDIContainer`].
-//!
-//! [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
+//! When configurator for a binding for types inside of a [`AsyncDIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingWhenConfiguratorError;
+use crate::util::use_double;
 
-/// When configurator for a binding for type `Interface` inside a [`IAsyncDIContainer`].
-///
-/// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
-pub struct AsyncBindingWhenConfigurator<Interface, DIContainerType>
+use_double!(crate::di_container::asynchronous::AsyncDIContainer);
+
+/// When configurator for a binding for type `Interface` inside a [`AsyncDIContainer`].
+pub struct AsyncBindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
 {
-    di_container: Arc<DIContainerType>,
+    di_container: Arc<AsyncDIContainer>,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType> AsyncBindingWhenConfigurator<Interface, DIContainerType>
+impl<Interface> AsyncBindingWhenConfigurator<Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
 {
-    pub(crate) fn new(di_container: Arc<DIContainerType>) -> Self
+    pub(crate) fn new(di_container: Arc<AsyncDIContainer>) -> Self
     {
         Self {
             di_container,
@@ -71,14 +67,14 @@ mod tests
     use mockall::predicate::eq;
 
     use super::*;
+    use crate::di_container::asynchronous::MockAsyncDIContainer;
     use crate::provider::r#async::MockIAsyncProvider;
-    use crate::test_utils::{mocks, subjects_async};
+    use crate::test_utils::subjects_async;
 
     #[tokio::test]
     async fn when_named_works()
     {
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_remove_binding::<dyn subjects_async::INumber>()
@@ -94,7 +90,6 @@ mod tests
 
         let binding_when_configurator = AsyncBindingWhenConfigurator::<
             dyn subjects_async::INumber,
-            mocks::async_di_container::MockAsyncDIContainer,
         >::new(Arc::new(di_container_mock));
 
         assert!(binding_when_configurator

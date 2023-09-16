@@ -1,6 +1,4 @@
-//! Binding builder for types inside of a [`IAsyncDIContainer`].
-//!
-//! [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
+//! Binding builder for types inside of a [`AsyncDIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -8,41 +6,37 @@ use std::sync::Arc;
 use crate::di_container::asynchronous::binding::scope_configurator::AsyncBindingScopeConfigurator;
 #[cfg(feature = "factory")]
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
-use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingBuilderError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
+use_double!(crate::di_container::asynchronous::AsyncDIContainer);
 
 /// Alias for a threadsafe boxed function.
 #[cfg(feature = "factory")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)>;
 
-/// Binding builder for type `Interface` inside a [`IAsyncDIContainer`].
-///
-/// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
+/// Binding builder for type `Interface` inside a [`AsyncDIContainer`].
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct AsyncBindingBuilder<Interface, DIContainerType>
+pub struct AsyncBindingBuilder<Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
 {
-    di_container: Arc<DIContainerType>,
+    di_container: Arc<AsyncDIContainer>,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface, DIContainerType> AsyncBindingBuilder<Interface, DIContainerType>
+impl<Interface> AsyncBindingBuilder<Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
-    DIContainerType: IAsyncDIContainer,
 {
     pub(crate) fn new(
-        di_container: Arc<DIContainerType>,
+        di_container: Arc<AsyncDIContainer>,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -54,13 +48,13 @@ where
     }
 
     /// Creates a binding of type `Interface` to type `Implementation` inside of the
-    /// associated [`IAsyncDIContainer`].
+    /// associated [`AsyncDIContainer`].
     ///
     /// The scope of the binding is transient. But that can be changed by using the
     /// returned [`AsyncBindingScopeConfigurator`]
     ///
     /// # Errors
-    /// Will return Err if the associated [`IAsyncDIContainer`] already have a binding for
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding for
     /// the interface.
     ///
     /// # Examples
@@ -94,16 +88,14 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     pub async fn to<Implementation>(
         self,
     ) -> Result<
-        AsyncBindingScopeConfigurator<Interface, Implementation, DIContainerType>,
+        AsyncBindingScopeConfigurator<Interface, Implementation>,
         AsyncBindingBuilderError,
     >
     where
-        Implementation: AsyncInjectable<DIContainerType>,
+        Implementation: AsyncInjectable<AsyncDIContainer>,
     {
         if self
             .di_container
@@ -127,10 +119,10 @@ where
     }
 
     /// Creates a binding of factory type `Interface` to a factory inside of the
-    /// associated [`IAsyncDIContainer`].
+    /// associated [`AsyncDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IAsyncDIContainer`] already have a binding
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
     /// for the interface.
     ///
     /// # Examples
@@ -173,23 +165,18 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
-        AsyncBindingBuilderError,
-    >
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = Return> + Send + Sync,
         FactoryFunc:
-            Fn<(Arc<DIContainerType>,), Output = BoxFn<Args, Return>> + Send + Sync,
+            Fn<(Arc<AsyncDIContainer>,), Output = BoxFn<Args, Return>> + Send + Sync,
     {
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
@@ -221,10 +208,10 @@ where
     }
 
     /// Creates a binding of factory type `Interface` to a async factory inside of the
-    /// associated [`IAsyncDIContainer`].
+    /// associated [`AsyncDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IAsyncDIContainer`] already have a binding
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
     /// for the interface.
     ///
     /// # Examples
@@ -276,24 +263,19 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
-        AsyncBindingBuilderError,
-    >
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface:
             Fn<Args, Output = crate::future::BoxFuture<'static, Return>> + Send + Sync,
         FactoryFunc: Fn<
-                (Arc<DIContainerType>,),
+                (Arc<AsyncDIContainer>,),
                 Output = BoxFn<Args, crate::future::BoxFuture<'static, Return>>,
             > + Send
             + Sync,
@@ -328,10 +310,10 @@ where
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
-    /// inside of the associated [`IAsyncDIContainer`].
+    /// inside of the associated [`AsyncDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IAsyncDIContainer`] already have a binding
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
     /// for the interface.
     ///
     /// # Examples
@@ -373,21 +355,16 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
-        AsyncBindingBuilderError,
-    >
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
     where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
-                (Arc<DIContainerType>,),
+                (Arc<AsyncDIContainer>,),
                 Output = BoxFn<(), crate::ptr::TransientPtr<Return>>,
             > + Send
             + Sync,
@@ -422,10 +399,10 @@ where
     }
 
     /// Creates a binding of factory type `Interface` to a async factory inside of the
-    /// associated [`IAsyncDIContainer`].
+    /// associated [`AsyncDIContainer`].
     ///
     /// # Errors
-    /// Will return Err if the associated [`IAsyncDIContainer`] already have a binding
+    /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
     /// for the interface.
     ///
     /// # Examples
@@ -472,21 +449,16 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// [`IAsyncDIContainer`]: crate::di_container::asynchronous::IAsyncDIContainer
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
     pub async fn to_async_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<
-        AsyncBindingWhenConfigurator<Interface, DIContainerType>,
-        AsyncBindingBuilderError,
-    >
+    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
     where
         Return: 'static + ?Sized,
         FactoryFunc: Fn<
-                (Arc<DIContainerType>,),
+                (Arc<AsyncDIContainer>,),
                 Output = BoxFn<(), crate::future::BoxFuture<'static, Return>>,
             > + Send
             + Sync,
@@ -530,13 +502,13 @@ mod tests
 
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
-    use crate::test_utils::{mocks, subjects_async};
+    use crate::di_container::asynchronous::MockAsyncDIContainer;
+    use crate::test_utils::subjects_async;
 
     #[tokio::test]
     async fn can_bind_to() -> Result<(), Box<dyn Error>>
     {
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
@@ -551,10 +523,10 @@ mod tests
             .once();
 
         let binding_builder =
-            AsyncBindingBuilder::<
-                dyn subjects_async::IUserManager,
-                mocks::async_di_container::MockAsyncDIContainer,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+            AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
+                Arc::new(di_container_mock),
+                MockDependencyHistory::new,
+            );
 
         binding_builder.to::<subjects_async::UserManager>().await?;
 
@@ -578,8 +550,7 @@ mod tests
             + Send
             + Sync;
 
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<IUserManagerFactory>()
@@ -593,11 +564,10 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder =
-            AsyncBindingBuilder::<
-                IUserManagerFactory,
-                mocks::async_di_container::MockAsyncDIContainer,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+        let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
+            Arc::new(di_container_mock),
+            MockDependencyHistory::new,
+        );
 
         binding_builder
             .to_factory(&|_| {
@@ -629,8 +599,7 @@ mod tests
             TransientPtr<dyn subjects_async::IUserManager>
         > + Send + Sync;
 
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<IUserManagerFactory>()
@@ -644,11 +613,10 @@ mod tests
             .return_once(|_name, _provider| ())
             .once();
 
-        let binding_builder =
-            AsyncBindingBuilder::<
-                IUserManagerFactory,
-                mocks::async_di_container::MockAsyncDIContainer,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+        let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
+            Arc::new(di_container_mock),
+            MockDependencyHistory::new,
+        );
 
         binding_builder
             .to_async_factory(&|_| {
@@ -675,8 +643,7 @@ mod tests
 
         declare_default_factory!(dyn subjects_async::IUserManager);
 
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
@@ -691,10 +658,10 @@ mod tests
             .once();
 
         let binding_builder =
-            AsyncBindingBuilder::<
-                dyn subjects_async::IUserManager,
-                mocks::async_di_container::MockAsyncDIContainer,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+            AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
+                Arc::new(di_container_mock),
+                MockDependencyHistory::new,
+            );
 
         binding_builder
             .to_default_factory(&|_| {
@@ -722,8 +689,7 @@ mod tests
 
         declare_default_factory!(dyn subjects_async::IUserManager, async = true);
 
-        let mut di_container_mock =
-            mocks::async_di_container::MockAsyncDIContainer::new();
+        let mut di_container_mock = MockAsyncDIContainer::new();
 
         di_container_mock
             .expect_has_binding::<dyn subjects_async::IUserManager>()
@@ -738,10 +704,10 @@ mod tests
             .once();
 
         let binding_builder =
-            AsyncBindingBuilder::<
-                dyn subjects_async::IUserManager,
-                mocks::async_di_container::MockAsyncDIContainer,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+            AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
+                Arc::new(di_container_mock),
+                MockDependencyHistory::new,
+            );
 
         binding_builder
             .to_async_default_factory(&|_| {

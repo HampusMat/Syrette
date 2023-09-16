@@ -250,7 +250,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                     Box::pin(async move {
                         use std::any::type_name;
 
-                        use syrette::di_container::asynchronous::IAsyncDIContainer;
                         use syrette::errors::injectable::InjectableError;
 
                         let self_type_name = type_name::<#self_type>();

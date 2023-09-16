@@ -8,7 +8,6 @@ mod food;
 mod interfaces;
 
 use anyhow::Result;
-use syrette::di_container::asynchronous::prelude::*;
 use tokio::spawn;
 
 use crate::bootstrap::bootstrap;

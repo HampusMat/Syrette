@@ -55,13 +55,11 @@ use std::any::type_name;
 use std::sync::Arc;
 
 use async_lock::Mutex;
-use async_trait::async_trait;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncDIContainerError;
-use crate::future::BoxFuture;
 use crate::private::cast::arc::CastArc;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
@@ -74,17 +72,39 @@ use_double!(crate::dependency_history::DependencyHistory);
 pub mod binding;
 pub mod prelude;
 
-/// Async dependency injection container interface.
-///
-/// **This trait is sealed and cannot be implemented for types outside this crate.**
-#[async_trait]
-pub trait IAsyncDIContainer:
-    Sized + 'static + Send + Sync + details::DIContainerInternals
+/// Async dependency injection container.
+pub struct AsyncDIContainer
+{
+    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
+}
+
+impl AsyncDIContainer
+{
+    /// Returns a new `AsyncDIContainer`.
+    #[must_use]
+    pub fn new() -> Arc<Self>
+    {
+        Arc::new(Self {
+            binding_storage: Mutex::new(DIContainerBindingStorage::new()),
+        })
+    }
+}
+
+#[cfg_attr(test, mockall::automock)]
+impl AsyncDIContainer
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
-    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
+    #[allow(clippy::missing_panics_doc)]
+    pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
     where
-        Interface: 'static + ?Sized + Send + Sync;
+        Interface: 'static + ?Sized + Send + Sync,
+    {
+        #[cfg(test)]
+        panic!("Bind function is unusable when testing");
+
+        #[cfg(not(test))]
+        AsyncBindingBuilder::new(self.clone(), DependencyHistory::new)
+    }
 
     /// Returns the type bound with `Interface`.
     ///
@@ -93,13 +113,15 @@ pub trait IAsyncDIContainer:
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
-    fn get<'a, 'b, Interface>(
-        self: &'a Arc<Self>,
-    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
+    pub async fn get<Interface>(
+        self: &Arc<Self>,
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + 'b + ?Sized + Send + Sync,
-        'a: 'b,
-        Self: 'b;
+        Interface: 'static + ?Sized + Send + Sync,
+    {
+        self.get_bound::<Interface>(DependencyHistory::new(), BindingOptions::new())
+            .await
+    }
 
     /// Returns the type bound with `Interface` and the specified name.
     ///
@@ -108,14 +130,19 @@ pub trait IAsyncDIContainer:
     /// - No binding for `Interface` with name `name` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
-    fn get_named<'a, 'b, Interface>(
-        self: &'a Arc<Self>,
+    pub async fn get_named<Interface>(
+        self: &Arc<Self>,
         name: &'static str,
-    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
-        Interface: 'static + 'b + ?Sized + Send + Sync,
-        'a: 'b,
-        Self: 'b;
+        Interface: 'static + ?Sized + Send + Sync,
+    {
+        self.get_bound::<Interface>(
+            DependencyHistory::new(),
+            BindingOptions::new().name(name),
+        )
+        .await
+    }
 
     /// Returns the type bound with `Interface` where the binding has the specified
     /// options.
@@ -131,7 +158,6 @@ pub trait IAsyncDIContainer:
     /// # Examples
     /// ```
     /// # use syrette::di_container::asynchronous::AsyncDIContainer;
-    /// # use syrette::di_container::asynchronous::IAsyncDIContainer;
     /// # use syrette::dependency_history::DependencyHistory;
     /// # use syrette::di_container::BindingOptions;
     /// #
@@ -152,100 +178,21 @@ pub trait IAsyncDIContainer:
     /// # Ok::<_, Box<dyn std::error::Error>>(())
     /// # });
     /// ```
-    fn get_bound<'this, 'fut, Interface>(
-        self: &'this Arc<Self>,
+    pub async fn get_bound<Interface>(
+        self: &Arc<Self>,
         dependency_history: DependencyHistory,
         binding_options: BindingOptions<'static>,
-    ) -> BoxFuture<'fut, Result<SomePtr<Interface>, AsyncDIContainerError>>
-    where
-        Interface: 'static + 'this + ?Sized + Send + Sync,
-        'this: 'fut,
-        Self: 'fut;
-}
-
-/// Async dependency injection container.
-pub struct AsyncDIContainer
-{
-    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
-}
-
-impl AsyncDIContainer
-{
-    /// Returns a new `AsyncDIContainer`.
-    #[must_use]
-    pub fn new() -> Arc<Self>
-    {
-        Arc::new(Self {
-            binding_storage: Mutex::new(DIContainerBindingStorage::new()),
-        })
-    }
-}
-
-#[async_trait]
-impl IAsyncDIContainer for AsyncDIContainer
-{
-    fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface, Self>
+    ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
-        AsyncBindingBuilder::new(self.clone(), DependencyHistory::new)
+        let binding_providable = self
+            .get_binding_providable::<Interface>(binding_options, dependency_history)
+            .await?;
+
+        self.handle_binding_providable(binding_providable).await
     }
 
-    fn get<'a, 'b, Interface>(
-        self: &'a Arc<Self>,
-    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
-    where
-        Interface: 'static + 'b + ?Sized + Send + Sync,
-        'a: 'b,
-        Self: 'b,
-    {
-        Box::pin(async {
-            self.get_bound::<Interface>(DependencyHistory::new(), BindingOptions::new())
-                .await
-        })
-    }
-
-    fn get_named<'a, 'b, Interface>(
-        self: &'a Arc<Self>,
-        name: &'static str,
-    ) -> BoxFuture<'b, Result<SomePtr<Interface>, AsyncDIContainerError>>
-    where
-        Interface: 'static + 'b + ?Sized + Send + Sync,
-        'a: 'b,
-        Self: 'b,
-    {
-        Box::pin(async {
-            self.get_bound::<Interface>(
-                DependencyHistory::new(),
-                BindingOptions::new().name(name),
-            )
-            .await
-        })
-    }
-
-    fn get_bound<'this, 'fut, Interface>(
-        self: &'this Arc<Self>,
-        dependency_history: DependencyHistory,
-        binding_options: BindingOptions<'static>,
-    ) -> BoxFuture<'fut, Result<SomePtr<Interface>, AsyncDIContainerError>>
-    where
-        Interface: 'static + 'this + ?Sized + Send + Sync,
-        'this: 'fut,
-        Self: 'fut,
-    {
-        Box::pin(async move {
-            let binding_providable = self
-                .get_binding_providable::<Interface>(binding_options, dependency_history)
-                .await?;
-
-            self.handle_binding_providable(binding_providable).await
-        })
-    }
-}
-
-#[async_trait]
-impl details::DIContainerInternals for AsyncDIContainer
-{
     async fn has_binding<Interface>(
         self: &Arc<Self>,
         binding_options: BindingOptions<'static>,
@@ -372,6 +319,7 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
+                use crate::future::BoxFuture;
                 use crate::private::factory::IThreadsafeFactory;
                 use crate::ptr::TransientPtr;
 
@@ -449,41 +397,6 @@ impl AsyncDIContainer
                 reason: err,
                 interface: type_name::<Interface>(),
             })
-    }
-}
-
-pub(crate) mod details
-{
-    use std::sync::Arc;
-
-    use async_trait::async_trait;
-
-    use crate::di_container::BindingOptions;
-    use crate::provider::r#async::IAsyncProvider;
-
-    #[async_trait]
-    pub trait DIContainerInternals
-    {
-        async fn has_binding<Interface>(
-            self: &Arc<Self>,
-            binding_options: BindingOptions<'static>,
-        ) -> bool
-        where
-            Interface: ?Sized + 'static;
-
-        async fn set_binding<Interface>(
-            self: &Arc<Self>,
-            binding_options: BindingOptions<'static>,
-            provider: Box<dyn IAsyncProvider<Self>>,
-        ) where
-            Interface: 'static + ?Sized;
-
-        async fn remove_binding<Interface>(
-            self: &Arc<Self>,
-            binding_options: BindingOptions<'static>,
-        ) -> Option<Box<dyn IAsyncProvider<Self>>>
-        where
-            Interface: 'static + ?Sized;
     }
 }
 
@@ -871,5 +784,84 @@ mod tests
             .threadsafe_factory()?;
 
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn has_binding_works()
+    {
+        let di_container = AsyncDIContainer::new();
+
+        // No binding is present yet
+        assert!(
+            !di_container
+                .has_binding::<subjects_async::Number>(BindingOptions::new())
+                .await
+        );
+
+        di_container
+            .binding_storage
+            .lock()
+            .await
+            .set::<subjects_async::Number>(
+                BindingOptions::new(),
+                Box::new(MockAsyncProvider::new()),
+            );
+
+        assert!(
+            di_container
+                .has_binding::<subjects_async::Number>(BindingOptions::new())
+                .await
+        );
+    }
+
+    #[tokio::test]
+    async fn set_binding_works()
+    {
+        let di_container = AsyncDIContainer::new();
+
+        di_container
+            .set_binding::<subjects_async::UserManager>(
+                BindingOptions::new(),
+                Box::new(MockAsyncProvider::new()),
+            )
+            .await;
+
+        assert!(di_container
+            .binding_storage
+            .lock()
+            .await
+            .has::<subjects_async::UserManager>(BindingOptions::new()));
+    }
+
+    #[tokio::test]
+    async fn remove_binding_works()
+    {
+        let di_container = AsyncDIContainer::new();
+
+        di_container
+            .binding_storage
+            .lock()
+            .await
+            .set::<subjects_async::UserManager>(
+                BindingOptions::new(),
+                Box::new(MockAsyncProvider::new()),
+            );
+
+        assert!(
+            // Formatting is weird without this comment
+            di_container
+                .remove_binding::<subjects_async::UserManager>(BindingOptions::new())
+                .await
+                .is_some()
+        );
+
+        assert!(
+            // Formatting is weird without this comment
+            !di_container
+                .binding_storage
+                .lock()
+                .await
+                .has::<subjects_async::UserManager>(BindingOptions::new())
+        );
     }
 }

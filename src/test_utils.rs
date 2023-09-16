@@ -144,7 +144,6 @@ pub mod subjects_async
     use async_trait::async_trait;
     use syrette_macros::declare_interface;
 
-    use crate::di_container::asynchronous::IAsyncDIContainer;
     use crate::interfaces::async_injectable::AsyncInjectable;
     use crate::ptr::TransientPtr;
 
@@ -187,8 +186,6 @@ pub mod subjects_async
 
     #[async_trait]
     impl<DIContainerType> AsyncInjectable<DIContainerType> for UserManager
-    where
-        DIContainerType: IAsyncDIContainer,
     {
         async fn resolve(
             _: &Arc<DIContainerType>,
@@ -254,8 +251,6 @@ pub mod subjects_async
 
     #[async_trait]
     impl<DIContainerType> AsyncInjectable<DIContainerType> for Number
-    where
-        DIContainerType: IAsyncDIContainer,
     {
         async fn resolve(
             _: &Arc<DIContainerType>,
@@ -275,85 +270,6 @@ pub mod mocks
     #![allow(dead_code)] // Not all mock functions may be used
 
     #[cfg(feature = "async")]
-    pub mod async_di_container
-    {
-        use std::sync::Arc;
-
-        use mockall::mock;
-
-        use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
-        use crate::di_container::asynchronous::details::DIContainerInternals;
-        use crate::di_container::asynchronous::IAsyncDIContainer;
-        use crate::di_container::BindingOptions;
-        use crate::errors::async_di_container::AsyncDIContainerError;
-        use crate::provider::r#async::IAsyncProvider;
-        use crate::ptr::SomePtr;
-        use crate::util::use_double;
-
-        use_double!(crate::dependency_history::DependencyHistory);
-
-        mock! {
-            pub AsyncDIContainer {}
-
-            #[async_trait::async_trait]
-            impl IAsyncDIContainer for AsyncDIContainer
-            {
-                fn bind<Interface>(self: &mut Arc<Self>) ->
-                    AsyncBindingBuilder<Interface, Self>
-                where
-                    Interface: 'static + ?Sized + Send + Sync;
-
-                async fn get<Interface>(
-                    self: &Arc<Self>,
-                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
-                where
-                    Interface: 'static + ?Sized + Send + Sync;
-
-                async fn get_named<Interface>(
-                    self: &Arc<Self>,
-                    name: &'static str,
-                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
-                where
-                    Interface: 'static + ?Sized + Send + Sync;
-
-                #[doc(hidden)]
-                async fn get_bound<Interface>(
-                    self: &Arc<Self>,
-                    dependency_history: DependencyHistory,
-                    binding_options: BindingOptions<'static>
-                ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
-                where
-                    Interface: 'static + ?Sized + Send + Sync;
-            }
-
-            #[async_trait::async_trait]
-            impl DIContainerInternals for AsyncDIContainer
-            {
-                async fn has_binding<Interface>(
-                    self: &Arc<Self>,
-                    binding_options: BindingOptions<'static>,
-                ) -> bool
-                where
-                    Interface: ?Sized + 'static;
-
-                async fn set_binding<Interface>(
-                    self: &Arc<Self>,
-                    binding_options: BindingOptions<'static>,
-                    provider: Box<dyn IAsyncProvider<Self>>,
-                ) where
-                    Interface: 'static + ?Sized;
-
-                async fn remove_binding<Interface>(
-                    self: &Arc<Self>,
-                    binding_options: BindingOptions<'static>,
-                ) -> Option<Box<dyn IAsyncProvider<Self>>>
-                where
-                    Interface: 'static + ?Sized;
-            }
-        }
-    }
-
-    #[cfg(feature = "async")]
     pub mod async_provider
     {
         use std::sync::Arc;
@@ -361,7 +277,6 @@ pub mod mocks
         use async_trait::async_trait;
         use mockall::mock;
 
-        use crate::di_container::asynchronous::IAsyncDIContainer;
         use crate::errors::injectable::InjectableError;
         use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
         use crate::util::use_double;
@@ -369,23 +284,22 @@ pub mod mocks
         use_double!(crate::dependency_history::DependencyHistory);
 
         mock! {
-            pub AsyncProvider<DIContainerType: IAsyncDIContainer> {}
+            pub AsyncProvider<DIContainerT> {}
 
             #[async_trait]
-            impl<
-                DIContainerType: IAsyncDIContainer,
-            > IAsyncProvider<DIContainerType> for AsyncProvider<
-                DIContainerType,
-            >
+            impl<DIContainerT> IAsyncProvider<DIContainerT>
+                for AsyncProvider<DIContainerT>
+            where
+                DIContainerT: Send + Sync
             {
                 async fn provide(
                     &self,
-                    di_container: &Arc<DIContainerType>,
+                    di_container: &Arc<DIContainerT>,
                     dependency_history: DependencyHistory
-                ) -> Result<AsyncProvidable<DIContainerType>, InjectableError>;
+                ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>;
 
                 fn do_clone(&self) ->
-                    Box<dyn IAsyncProvider<DIContainerType>>;
+                    Box<dyn IAsyncProvider<DIContainerT>>;
             }
         }
     }

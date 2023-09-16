@@ -2,7 +2,6 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::di_container::asynchronous::IAsyncDIContainer;
 use crate::errors::injectable::InjectableError;
 use crate::future::BoxFuture;
 use crate::private::cast::CastFromArc;
@@ -13,8 +12,6 @@ use_double!(crate::dependency_history::DependencyHistory);
 
 /// Interface for structs that can be injected into or be injected to.
 pub trait AsyncInjectable<DIContainerType>: CastFromArc
-where
-    DIContainerType: IAsyncDIContainer,
 {
     /// Resolves the dependencies of the injectable.
     ///
@@ -30,8 +27,6 @@ where
 }
 
 impl<DIContainerType> Debug for dyn AsyncInjectable<DIContainerType>
-where
-    DIContainerType: IAsyncDIContainer,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
