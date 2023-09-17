@@ -215,7 +215,7 @@ impl DIContainer
                         binding_kind: "factory",
                     })?;
 
-                Ok(SomePtr::Factory(factory(self.clone()).into()))
+                Ok(SomePtr::Factory(factory.call(self.clone()).into()))
             }
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
@@ -234,7 +234,7 @@ impl DIContainer
                         binding_kind: "default factory",
                     })?;
 
-                Ok(SomePtr::Transient(default_factory(self.clone())()))
+                Ok(SomePtr::Transient(default_factory.call(self.clone())()))
             }
         }
     }
