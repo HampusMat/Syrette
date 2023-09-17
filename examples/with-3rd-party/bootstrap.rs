@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::rc::Rc;
 
 use syrette::ptr::TransientPtr;
 use syrette::{declare_default_factory, DIContainer};
@@ -10,7 +9,7 @@ use crate::ninja::Ninja;
 
 declare_default_factory!(Shuriken);
 
-pub fn bootstrap() -> Result<Rc<DIContainer>, Box<dyn Error>>
+pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
 {
     let mut di_container = DIContainer::new();
 

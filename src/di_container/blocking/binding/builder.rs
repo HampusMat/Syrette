@@ -1,7 +1,6 @@
 //! Binding builder for types inside of a [`DIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator;
 #[cfg(feature = "factory")]
@@ -16,22 +15,22 @@ use_double!(crate::di_container::blocking::DIContainer);
 
 /// Binding builder for type `Interface` inside a [`DIContainer`].
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct BindingBuilder<Interface>
+pub struct BindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: Rc<DIContainer>,
+    di_container: &'di_container DIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface> BindingBuilder<Interface>
+impl<'di_container, Interface> BindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
     pub(crate) fn new(
-        di_container: Rc<DIContainer>,
+        di_container: &'di_container DIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -83,7 +82,10 @@ where
     /// ```
     pub fn to<Implementation>(
         self,
-    ) -> Result<BindingScopeConfigurator<Interface, Implementation>, BindingBuilderError>
+    ) -> Result<
+        BindingScopeConfigurator<'di_container, Interface, Implementation>,
+        BindingBuilderError,
+    >
     where
         Implementation: Injectable<DIContainer>,
     {
@@ -97,7 +99,7 @@ where
         }
 
         let binding_scope_configurator = BindingScopeConfigurator::new(
-            self.di_container.clone(),
+            self.di_container,
             self.dependency_history_factory,
         );
 
@@ -151,13 +153,13 @@ where
     /// di_container
     ///     .bind::<ICustomerFactory>()
     ///     .to_factory(&|context| {
-    ///         Box::new(move |name, id| {
-    ///             let customer_id_factory = context
-    ///                 .get::<ICustomerIDFactory>()
-    ///                 .unwrap()
-    ///                 .factory()
-    ///                 .unwrap();
+    ///         let customer_id_factory = context
+    ///             .get::<ICustomerIDFactory>()
+    ///             .unwrap()
+    ///             .factory()
+    ///             .unwrap();
     ///
+    ///         Box::new(move |name, id| {
     ///             let customer_id = customer_id_factory(id);
     ///
     ///             let customer = TransientPtr::new(Customer::new(name, customer_id));
@@ -174,12 +176,12 @@ where
     pub fn to_factory<Args, Return, Func>(
         self,
         factory_func: &'static Func,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<'di_container, Interface>, BindingBuilderError>
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
-        Func: Fn<(std::rc::Rc<DIContainer>,), Output = Box<Interface>>,
+        Func: Fn(&DIContainer) -> Box<Interface>,
     {
         use crate::private::castable_factory::blocking::CastableFactory;
 
@@ -260,14 +262,13 @@ where
     pub fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingBuilderError>
+    ) -> Result<BindingWhenConfigurator<'di_container, Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn<
-            (Rc<DIContainer>,),
-            Output = crate::ptr::TransientPtr<
-                dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
-            >,
+        FactoryFunc: Fn(
+            &DIContainer,
+        ) -> crate::ptr::TransientPtr<
+            dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
         >,
     {
         use crate::private::castable_factory::blocking::CastableFactory;
@@ -325,7 +326,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<dyn subjects::INumber>::new(
-            Rc::new(mock_di_container),
+            &mock_di_container,
             MockDependencyHistory::new,
         );
 
@@ -361,7 +362,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<IUserManagerFactory>::new(
-            Rc::new(mock_di_container),
+            &mock_di_container,
             MockDependencyHistory::new,
         );
 
@@ -403,7 +404,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<dyn subjects::IUserManager>::new(
-            Rc::new(mock_di_container),
+            &mock_di_container,
             MockDependencyHistory::new,
         );
 

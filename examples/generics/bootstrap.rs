@@ -1,11 +1,9 @@
-use std::rc::Rc;
-
 use syrette::{di_container_bind, DIContainer};
 
 use crate::interfaces::printer::IPrinter;
 use crate::printer::Printer;
 
-pub fn bootstrap() -> Rc<DIContainer>
+pub fn bootstrap() -> DIContainer
 {
     let mut di_container = DIContainer::new();
 

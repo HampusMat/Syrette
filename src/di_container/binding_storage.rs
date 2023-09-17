@@ -63,6 +63,16 @@ where
     }
 }
 
+impl<Provider> Default for DIContainerBindingStorage<Provider>
+where
+    Provider: 'static + ?Sized,
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct BindingId<'opts>
 {

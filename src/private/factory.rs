@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
 
@@ -8,7 +6,7 @@ pub trait IFactory<ReturnInterface, DIContainerT>: CastFrom
 where
     ReturnInterface: 'static + ?Sized,
 {
-    fn call(&self, di_container: Rc<DIContainerT>) -> TransientPtr<ReturnInterface>;
+    fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>;
 }
 
 /// Interface for a threadsafe factory.

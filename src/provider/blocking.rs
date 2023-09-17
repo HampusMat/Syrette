@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
@@ -24,7 +23,7 @@ pub trait IProvider<DIContainerType>
 {
     fn provide(
         &self,
-        di_container: &Rc<DIContainerType>,
+        di_container: &DIContainerType,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<DIContainerType>, InjectableError>;
 }
@@ -58,7 +57,7 @@ where
 {
     fn provide(
         &self,
-        di_container: &Rc<DIContainerType>,
+        di_container: &DIContainerType,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<DIContainerType>, InjectableError>
     {
@@ -98,7 +97,7 @@ where
 {
     fn provide(
         &self,
-        _di_container: &Rc<DIContainerType>,
+        _di_container: &DIContainerType,
         _dependency_history: DependencyHistory,
     ) -> Result<Providable<DIContainerType>, InjectableError>
     {
@@ -133,7 +132,7 @@ impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
 {
     fn provide(
         &self,
-        _di_container: &Rc<DIContainerType>,
+        _di_container: &DIContainerType,
         _dependency_history: DependencyHistory,
     ) -> Result<Providable<DIContainerType>, InjectableError>
     {
@@ -168,7 +167,7 @@ mod tests
         assert!(
             matches!(
                 transient_type_provider
-                    .provide(&Rc::new(di_container), dependency_history_mock)?,
+                    .provide(&di_container, dependency_history_mock)?,
                 Providable::Transient(_)
             ),
             "The provided type is not transient"
@@ -190,7 +189,7 @@ mod tests
         assert!(
             matches!(
                 singleton_provider
-                    .provide(&Rc::new(di_container), MockDependencyHistory::new())?,
+                    .provide(&di_container, MockDependencyHistory::new())?,
                 Providable::Singleton(_)
             ),
             "The provided type is not a singleton"
@@ -215,7 +214,7 @@ mod tests
         let default_factory_provider =
             FactoryProvider::new(FactoryPtr::new(FooFactory), true);
 
-        let di_container = Rc::new(MockDIContainer::new());
+        let di_container = MockDIContainer::new();
 
         assert!(
             matches!(

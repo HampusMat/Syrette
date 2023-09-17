@@ -51,7 +51,6 @@
 //! ```
 use std::any::type_name;
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
@@ -74,6 +73,7 @@ pub(crate) type BindingOptionsWithLt<'a> = BindingOptions<'a>;
 pub(crate) type BindingOptionsWithLt = BindingOptions<'static>;
 
 /// Blocking dependency injection container.
+#[derive(Default)]
 pub struct DIContainer
 {
     binding_storage: RefCell<DIContainerBindingStorage<dyn IProvider<Self>>>,
@@ -83,11 +83,11 @@ impl DIContainer
 {
     /// Returns a new `DIContainer`.
     #[must_use]
-    pub fn new() -> Rc<Self>
+    pub fn new() -> Self
     {
-        Rc::new(Self {
+        Self {
             binding_storage: RefCell::new(DIContainerBindingStorage::new()),
-        })
+        }
     }
 }
 
@@ -96,7 +96,7 @@ impl DIContainer
 {
     /// Returns a new [`BindingBuilder`] for the given interface.
     #[allow(clippy::missing_panics_doc)]
-    pub fn bind<Interface>(self: &mut Rc<Self>) -> BindingBuilder<Interface>
+    pub fn bind<Interface>(&mut self) -> BindingBuilder<'_, Interface>
     where
         Interface: 'static + ?Sized,
     {
@@ -104,7 +104,7 @@ impl DIContainer
         panic!("Nope");
 
         #[cfg(not(test))]
-        BindingBuilder::new(self.clone(), DependencyHistory::new)
+        BindingBuilder::new(self, DependencyHistory::new)
     }
 
     /// Returns the type bound with `Interface`.
@@ -114,7 +114,7 @@ impl DIContainer
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
-    pub fn get<Interface>(self: &Rc<Self>) -> Result<SomePtr<Interface>, DIContainerError>
+    pub fn get<Interface>(&self) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
     {
@@ -129,7 +129,7 @@ impl DIContainer
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
     pub fn get_named<Interface>(
-        self: &Rc<Self>,
+        &self,
         name: &'static str,
     ) -> Result<SomePtr<Interface>, DIContainerError>
     where
@@ -177,7 +177,7 @@ impl DIContainer
     /// # }
     /// ```
     pub fn get_bound<Interface>(
-        self: &Rc<Self>,
+        &self,
         dependency_history: DependencyHistory,
         binding_options: BindingOptionsWithLt,
     ) -> Result<SomePtr<Interface>, DIContainerError>
@@ -215,7 +215,7 @@ impl DIContainer
                         binding_kind: "factory",
                     })?;
 
-                Ok(SomePtr::Factory(factory.call(self.clone()).into()))
+                Ok(SomePtr::Factory(factory.call(self).into()))
             }
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
@@ -234,15 +234,12 @@ impl DIContainer
                         binding_kind: "default factory",
                     })?;
 
-                Ok(SomePtr::Transient(default_factory.call(self.clone())()))
+                Ok(SomePtr::Transient(default_factory.call(self)()))
             }
         }
     }
 
-    fn has_binding<Interface>(
-        self: &Rc<Self>,
-        binding_options: BindingOptionsWithLt,
-    ) -> bool
+    fn has_binding<Interface>(&self, binding_options: BindingOptionsWithLt) -> bool
     where
         Interface: ?Sized + 'static,
     {
@@ -252,7 +249,7 @@ impl DIContainer
     }
 
     fn set_binding<Interface>(
-        self: &Rc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
         provider: Box<dyn IProvider<Self>>,
     ) where
@@ -264,7 +261,7 @@ impl DIContainer
     }
 
     fn remove_binding<Interface>(
-        self: &Rc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IProvider<Self>>>
     where
@@ -279,7 +276,7 @@ impl DIContainer
 impl DIContainer
 {
     fn get_binding_providable<Interface>(
-        self: &Rc<Self>,
+        &self,
         binding_options: BindingOptionsWithLt,
         dependency_history: DependencyHistory,
     ) -> Result<Providable<Self>, DIContainerError>
@@ -494,15 +491,14 @@ mod tests
 
         let di_container = DIContainer::new();
 
-        let factory_func: &dyn Fn(Rc<DIContainer>) -> Box<IUserManagerFactory> =
-            &|_: Rc<DIContainer>| {
-                Box::new(move |users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
+        let factory_func: &dyn Fn(&DIContainer) -> Box<IUserManagerFactory> = &|_| {
+            Box::new(move |users| {
+                let user_manager: TransientPtr<dyn IUserManager> =
+                    TransientPtr::new(UserManager::new(users));
 
-                    user_manager
-                })
-            };
+                user_manager
+            })
+        };
 
         let mut mock_provider = MockIProvider::new();
 
@@ -572,15 +568,14 @@ mod tests
 
         let di_container = DIContainer::new();
 
-        let factory_func: &dyn Fn(Rc<DIContainer>) -> Box<IUserManagerFactory> =
-            &|_: Rc<DIContainer>| {
-                Box::new(move |users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
+        let factory_func: &dyn Fn(&DIContainer) -> Box<IUserManagerFactory> = &|_| {
+            Box::new(move |users| {
+                let user_manager: TransientPtr<dyn IUserManager> =
+                    TransientPtr::new(UserManager::new(users));
 
-                    user_manager
-                })
-            };
+                user_manager
+            })
+        };
 
         let mut mock_provider = MockIProvider::new();
 

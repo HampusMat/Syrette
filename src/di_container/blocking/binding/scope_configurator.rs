@@ -1,6 +1,5 @@
 //! Scope configurator for a binding for types inside of a [`DIContainer`].
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::BindingOptions;
@@ -14,25 +13,26 @@ use_double!(crate::dependency_history::DependencyHistory);
 use_double!(crate::di_container::blocking::DIContainer);
 
 /// Scope configurator for a binding for type `Interface` inside a [`DIContainer`].
-pub struct BindingScopeConfigurator<Interface, Implementation>
+pub struct BindingScopeConfigurator<'di_container, Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: Injectable<DIContainer>,
 {
-    di_container: Rc<DIContainer>,
+    di_container: &'di_container DIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation> BindingScopeConfigurator<Interface, Implementation>
+impl<'di_container, Interface, Implementation>
+    BindingScopeConfigurator<'di_container, Interface, Implementation>
 where
     Interface: 'static + ?Sized,
     Implementation: Injectable<DIContainer>,
 {
     pub(crate) fn new(
-        di_container: Rc<DIContainer>,
+        di_container: &'di_container DIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -48,7 +48,7 @@ where
     ///
     /// This is the default.
     #[allow(clippy::must_use_candidate)]
-    pub fn in_transient_scope(self) -> BindingWhenConfigurator<Interface>
+    pub fn in_transient_scope(self) -> BindingWhenConfigurator<'di_container, Interface>
     {
         self.set_in_transient_scope();
 
@@ -61,11 +61,14 @@ where
     /// Will return Err if resolving the implementation fails.
     pub fn in_singleton_scope(
         self,
-    ) -> Result<BindingWhenConfigurator<Interface>, BindingScopeConfiguratorError>
+    ) -> Result<
+        BindingWhenConfigurator<'di_container, Interface>,
+        BindingScopeConfiguratorError,
+    >
     {
         let singleton: SingletonPtr<Implementation> = SingletonPtr::from(
             Implementation::resolve(
-                &self.di_container,
+                self.di_container,
                 (self.dependency_history_factory)(),
             )
             .map_err(BindingScopeConfiguratorError::SingletonResolveFailed)?,
@@ -111,8 +114,7 @@ mod tests
             dyn subjects::IUserManager,
             subjects::UserManager,
         >::new(
-            Rc::new(di_container_mock),
-            MockDependencyHistory::new,
+            &di_container_mock, MockDependencyHistory::new
         );
 
         binding_scope_configurator.in_transient_scope();
@@ -133,8 +135,7 @@ mod tests
             dyn subjects::IUserManager,
             subjects::UserManager,
         >::new(
-            Rc::new(di_container_mock),
-            MockDependencyHistory::new,
+            &di_container_mock, MockDependencyHistory::new
         );
 
         assert!(binding_scope_configurator.in_singleton_scope().is_ok());

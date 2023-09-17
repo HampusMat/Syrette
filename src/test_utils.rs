@@ -3,7 +3,6 @@ pub mod subjects
     //! Test subjects.
 
     use std::fmt::Debug;
-    use std::rc::Rc;
 
     use syrette_macros::declare_interface;
 
@@ -51,7 +50,7 @@ pub mod subjects
     impl<DIContainerT> Injectable<DIContainerT> for UserManager
     {
         fn resolve(
-            _di_container: &Rc<DIContainerT>,
+            _di_container: &DIContainerT,
             _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
@@ -115,7 +114,7 @@ pub mod subjects
     impl<DIContainerT> Injectable<DIContainerT> for Number
     {
         fn resolve(
-            _di_container: &Rc<DIContainerT>,
+            _di_container: &DIContainerT,
             _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where

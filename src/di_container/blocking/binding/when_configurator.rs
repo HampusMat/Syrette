@@ -1,7 +1,6 @@
 //! When configurator for a binding for types inside of a [`DIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingWhenConfiguratorError;
@@ -10,20 +9,20 @@ use crate::util::use_double;
 use_double!(crate::di_container::blocking::DIContainer);
 
 /// When configurator for a binding for type `Interface` inside a [`DIContainer`].
-pub struct BindingWhenConfigurator<Interface>
+pub struct BindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: Rc<DIContainer>,
+    di_container: &'di_container DIContainer,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface> BindingWhenConfigurator<Interface>
+impl<'di_container, Interface> BindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    pub(crate) fn new(di_container: Rc<DIContainer>) -> Self
+    pub(crate) fn new(di_container: &'di_container DIContainer) -> Self
     {
         Self {
             di_container,
@@ -88,9 +87,7 @@ mod tests
             .once();
 
         let binding_when_configurator =
-            BindingWhenConfigurator::<dyn subjects::INumber>::new(Rc::new(
-                di_container_mock,
-            ));
+            BindingWhenConfigurator::<dyn subjects::INumber>::new(&di_container_mock);
 
         assert!(binding_when_configurator.when_named("cool").is_ok());
     }

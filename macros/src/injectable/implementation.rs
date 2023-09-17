@@ -292,9 +292,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             > for #self_type
             {
                 fn resolve(
-                    #di_container_var: &std::rc::Rc<
-                        syrette::di_container::blocking::DIContainer
-                    >,
+                    #di_container_var: &syrette::di_container::blocking::DIContainer,
                     mut #dependency_history_var: syrette::dependency_history::DependencyHistory
                 ) -> Result<
                     syrette::ptr::TransientPtr<Self>,

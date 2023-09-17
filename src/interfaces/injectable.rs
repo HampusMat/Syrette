@@ -1,6 +1,5 @@
 //! Interface for structs that can be injected into or be injected to.
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use crate::errors::injectable::InjectableError;
 use crate::private::cast::CastFrom;
@@ -17,7 +16,7 @@ pub trait Injectable<DIContainerT>: CastFrom
     /// # Errors
     /// Will return `Err` if resolving the dependencies fails.
     fn resolve(
-        di_container: &Rc<DIContainerT>,
+        di_container: &DIContainerT,
         dependency_history: DependencyHistory,
     ) -> Result<TransientPtr<Self>, InjectableError>
     where
