@@ -445,7 +445,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory() -> Result<(), Box<dyn Error>>
     {
-        use crate::private::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -522,7 +522,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named() -> Result<(), Box<dyn Error>>
     {
-        use crate::private::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager

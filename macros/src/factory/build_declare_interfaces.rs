@@ -32,7 +32,7 @@ pub fn build_declare_factory_interfaces(
     } else {
         quote! {
             syrette::declare_interface!(
-                syrette::private::castable_factory::blocking::CastableFactory<
+                syrette::private::castable_factory::CastableFactory<
                     #factory_interface,
                     syrette::di_container::blocking::DIContainer
                 > -> syrette::private::factory::IFactory<
@@ -42,7 +42,7 @@ pub fn build_declare_factory_interfaces(
             );
 
             syrette::declare_interface!(
-                syrette::private::castable_factory::blocking::CastableFactory<
+                syrette::private::castable_factory::CastableFactory<
                     #factory_interface,
                     syrette::di_container::blocking::DIContainer
                 > -> syrette::private::any_factory::AnyFactory

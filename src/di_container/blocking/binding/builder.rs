@@ -183,7 +183,7 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn(&DIContainer) -> Box<Interface>,
     {
-        use crate::private::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::CastableFactory;
 
         if self
             .di_container
@@ -271,7 +271,7 @@ where
             dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
         >,
     {
-        use crate::private::castable_factory::blocking::CastableFactory;
+        use crate::private::castable_factory::CastableFactory;
 
         if self
             .di_container
