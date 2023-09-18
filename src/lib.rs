@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "factory", feature(unboxed_closures, fn_traits, tuple_trait))]
+#![cfg_attr(feature = "factory", feature(unboxed_closures, tuple_trait))]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]

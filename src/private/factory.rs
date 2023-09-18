@@ -15,9 +15,9 @@ where
 /// Interface for a threadsafe factory.
 #[cfg(feature = "async")]
 pub trait IThreadsafeFactory<ReturnInterface, DIContainerT>:
-    Fn<(Arc<DIContainerT>,), Output = TransientPtr<ReturnInterface>>
-    + crate::private::cast::CastFromArc
+    crate::private::cast::CastFromArc
 where
     ReturnInterface: 'static + ?Sized,
 {
+    fn call(&self, di_container: Arc<DIContainerT>) -> TransientPtr<ReturnInterface>;
 }

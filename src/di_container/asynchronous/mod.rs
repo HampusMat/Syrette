@@ -299,7 +299,9 @@ impl AsyncDIContainer
                         }
                     })?;
 
-                Ok(SomePtr::ThreadsafeFactory(factory(self.clone()).into()))
+                Ok(SomePtr::ThreadsafeFactory(
+                    factory.call(self.clone()).into(),
+                ))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
@@ -315,7 +317,7 @@ impl AsyncDIContainer
                     DefaultFactoryFn<Interface>,
                 >(binding, "default factory")?;
 
-                Ok(SomePtr::Transient(default_factory(self.clone())()))
+                Ok(SomePtr::Transient(default_factory.call(self.clone())()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
@@ -337,7 +339,7 @@ impl AsyncDIContainer
                 )?;
 
                 Ok(SomePtr::Transient(
-                    async_default_factory(self.clone())().await,
+                    async_default_factory.call(self.clone())().await,
                 ))
             }
         }

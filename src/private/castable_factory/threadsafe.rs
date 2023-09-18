@@ -11,7 +11,7 @@ where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    func: &'static (dyn Fn<(Arc<DIContainerT>,), Output = TransientPtr<ReturnInterface>>
+    func: &'static (dyn Fn(Arc<DIContainerT>) -> TransientPtr<ReturnInterface>
                   + Send
                   + Sync),
 }
@@ -38,44 +38,9 @@ where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-}
-
-impl<ReturnInterface, DIContainerT> Fn<(Arc<DIContainerT>,)>
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
-where
-    DIContainerT: 'static,
-    ReturnInterface: 'static + ?Sized,
-{
-    extern "rust-call" fn call(&self, args: (Arc<DIContainerT>,)) -> Self::Output
+    fn call(&self, di_container: Arc<DIContainerT>) -> TransientPtr<ReturnInterface>
     {
-        self.func.call(args)
-    }
-}
-
-impl<ReturnInterface, DIContainerT> FnMut<(Arc<DIContainerT>,)>
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
-where
-    DIContainerT: 'static,
-    ReturnInterface: 'static + ?Sized,
-{
-    extern "rust-call" fn call_mut(&mut self, args: (Arc<DIContainerT>,))
-        -> Self::Output
-    {
-        self.call(args)
-    }
-}
-
-impl<ReturnInterface, DIContainerT> FnOnce<(Arc<DIContainerT>,)>
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
-where
-    DIContainerT: 'static,
-    ReturnInterface: 'static + ?Sized,
-{
-    type Output = TransientPtr<ReturnInterface>;
-
-    extern "rust-call" fn call_once(self, args: (Arc<DIContainerT>,)) -> Self::Output
-    {
-        self.call(args)
+        (self.func)(di_container)
     }
 }
 
@@ -133,36 +98,8 @@ mod tests
 
         let mock_di_container = Arc::new(MockAsyncDIContainer::new());
 
-        let output = castable_factory.call((mock_di_container,));
+        let output = castable_factory.call(mock_di_container);
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 27 }));
-    }
-
-    #[test]
-    fn can_call_mut()
-    {
-        let mut castable_factory = ThreadsafeCastableFactory::new(&|_| {
-            TransientPtr::new(Bacon { heal_amount: 1092 })
-        });
-
-        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
-
-        let output = castable_factory.call_mut((mock_di_container,));
-
-        assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 1092 }));
-    }
-
-    #[test]
-    fn can_call_once()
-    {
-        let castable_factory = ThreadsafeCastableFactory::new(&|_| {
-            TransientPtr::new(Bacon { heal_amount: 547 })
-        });
-
-        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
-
-        let output = castable_factory.call_once((mock_di_container,));
-
-        assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 547 }));
     }
 }
