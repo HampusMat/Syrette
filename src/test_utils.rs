@@ -138,7 +138,6 @@ pub mod subjects_async
     //! Test subjects.
 
     use std::fmt::Debug;
-    use std::sync::Arc;
 
     use async_trait::async_trait;
     use syrette_macros::declare_interface;
@@ -187,7 +186,7 @@ pub mod subjects_async
     impl<DIContainerType> AsyncInjectable<DIContainerType> for UserManager
     {
         async fn resolve(
-            _: &Arc<DIContainerType>,
+            _: &DIContainerType,
             _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
@@ -252,7 +251,7 @@ pub mod subjects_async
     impl<DIContainerType> AsyncInjectable<DIContainerType> for Number
     {
         async fn resolve(
-            _: &Arc<DIContainerType>,
+            _: &DIContainerType,
             _dependency_history: DependencyHistory,
         ) -> Result<TransientPtr<Self>, crate::errors::injectable::InjectableError>
         where
@@ -271,8 +270,6 @@ pub mod mocks
     #[cfg(feature = "async")]
     pub mod async_provider
     {
-        use std::sync::Arc;
-
         use async_trait::async_trait;
         use mockall::mock;
 
@@ -293,7 +290,7 @@ pub mod mocks
             {
                 async fn provide(
                     &self,
-                    di_container: &Arc<DIContainerT>,
+                    di_container: &DIContainerT,
                     dependency_history: DependencyHistory
                 ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>;
 

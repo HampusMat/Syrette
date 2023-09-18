@@ -1,7 +1,6 @@
 //! Binding builder for types inside of a [`AsyncDIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use crate::di_container::asynchronous::binding::scope_configurator::AsyncBindingScopeConfigurator;
 #[cfg(feature = "factory")]
@@ -21,22 +20,22 @@ pub type BoxFn<Args, Return> = Box<(dyn Fn<Args, Output = Return> + Send + Sync)
 
 /// Binding builder for type `Interface` inside a [`AsyncDIContainer`].
 #[must_use = "No binding will be created if you don't use the binding builder"]
-pub struct AsyncBindingBuilder<Interface>
+pub struct AsyncBindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    di_container: Arc<AsyncDIContainer>,
+    di_container: &'di_container AsyncDIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface> AsyncBindingBuilder<Interface>
+impl<'di_container, Interface> AsyncBindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
     pub(crate) fn new(
-        di_container: Arc<AsyncDIContainer>,
+        di_container: &'di_container AsyncDIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -91,7 +90,7 @@ where
     pub async fn to<Implementation>(
         self,
     ) -> Result<
-        AsyncBindingScopeConfigurator<Interface, Implementation>,
+        AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>,
         AsyncBindingBuilderError,
     >
     where
@@ -109,7 +108,7 @@ where
         }
 
         let binding_scope_configurator = AsyncBindingScopeConfigurator::new(
-            self.di_container.clone(),
+            self.di_container,
             self.dependency_history_factory,
         );
 
@@ -170,13 +169,15 @@ where
     pub async fn to_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    ) -> Result<
+        AsyncBindingWhenConfigurator<'di_container, Interface>,
+        AsyncBindingBuilderError,
+    >
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface: Fn<Args, Output = Return> + Send + Sync,
-        FactoryFunc:
-            Fn<(Arc<AsyncDIContainer>,), Output = BoxFn<Args, Return>> + Send + Sync,
+        FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<Args, Return> + Send + Sync,
     {
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
@@ -204,7 +205,7 @@ where
             )
             .await;
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
     /// Creates a binding of factory type `Interface` to a async factory inside of the
@@ -268,16 +269,19 @@ where
     pub async fn to_async_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    ) -> Result<
+        AsyncBindingWhenConfigurator<'di_container, Interface>,
+        AsyncBindingBuilderError,
+    >
     where
         Args: std::marker::Tuple + 'static,
         Return: 'static + ?Sized,
         Interface:
             Fn<Args, Output = crate::future::BoxFuture<'static, Return>> + Send + Sync,
-        FactoryFunc: Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = BoxFn<Args, crate::future::BoxFuture<'static, Return>>,
-            > + Send
+        FactoryFunc: Fn(
+                &AsyncDIContainer,
+            ) -> BoxFn<Args, crate::future::BoxFuture<'static, Return>>
+            + Send
             + Sync,
     {
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
@@ -306,7 +310,7 @@ where
             )
             .await;
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
     /// Creates a binding of type `Interface` to a factory that takes no arguments
@@ -360,13 +364,14 @@ where
     pub async fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    ) -> Result<
+        AsyncBindingWhenConfigurator<'di_container, Interface>,
+        AsyncBindingBuilderError,
+    >
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = BoxFn<(), crate::ptr::TransientPtr<Return>>,
-            > + Send
+        FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<(), crate::ptr::TransientPtr<Return>>
+            + Send
             + Sync,
     {
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
@@ -395,7 +400,7 @@ where
             )
             .await;
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
     /// Creates a binding of factory type `Interface` to a async factory inside of the
@@ -454,13 +459,14 @@ where
     pub async fn to_async_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
-    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingBuilderError>
+    ) -> Result<
+        AsyncBindingWhenConfigurator<'di_container, Interface>,
+        AsyncBindingBuilderError,
+    >
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = BoxFn<(), crate::future::BoxFuture<'static, Return>>,
-            > + Send
+        FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<(), crate::future::BoxFuture<'static, Return>>
+            + Send
             + Sync,
     {
         use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
@@ -489,7 +495,7 @@ where
             )
             .await;
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 }
 
@@ -524,7 +530,7 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                Arc::new(di_container_mock),
+                &di_container_mock,
                 MockDependencyHistory::new,
             );
 
@@ -565,7 +571,7 @@ mod tests
             .once();
 
         let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
-            Arc::new(di_container_mock),
+            &di_container_mock,
             MockDependencyHistory::new,
         );
 
@@ -614,7 +620,7 @@ mod tests
             .once();
 
         let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
-            Arc::new(di_container_mock),
+            &di_container_mock,
             MockDependencyHistory::new,
         );
 
@@ -659,7 +665,7 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                Arc::new(di_container_mock),
+                &di_container_mock,
                 MockDependencyHistory::new,
             );
 
@@ -705,7 +711,7 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                Arc::new(di_container_mock),
+                &di_container_mock,
                 MockDependencyHistory::new,
             );
 

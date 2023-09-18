@@ -1,6 +1,5 @@
 //! Scope configurator for a binding for types inside of a [`AsyncDIContainer`].
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::BindingOptions;
@@ -14,25 +13,26 @@ use_double!(crate::dependency_history::DependencyHistory);
 use_double!(crate::di_container::asynchronous::AsyncDIContainer);
 
 /// Scope configurator for a binding for type `Interface` inside a [`AsyncDIContainer`].
-pub struct AsyncBindingScopeConfigurator<Interface, Implementation>
+pub struct AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>
 where
     Interface: 'static + ?Sized + Send + Sync,
     Implementation: AsyncInjectable<AsyncDIContainer>,
 {
-    di_container: Arc<AsyncDIContainer>,
+    di_container: &'di_container AsyncDIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
     implementation_phantom: PhantomData<Implementation>,
 }
 
-impl<Interface, Implementation> AsyncBindingScopeConfigurator<Interface, Implementation>
+impl<'di_container, Interface, Implementation>
+    AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>
 where
     Interface: 'static + ?Sized + Send + Sync,
     Implementation: AsyncInjectable<AsyncDIContainer>,
 {
     pub(crate) fn new(
-        di_container: Arc<AsyncDIContainer>,
+        di_container: &'di_container AsyncDIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -47,11 +47,13 @@ where
     /// Configures the binding to be in a transient scope.
     ///
     /// This is the default.
-    pub async fn in_transient_scope(self) -> AsyncBindingWhenConfigurator<Interface>
+    pub async fn in_transient_scope(
+        self,
+    ) -> AsyncBindingWhenConfigurator<'di_container, Interface>
     {
         self.set_in_transient_scope().await;
 
-        AsyncBindingWhenConfigurator::new(self.di_container.clone())
+        AsyncBindingWhenConfigurator::new(self.di_container)
     }
 
     /// Configures the binding to be in a singleton scope.
@@ -60,12 +62,15 @@ where
     /// Will return Err if resolving the implementation fails.
     pub async fn in_singleton_scope(
         self,
-    ) -> Result<AsyncBindingWhenConfigurator<Interface>, AsyncBindingScopeConfiguratorError>
+    ) -> Result<
+        AsyncBindingWhenConfigurator<'di_container, Interface>,
+        AsyncBindingScopeConfiguratorError,
+    >
     {
         let singleton: ThreadsafeSingletonPtr<Implementation> =
             ThreadsafeSingletonPtr::from(
                 Implementation::resolve(
-                    &self.di_container,
+                    self.di_container,
                     (self.dependency_history_factory)(),
                 )
                 .await
@@ -79,7 +84,7 @@ where
             )
             .await;
 
-        Ok(AsyncBindingWhenConfigurator::new(self.di_container.clone()))
+        Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
     pub(crate) async fn set_in_transient_scope(&self)
@@ -118,7 +123,7 @@ mod tests
             AsyncBindingScopeConfigurator::<
                 dyn subjects_async::IUserManager,
                 subjects_async::UserManager,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+            >::new(&di_container_mock, MockDependencyHistory::new);
 
         binding_scope_configurator.in_transient_scope().await;
     }
@@ -138,7 +143,7 @@ mod tests
             AsyncBindingScopeConfigurator::<
                 dyn subjects_async::IUserManager,
                 subjects_async::UserManager,
-            >::new(Arc::new(di_container_mock), MockDependencyHistory::new);
+            >::new(&di_container_mock, MockDependencyHistory::new);
 
         assert!(binding_scope_configurator
             .in_singleton_scope()

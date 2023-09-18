@@ -1,6 +1,5 @@
 use std::any::type_name;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 use crate::private::any_factory::{AnyFactory, AnyThreadsafeFactory};
 use crate::private::factory::IThreadsafeFactory;
@@ -11,9 +10,7 @@ where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    func: &'static (dyn Fn(Arc<DIContainerT>) -> TransientPtr<ReturnInterface>
-                  + Send
-                  + Sync),
+    func: &'static (dyn Fn(&DIContainerT) -> TransientPtr<ReturnInterface> + Send + Sync),
 }
 
 impl<ReturnInterface, DIContainerT>
@@ -23,7 +20,7 @@ where
     ReturnInterface: 'static + ?Sized,
 {
     pub fn new(
-        func: &'static (dyn Fn<(Arc<DIContainerT>,), Output = TransientPtr<ReturnInterface>>
+        func: &'static (dyn Fn(&DIContainerT) -> TransientPtr<ReturnInterface>
                       + Send
                       + Sync),
     ) -> Self
@@ -38,7 +35,7 @@ where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    fn call(&self, di_container: Arc<DIContainerT>) -> TransientPtr<ReturnInterface>
+    fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>
     {
         (self.func)(di_container)
     }
@@ -72,7 +69,7 @@ where
         let ret = type_name::<TransientPtr<ReturnInterface>>();
 
         formatter.write_fmt(format_args!(
-            "ThreadsafeCastableFactory (Arc<AsyncDIContainer>) -> {ret} {{ ... }}",
+            "ThreadsafeCastableFactory (&AsyncDIContainer) -> {ret} {{ ... }}",
         ))
     }
 }
@@ -92,13 +89,14 @@ mod tests
     #[test]
     fn can_call()
     {
-        let castable_factory = ThreadsafeCastableFactory::new(&|_| {
-            TransientPtr::new(Bacon { heal_amount: 27 })
-        });
+        let castable_factory =
+            ThreadsafeCastableFactory::new(&|_: &MockAsyncDIContainer| {
+                TransientPtr::new(Bacon { heal_amount: 27 })
+            });
 
-        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
+        let mock_di_container = MockAsyncDIContainer::new();
 
-        let output = castable_factory.call(mock_di_container);
+        let output = castable_factory.call(&mock_di_container);
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 27 }));
     }

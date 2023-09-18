@@ -1,6 +1,3 @@
-#[cfg(feature = "async")]
-use std::sync::Arc;
-
 use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
 
@@ -19,5 +16,5 @@ pub trait IThreadsafeFactory<ReturnInterface, DIContainerT>:
 where
     ReturnInterface: 'static + ?Sized,
 {
-    fn call(&self, di_container: Arc<DIContainerT>) -> TransientPtr<ReturnInterface>;
+    fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>;
 }

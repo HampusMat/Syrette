@@ -1,7 +1,6 @@
 //! When configurator for a binding for types inside of a [`AsyncDIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingWhenConfiguratorError;
@@ -10,20 +9,20 @@ use crate::util::use_double;
 use_double!(crate::di_container::asynchronous::AsyncDIContainer);
 
 /// When configurator for a binding for type `Interface` inside a [`AsyncDIContainer`].
-pub struct AsyncBindingWhenConfigurator<Interface>
+pub struct AsyncBindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    di_container: Arc<AsyncDIContainer>,
+    di_container: &'di_container AsyncDIContainer,
 
     interface_phantom: PhantomData<Interface>,
 }
 
-impl<Interface> AsyncBindingWhenConfigurator<Interface>
+impl<'di_container, Interface> AsyncBindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    pub(crate) fn new(di_container: Arc<AsyncDIContainer>) -> Self
+    pub(crate) fn new(di_container: &'di_container AsyncDIContainer) -> Self
     {
         Self {
             di_container,
@@ -90,7 +89,7 @@ mod tests
 
         let binding_when_configurator = AsyncBindingWhenConfigurator::<
             dyn subjects_async::INumber,
-        >::new(Arc::new(di_container_mock));
+        >::new(&di_container_mock);
 
         assert!(binding_when_configurator
             .when_named("awesome")

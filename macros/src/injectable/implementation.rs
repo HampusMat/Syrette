@@ -232,9 +232,8 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             > for #self_type
             {
                 fn resolve<'di_container, 'fut>(
-                    #di_container_var: &'di_container std::sync::Arc<
-                        syrette::di_container::asynchronous::AsyncDIContainer
-                    >,
+                    #di_container_var: &'di_container
+                        syrette::di_container::asynchronous::AsyncDIContainer,
                     mut #dependency_history_var: syrette::dependency_history::DependencyHistory
                 ) -> syrette::future::BoxFuture<
                     'fut,

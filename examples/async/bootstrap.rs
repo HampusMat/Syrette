@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-use anyhow::Result;
 use syrette::ptr::TransientPtr;
 use syrette::{declare_default_factory, AsyncDIContainer};
 
@@ -15,7 +12,7 @@ use crate::interfaces::human::IHuman;
 
 declare_default_factory!(dyn ICat, threadsafe = true);
 
-pub async fn bootstrap() -> Result<Arc<AsyncDIContainer>>
+pub async fn bootstrap() -> Result<AsyncDIContainer, anyhow::Error>
 {
     let mut di_container = AsyncDIContainer::new();
 

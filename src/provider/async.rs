@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 
@@ -43,7 +42,7 @@ where
 {
     async fn provide(
         &self,
-        di_container: &Arc<DIContainerT>,
+        di_container: &DIContainerT,
         dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>;
 
@@ -90,7 +89,7 @@ where
 {
     async fn provide(
         &self,
-        di_container: &Arc<DIContainerT>,
+        di_container: &DIContainerT,
         dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
@@ -150,7 +149,7 @@ where
 {
     async fn provide(
         &self,
-        _di_container: &Arc<DIContainerT>,
+        _di_container: &DIContainerT,
         _dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
@@ -217,7 +216,7 @@ where
 {
     async fn provide(
         &self,
-        _di_container: &Arc<DIContainerT>,
+        _di_container: &DIContainerT,
         _dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
@@ -273,7 +272,7 @@ mod tests
         assert!(
             matches!(
                 transient_type_provider
-                    .provide(&Arc::new(di_container), MockDependencyHistory::new())
+                    .provide(&di_container, MockDependencyHistory::new())
                     .await?,
                 AsyncProvidable::Transient(_)
             ),
@@ -298,7 +297,7 @@ mod tests
         assert!(
             matches!(
                 singleton_provider
-                    .provide(&Arc::new(di_container), MockDependencyHistory::new())
+                    .provide(&di_container, MockDependencyHistory::new())
                     .await?,
                 AsyncProvidable::Singleton(_)
             ),
@@ -335,7 +334,7 @@ mod tests
             AsyncFactoryVariant::AsyncDefault,
         );
 
-        let di_container = Arc::new(MockAsyncDIContainer::new());
+        let di_container = MockAsyncDIContainer::new();
 
         assert!(
             matches!(

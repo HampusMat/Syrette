@@ -71,6 +71,7 @@ use_double!(crate::dependency_history::DependencyHistory);
 pub mod binding;
 
 /// Async dependency injection container.
+#[derive(Default)]
 pub struct AsyncDIContainer
 {
     binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
@@ -80,11 +81,11 @@ impl AsyncDIContainer
 {
     /// Returns a new `AsyncDIContainer`.
     #[must_use]
-    pub fn new() -> Arc<Self>
+    pub fn new() -> Self
     {
-        Arc::new(Self {
+        Self {
             binding_storage: Mutex::new(DIContainerBindingStorage::new()),
-        })
+        }
     }
 }
 
@@ -93,7 +94,7 @@ impl AsyncDIContainer
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
     #[allow(clippy::missing_panics_doc)]
-    pub fn bind<Interface>(self: &mut Arc<Self>) -> AsyncBindingBuilder<Interface>
+    pub fn bind<Interface>(&mut self) -> AsyncBindingBuilder<'_, Interface>
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
@@ -101,7 +102,7 @@ impl AsyncDIContainer
         panic!("Bind function is unusable when testing");
 
         #[cfg(not(test))]
-        AsyncBindingBuilder::new(self.clone(), DependencyHistory::new)
+        AsyncBindingBuilder::new(self, DependencyHistory::new)
     }
 
     /// Returns the type bound with `Interface`.
@@ -112,7 +113,7 @@ impl AsyncDIContainer
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
     pub async fn get<Interface>(
-        self: &Arc<Self>,
+        &self,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
         Interface: 'static + ?Sized + Send + Sync,
@@ -129,7 +130,7 @@ impl AsyncDIContainer
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
     pub async fn get_named<Interface>(
-        self: &Arc<Self>,
+        &self,
         name: &'static str,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
@@ -177,7 +178,7 @@ impl AsyncDIContainer
     /// # });
     /// ```
     pub async fn get_bound<Interface>(
-        self: &Arc<Self>,
+        &self,
         dependency_history: DependencyHistory,
         binding_options: BindingOptions<'static>,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
@@ -192,7 +193,7 @@ impl AsyncDIContainer
     }
 
     async fn has_binding<Interface>(
-        self: &Arc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
     ) -> bool
     where
@@ -205,7 +206,7 @@ impl AsyncDIContainer
     }
 
     async fn set_binding<Interface>(
-        self: &Arc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
         provider: Box<dyn IAsyncProvider<Self>>,
     ) where
@@ -218,7 +219,7 @@ impl AsyncDIContainer
     }
 
     async fn remove_binding<Interface>(
-        self: &Arc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IAsyncProvider<Self>>>
     where
@@ -234,7 +235,7 @@ impl AsyncDIContainer
 impl AsyncDIContainer
 {
     async fn handle_binding_providable<Interface>(
-        self: &Arc<Self>,
+        &self,
         binding_providable: AsyncProvidable<Self>,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
     where
@@ -299,9 +300,7 @@ impl AsyncDIContainer
                         }
                     })?;
 
-                Ok(SomePtr::ThreadsafeFactory(
-                    factory.call(self.clone()).into(),
-                ))
+                Ok(SomePtr::ThreadsafeFactory(factory.call(self).into()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
@@ -317,7 +316,7 @@ impl AsyncDIContainer
                     DefaultFactoryFn<Interface>,
                 >(binding, "default factory")?;
 
-                Ok(SomePtr::Transient(default_factory.call(self.clone())()))
+                Ok(SomePtr::Transient(default_factory.call(self)()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
@@ -338,9 +337,7 @@ impl AsyncDIContainer
                     binding, "async default factory"
                 )?;
 
-                Ok(SomePtr::Transient(
-                    async_default_factory.call(self.clone())().await,
-                ))
+                Ok(SomePtr::Transient(async_default_factory.call(self)().await))
             }
         }
     }
@@ -368,7 +365,7 @@ impl AsyncDIContainer
     }
 
     async fn get_binding_providable<Interface>(
-        self: &Arc<Self>,
+        &self,
         binding_options: BindingOptions<'static>,
         dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<Self>, AsyncDIContainerError>
@@ -644,21 +641,13 @@ mod tests
         let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
-            type FactoryFunc = Box<
-                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
-            >;
-
             let mut inner_mock_provider = MockAsyncProvider::new();
 
-            let factory_func: &'static (dyn Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = FactoryFunc> + Send + Sync) = &|_| {
+            let factory_func = &|_: &AsyncDIContainer| {
                 Box::new(|users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
-
-                    user_manager
-                })
+                    TransientPtr::new(UserManager::new(users))
+                        as TransientPtr<dyn IUserManager>
+                }) as Box<IUserManagerFactory>
             };
 
             inner_mock_provider.expect_provide().returning(|_, _| {
@@ -672,16 +661,11 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<IUserManagerFactory>(
-                    BindingOptions::new(),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container
+            .binding_storage
+            .lock()
+            .await
+            .set::<IUserManagerFactory>(BindingOptions::new(), Box::new(mock_provider));
 
         di_container
             .get::<IUserManagerFactory>()
@@ -743,21 +727,13 @@ mod tests
         let mut mock_provider = MockAsyncProvider::new();
 
         mock_provider.expect_do_clone().returning(|| {
-            type FactoryFunc = Box<
-                (dyn Fn<(Vec<i128>,), Output = TransientPtr<dyn IUserManager>> + Send + Sync)
-            >;
-
             let mut inner_mock_provider = MockAsyncProvider::new();
 
-            let factory_func: &'static (dyn Fn<
-                (Arc<AsyncDIContainer>,),
-                Output = FactoryFunc> + Send + Sync) = &|_| {
+            let factory_func = &|_: &AsyncDIContainer| {
                 Box::new(|users| {
-                    let user_manager: TransientPtr<dyn IUserManager> =
-                        TransientPtr::new(UserManager::new(users));
-
-                    user_manager
-                })
+                    TransientPtr::new(UserManager::new(users))
+                        as TransientPtr<dyn IUserManager>
+                }) as Box<IUserManagerFactory>
             };
 
             inner_mock_provider.expect_provide().returning(|_, _| {
