@@ -279,7 +279,7 @@ impl AsyncDIContainer
                 use crate::private::factory::IThreadsafeFactory;
 
                 let factory = factory_binding
-                    .cast::<dyn IThreadsafeFactory<(Arc<AsyncDIContainer>,), Interface>>()
+                    .cast::<dyn IThreadsafeFactory<Interface, Self>>()
                     .map_err(|err| match err {
                         CastError::NotArcCastable(_) => {
                             AsyncDIContainerError::InterfaceNotAsync(
@@ -306,11 +306,13 @@ impl AsyncDIContainer
                 use crate::private::factory::IThreadsafeFactory;
                 use crate::ptr::TransientPtr;
 
+                type DefaultFactoryFn<Interface> = dyn IThreadsafeFactory<
+                    dyn Fn<(), Output = TransientPtr<Interface>> + Send + Sync,
+                    AsyncDIContainer,
+                >;
+
                 let default_factory = Self::cast_factory_binding::<
-                    dyn IThreadsafeFactory<
-                        (Arc<AsyncDIContainer>,),
-                        dyn Fn<(), Output = TransientPtr<Interface>> + Send + Sync,
-                    >,
+                    DefaultFactoryFn<Interface>,
                 >(binding, "default factory")?;
 
                 Ok(SomePtr::Transient(default_factory(self.clone())()))
@@ -321,13 +323,15 @@ impl AsyncDIContainer
                 use crate::private::factory::IThreadsafeFactory;
                 use crate::ptr::TransientPtr;
 
+                type AsyncDefaultFactoryFn<Interface> = dyn IThreadsafeFactory<
+                    dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
+                        + Send
+                        + Sync,
+                    AsyncDIContainer,
+                >;
+
                 let async_default_factory = Self::cast_factory_binding::<
-                    dyn IThreadsafeFactory<
-                        (Arc<AsyncDIContainer>,),
-                        dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
-                            + Send
-                            + Sync,
-                    >,
+                    AsyncDefaultFactoryFn<Interface>,
                 >(
                     binding, "async default factory"
                 )?;

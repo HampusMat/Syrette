@@ -1,26 +1,29 @@
 use std::any::type_name;
 use std::fmt::Debug;
-use std::marker::Tuple;
+use std::sync::Arc;
 
 use crate::private::any_factory::{AnyFactory, AnyThreadsafeFactory};
 use crate::private::factory::IThreadsafeFactory;
 use crate::ptr::TransientPtr;
 
-pub struct ThreadsafeCastableFactory<Args, ReturnInterface>
+pub struct ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    func: &'static (dyn Fn<Args, Output = TransientPtr<ReturnInterface>> + Send + Sync),
+    func: &'static (dyn Fn<(Arc<DIContainerT>,), Output = TransientPtr<ReturnInterface>>
+                  + Send
+                  + Sync),
 }
 
-impl<Args, ReturnInterface> ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT>
+    ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
     pub fn new(
-        func: &'static (dyn Fn<Args, Output = TransientPtr<ReturnInterface>>
+        func: &'static (dyn Fn<(Arc<DIContainerT>,), Output = TransientPtr<ReturnInterface>>
                       + Send
                       + Sync),
     ) -> Self
@@ -29,94 +32,83 @@ where
     }
 }
 
-impl<Args, ReturnInterface> IThreadsafeFactory<Args, ReturnInterface>
-    for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> IThreadsafeFactory<ReturnInterface, DIContainerT>
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
-impl<Args, ReturnInterface> Fn<Args> for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> Fn<(Arc<DIContainerT>,)>
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    extern "rust-call" fn call(&self, args: Args) -> Self::Output
+    extern "rust-call" fn call(&self, args: (Arc<DIContainerT>,)) -> Self::Output
     {
         self.func.call(args)
     }
 }
 
-impl<Args, ReturnInterface> FnMut<Args>
-    for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> FnMut<(Arc<DIContainerT>,)>
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
-    extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output
+    extern "rust-call" fn call_mut(&mut self, args: (Arc<DIContainerT>,))
+        -> Self::Output
     {
         self.call(args)
     }
 }
 
-impl<Args, ReturnInterface> FnOnce<Args>
-    for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> FnOnce<(Arc<DIContainerT>,)>
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
     type Output = TransientPtr<ReturnInterface>;
 
-    extern "rust-call" fn call_once(self, args: Args) -> Self::Output
+    extern "rust-call" fn call_once(self, args: (Arc<DIContainerT>,)) -> Self::Output
     {
         self.call(args)
     }
 }
 
-impl<Args, ReturnInterface> AnyFactory
-    for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> AnyFactory
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
-impl<Args, ReturnInterface> AnyThreadsafeFactory
-    for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> AnyThreadsafeFactory
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
 }
 
-impl<Args, ReturnInterface> Debug for ThreadsafeCastableFactory<Args, ReturnInterface>
+impl<ReturnInterface, DIContainerT> Debug
+    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
-    Args: Tuple + 'static,
+    DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
     #[cfg(not(tarpaulin_include))]
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
-        let mut args = type_name::<Args>();
-
-        if args.len() < 2 {
-            return Err(std::fmt::Error);
-        }
-
-        args = args
-            .get(1..args.len() - 1)
-            .map_or_else(|| Err(std::fmt::Error), Ok)?;
-
-        if args.ends_with(',') {
-            args = args
-                .get(..args.len() - 1)
-                .map_or_else(|| Err(std::fmt::Error), Ok)?;
-        }
-
         let ret = type_name::<TransientPtr<ReturnInterface>>();
 
-        formatter.write_fmt(format_args!("ThreadsafeCastableFactory ({args}) -> {ret}",))
+        formatter.write_fmt(format_args!(
+            "ThreadsafeCastableFactory (Arc<AsyncDIContainer>) -> {ret} {{ ... }}",
+        ))
     }
 }
 
@@ -124,6 +116,7 @@ where
 mod tests
 {
     use super::*;
+    use crate::di_container::asynchronous::MockAsyncDIContainer;
 
     #[derive(Debug, PartialEq, Eq)]
     struct Bacon
@@ -134,11 +127,13 @@ mod tests
     #[test]
     fn can_call()
     {
-        let castable_factory = ThreadsafeCastableFactory::new(&|heal_amount| {
-            TransientPtr::new(Bacon { heal_amount })
+        let castable_factory = ThreadsafeCastableFactory::new(&|_| {
+            TransientPtr::new(Bacon { heal_amount: 27 })
         });
 
-        let output = castable_factory.call((27,));
+        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
+
+        let output = castable_factory.call((mock_di_container,));
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 27 }));
     }
@@ -146,11 +141,13 @@ mod tests
     #[test]
     fn can_call_mut()
     {
-        let mut castable_factory = ThreadsafeCastableFactory::new(&|heal_amount| {
-            TransientPtr::new(Bacon { heal_amount })
+        let mut castable_factory = ThreadsafeCastableFactory::new(&|_| {
+            TransientPtr::new(Bacon { heal_amount: 1092 })
         });
 
-        let output = castable_factory.call_mut((1092,));
+        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
+
+        let output = castable_factory.call_mut((mock_di_container,));
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 1092 }));
     }
@@ -158,11 +155,13 @@ mod tests
     #[test]
     fn can_call_once()
     {
-        let castable_factory = ThreadsafeCastableFactory::new(&|heal_amount| {
-            TransientPtr::new(Bacon { heal_amount })
+        let castable_factory = ThreadsafeCastableFactory::new(&|_| {
+            TransientPtr::new(Bacon { heal_amount: 547 })
         });
 
-        let output = castable_factory.call_once((547,));
+        let mock_di_container = Arc::new(MockAsyncDIContainer::new());
+
+        let output = castable_factory.call_once((mock_di_container,));
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 547 }));
     }

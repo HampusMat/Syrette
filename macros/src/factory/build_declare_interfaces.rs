@@ -12,19 +12,19 @@ pub fn build_declare_factory_interfaces(
         quote! {
             syrette::declare_interface!(
                 syrette::private::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::AsyncDIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::asynchronous::AsyncDIContainer,
                 > -> syrette::private::factory::IThreadsafeFactory<
-                    (std::sync::Arc<syrette::AsyncDIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::asynchronous::AsyncDIContainer,
                 >,
                 threadsafe_sharable = true
             );
 
             syrette::declare_interface!(
                 syrette::private::castable_factory::threadsafe::ThreadsafeCastableFactory<
-                    (std::sync::Arc<syrette::AsyncDIContainer>,),
-                    #factory_interface
+                    #factory_interface,
+                    syrette::di_container::asynchronous::AsyncDIContainer,
                 > -> syrette::private::any_factory::AnyThreadsafeFactory,
                 threadsafe_sharable = true
             );
