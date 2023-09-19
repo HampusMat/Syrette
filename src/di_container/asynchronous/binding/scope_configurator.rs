@@ -47,6 +47,36 @@ where
     /// Configures the binding to be in a transient scope.
     ///
     /// This is the default.
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct Authenticator {}
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl Authenticator
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<Authenticator>()
+    ///     .to::<Authenticator>()
+    ///     .await?
+    ///     .in_transient_scope()
+    ///     .await;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn in_transient_scope(
         self,
     ) -> AsyncBindingWhenConfigurator<'di_container, Interface>
@@ -60,6 +90,67 @@ where
     ///
     /// # Errors
     /// Will return Err if resolving the implementation fails.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::sync::atomic::{AtomicBool, Ordering};
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct AudioManager
+    /// # {
+    /// #     is_sound_playing: AtomicBool
+    /// # }
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl AudioManager
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self { is_sound_playing: AtomicBool::new(false) }
+    /// #     }
+    /// #
+    /// #     fn play_long_sound(&self)
+    /// #     {
+    /// #         self.is_sound_playing.store(true, Ordering::Relaxed);
+    /// #     }
+    /// #
+    /// #     fn is_sound_playing(&self) -> bool
+    /// #     {
+    /// #        self.is_sound_playing.load(Ordering::Relaxed)
+    /// #     }
+    /// #
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<AudioManager>()
+    ///     .to::<AudioManager>()
+    ///     .await?
+    ///     .in_singleton_scope()
+    ///     .await;
+    ///
+    /// {
+    ///     let audio_manager = di_container
+    ///         .get::<AudioManager>()
+    ///         .await?
+    ///         .threadsafe_singleton()?;
+    ///
+    ///     audio_manager.play_long_sound();
+    /// }
+    ///
+    /// let audio_manager = di_container
+    ///     .get::<AudioManager>()
+    ///     .await?
+    ///     .threadsafe_singleton()?;
+    ///
+    /// assert!(audio_manager.is_sound_playing());
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn in_singleton_scope(
         self,
     ) -> Result<

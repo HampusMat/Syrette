@@ -34,6 +34,34 @@ where
     ///
     /// # Errors
     /// Will return Err if no binding for the interface already exists.
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{DIContainer, injectable};
+    /// #
+    /// # struct Kitten {}
+    /// #
+    /// # #[injectable]
+    /// # impl Kitten
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = DIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<Kitten>()
+    ///     .to::<Kitten>()?
+    ///     .in_transient_scope()
+    ///     .when_named("Billy")?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn when_named(
         self,
         name: &'static str,

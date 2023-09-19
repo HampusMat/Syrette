@@ -93,6 +93,31 @@ impl AsyncDIContainer
 impl AsyncDIContainer
 {
     /// Returns a new [`AsyncBindingBuilder`] for the given interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct DiskWriter {}
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl DiskWriter
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container.bind::<DiskWriter>().to::<DiskWriter>().await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[allow(clippy::missing_panics_doc)]
     pub fn bind<Interface>(&mut self) -> AsyncBindingBuilder<'_, Interface>
     where
@@ -112,6 +137,36 @@ impl AsyncDIContainer
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct DeviceManager {}
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl DeviceManager
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<DeviceManager>()
+    ///     .to::<DeviceManager>()
+    ///     .await?;
+    ///
+    /// let device_manager = di_container.get::<DeviceManager>().await?.transient();
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get<Interface>(
         &self,
     ) -> Result<SomePtr<Interface>, AsyncDIContainerError>
@@ -129,6 +184,43 @@ impl AsyncDIContainer
     /// - No binding for `Interface` with name `name` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct DeviceManager {}
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl DeviceManager
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<DeviceManager>()
+    ///     .to::<DeviceManager>()
+    ///     .await?
+    ///     .in_transient_scope()
+    ///     .await
+    ///     .when_named("usb")
+    ///     .await;
+    ///
+    /// let device_manager = di_container
+    ///     .get_named::<DeviceManager>("usb")
+    ///     .await?
+    ///     .transient();
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get_named<Interface>(
         &self,
         name: &'static str,

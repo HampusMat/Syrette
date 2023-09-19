@@ -34,6 +34,38 @@ where
     ///
     /// # Errors
     /// Will return Err if no binding for the interface already exists.
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{AsyncDIContainer, injectable};
+    /// #
+    /// # struct Kitten {}
+    /// #
+    /// # #[injectable(async = true)]
+    /// # impl Kitten
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = AsyncDIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<Kitten>()
+    ///     .to::<Kitten>()
+    ///     .await?
+    ///     .in_transient_scope()
+    ///     .await
+    ///     .when_named("Billy")
+    ///     .await?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn when_named(
         self,
         name: &'static str,

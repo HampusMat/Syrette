@@ -95,6 +95,30 @@ impl DIContainer
 impl DIContainer
 {
     /// Returns a new [`BindingBuilder`] for the given interface.
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{DIContainer, injectable};
+    /// #
+    /// # struct DiskWriter {}
+    /// #
+    /// # #[injectable]
+    /// # impl DiskWriter
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = DIContainer::new();
+    ///
+    /// di_container.bind::<DiskWriter>().to::<DiskWriter>()?;
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     #[allow(clippy::missing_panics_doc)]
     pub fn bind<Interface>(&mut self) -> BindingBuilder<'_, Interface>
     where
@@ -114,6 +138,32 @@ impl DIContainer
     /// - No binding for `Interface` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{DIContainer, injectable};
+    /// #
+    /// # struct DeviceManager {}
+    /// #
+    /// # #[injectable]
+    /// # impl DeviceManager
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = DIContainer::new();
+    ///
+    /// di_container.bind::<DeviceManager>().to::<DeviceManager>()?;
+    ///
+    /// let device_manager = di_container.get::<DeviceManager>()?.transient();
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get<Interface>(&self) -> Result<SomePtr<Interface>, DIContainerError>
     where
         Interface: 'static + ?Sized,
@@ -128,6 +178,36 @@ impl DIContainer
     /// - No binding for `Interface` with name `name` exists
     /// - Resolving the binding for `Interface` fails
     /// - Casting the binding for `Interface` fails
+    ///
+    /// # Examples
+    /// ```
+    /// # use syrette::{DIContainer, injectable};
+    /// #
+    /// # struct DeviceManager {}
+    /// #
+    /// # #[injectable]
+    /// # impl DeviceManager
+    /// # {
+    /// #     fn new() -> Self
+    /// #     {
+    /// #         Self {}
+    /// #     }
+    /// # }
+    /// #
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut di_container = DIContainer::new();
+    ///
+    /// di_container
+    ///     .bind::<DeviceManager>()
+    ///     .to::<DeviceManager>()?
+    ///     .in_transient_scope()
+    ///     .when_named("usb")?;
+    ///
+    /// let device_manager = di_container.get_named::<DeviceManager>("usb")?.transient();
+    /// #
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get_named<Interface>(
         &self,
         name: &'static str,
