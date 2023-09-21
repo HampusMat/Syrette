@@ -1,6 +1,6 @@
 [package]
 name = "syrette_macros"
-version = "0.4.2"
+version = "0.5.0"
 license = "MIT OR Apache-2.0"
 authors = ["HampusM <hampus@hampusmat.com>"]
 description = "Macros for Syrette, the convenient dependency injection framework"
@@ -35,7 +35,7 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 
 [dev_dependencies]
-syrette = { version = "0.4.2", path = ".." }
+syrette = { version = "0.5.0", path = ".." }
 mockall = "0.11.4"
 pretty_assertions = "1.3.0"
 syn = { version = "1.0.96", features = ["full", "extra-traits"] }
