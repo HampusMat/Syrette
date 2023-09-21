@@ -1,6 +1,133 @@
 ## Unreleased
 
 
+## v0.5.0 - 2023-09-21
+### Bug Fixes
+- make the factory macro not change its input
+- change terminology in injectable macro async flag error
+- remove unwrap from generated implementations of Injectable
+- add missing dummy async injectable impl
+
+### Build System/Dependency Changes
+- bump versions to 0.5.0
+- exclude files when packaging
+- change repository in Cargo.toml to the Github repo url
+- add Cargo.lock to keep predicates-tree dependency old
+- improve the fix for the predicates-tree MSRV change
+- add temporary fix for predicates-tree MSRV change
+- use mockall 0.11.4
+
+### Chores
+- fix warnings when only the async feature enabled
+- remove the factory macro async flag
+
+### Code Refactoring
+- make the async DI container not inside a Arc
+- replace threadsafe castable factory Fn impl with method
+- make threadsafe castable factory take DI container param
+- move castable factory to directory module
+- make the blocking DI container not inside a Rc
+- replace castable factory Fn impl with method
+- make castable factory take DI container param
+- move DI container get_binding_providable to other impl
+- remove async DI container prelude module
+- remove async DI container interface
+- remove blocking DI container prelude module
+- remove blocking DI container interface
+- remove unnecessary block in the BindingBuilder::to method
+- remove unnecessary phantom data fields from providers
+- pass around BindingOptions instead of name
+- replace use_dependency_history with a more generic macro
+- remove useless Sealed impl for DependencyHistory
+- use derive for DependencyHistory Default impl
+- remove IDependencyHistory
+- remove SomeThreadsafePtr & move variants to SomePtr
+- rename the async flag of the declare_interface macro
+- rename CastFromSync to CastFromArc
+- remove async_closure macro from API
+- remove calls to default on unit structs
+- remove SomeThreadsafePtrError
+- remove unnecessary must_use attributes
+- make binding builder & configurator methods take self ownership
+- put syn_path_to_string in a extension trait
+- fix Clippy lint in threadsafe castable factory
+- allow manual let else in macros crate
+- fix Clippy lints
+- add deny unsafe code in macros crate
+
+### Code Testing
+- import proc_macro2 TokenStream in dependency tests
+- make the prevent-circular example an integration test
+- add & improve MacroFlag unit tests
+- clean up create_caster_fn_ident unit test
+- clean up DeclareDefaultFactoryMacroArgs unit tests
+- clean up FactoryMacroArgs unit tests
+- clean up binding configurator unit tests
+- clean up DeclareInterfaceArgs unit tests
+- remove unused std::error::Error import
+- remove vec macro usages in IteratorExt unit tests
+- clean up InjectableMacroArgs unit tests
+- remove Result return value of can_build_dependencies
+- fix create_single_get_dep_method_call unit tests
+
+### Documentation Changes
+- add examples to DI container & related functions
+- add threadsafe flag to IFooFactory in async-factory example
+- add existance reason to DependencyHistory docs
+- remove the 'unbound' example
+- add missing TransientPtr import to factory macro example
+- improve injectable macro docs
+- remove panics sections from macros
+- move the injectable macro example section
+- fix wrong quotes in binding configurators
+
+### Features
+- make dependency history new method const
+- make binding options name method const
+- expose DI container get_bound methods to public API
+- add DependencyHistory methods to public API
+- make SomePtr implement Debug
+- add internal logging for macros
+- add constructor name flag to injectable macro
+- improve macro error messages
+
+### Performance Improvements
+- reduce number of allocations in SynPathExt::to_string
+
+### BREAKING CHANGE
+
+The async DI container is no longer inside of a Arc. This affects AsyncBindingBuilder, AsyncBindingScopeConfigurator, AsyncBindingWhenConfigurator & AsyncInjectable
+
+The blocking DI container is no longer inside of a Rc. This affects BindingBuilder, BindingScopeConfigurator, BindingWhenConfigurator & Injectable
+
+The async DI container prelude module have been removed as it is no longer necessary seeing as the async DI container interface have been removed
+
+IAsyncDIContainer have been removed and multiple structs no longer take a DI container generic parameter
+
+The blocking DI container prelude module have been removed as it is no longer necessary seeing as the blocking DI container interface have been removed
+
+IDIContainer have been removed and multiple structs no longer take a DI container generic parameter
+
+The factory macro's async flag has been removed
+
+The factory macro no longer
+- Changes the return type to be inside of a TransientPtr
+- Adds Send + Sync bounds when the threadsafe or the async flag is set
+- Changes the return type be inside of a BoxFuture when the async flag is set
+
+IDependencyHistory has been removed as part of an effort to simplify the API. This affects IDIContainer, DIContainer, IAsyncDIContainer, AsyncDIContainer, Injectable, AsyncInjectable, BindingBuilder, AsyncBindingBuilder, BindingScopeConfigurator, BindingWhenConfigurator, AsyncBindingScopeConfigurator, AsyncBindingWhenConfigurator and DependencyHistory
+
+SomeThreadsafePtr has been removed and it's variants have been moved to SomePtr
+
+The flag 'async' of the declare_interface macro has been renamed to 'threadsafe_sharable'. The reason being that the name 'async' was an outright lie. The new name describes exactly what the flag enables
+
+The async_closure macro has been removed. This is because it is completely out of scope for this crate
+
+SomeThreadsafePtrError has been removed and SomePtrError is now used by both the methods of SomePtr and of SomeThreadsafePtr
+
+The methods of BindingBuilder, AsyncBuilder, BindingScopeConfigurator, AsyncBindingScopeConfigurator, BindingWhenConfigurator, AsyncBindingWhenConfigurator now take ownership of self
+
+
 ## v0.4.2 - 2022-11-28
 ### Bug Fixes
 - allow for concrete type interfaces to be marked async
