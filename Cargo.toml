@@ -12,7 +12,7 @@ exclude = ["/.chglog", "/.circleci", "examples", "rustfmt.toml"]
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "doc_cfg", "--extend-css", "docs-rs-ext.css"]
+rustdoc-args = ["--cfg", "doc_cfg", "--html-in-header", "docs-style.html"]
 
 [features]
 default = ["prevent-circular"]
