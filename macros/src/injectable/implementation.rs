@@ -870,7 +870,7 @@ mod tests
     }
 
     #[test]
-    fn can_create_single_get_dep_method_call() -> Result<(), Box<dyn Error>>
+    fn can_create_single_get_dep_method_call()
     {
         let mut mock_dependency = MockIDependency::new();
 
@@ -893,10 +893,11 @@ mod tests
             InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
                 &mock_dependency,
                 false,
-            )?;
+            )
+            .unwrap();
 
         assert_eq!(
-            parse2::<Expr>(output)?,
+            parse2::<Expr>(output).unwrap(),
             parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(
@@ -912,14 +913,13 @@ mod tests
                         reason: err,
                         dependency_name: "Foo"
                     })?
-            })?
+            })
+            .unwrap()
         );
-
-        Ok(())
     }
 
     #[test]
-    fn can_create_single_get_dep_method_call_with_name() -> Result<(), Box<dyn Error>>
+    fn can_create_single_get_dep_method_call_with_name()
     {
         let mut mock_dependency = MockIDependency::new();
 
@@ -944,10 +944,11 @@ mod tests
             InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
                 &mock_dependency,
                 false,
-            )?;
+            )
+            .unwrap();
 
         assert_eq!(
-            parse2::<Expr>(output)?,
+            parse2::<Expr>(output).unwrap(),
             parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(
@@ -963,14 +964,13 @@ mod tests
                         reason: err,
                         dependency_name: "Foo"
                     })?
-            })?
+            })
+            .unwrap()
         );
-
-        Ok(())
     }
 
     #[test]
-    fn can_create_single_get_dep_method_call_async() -> Result<(), Box<dyn Error>>
+    fn can_create_single_get_dep_method_call_async()
     {
         let mut mock_dependency = MockIDependency::new();
 
@@ -993,10 +993,11 @@ mod tests
             InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
                 &mock_dependency,
                 true,
-            )?;
+            )
+            .unwrap();
 
         assert_eq!(
-            parse2::<Expr>(output)?,
+            parse2::<Expr>(output).unwrap(),
             parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(
@@ -1013,15 +1014,13 @@ mod tests
                         reason: err,
                         dependency_name: "Foo"
                     })?
-            })?
+            })
+            .unwrap()
         );
-
-        Ok(())
     }
 
     #[test]
-    fn can_create_single_get_dep_method_call_async_with_name(
-    ) -> Result<(), Box<dyn Error>>
+    fn can_create_single_get_dep_method_call_async_with_name()
     {
         let mut mock_dependency = MockIDependency::new();
 
@@ -1046,10 +1045,11 @@ mod tests
             InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
                 &mock_dependency,
                 true,
-            )?;
+            )
+            .unwrap();
 
         assert_eq!(
-            parse2::<Expr>(output)?,
+            parse2::<Expr>(output).unwrap(),
             parse2::<Expr>(quote! {
                 #di_container_var_ident
                     .get_bound::<Foo>(
@@ -1066,9 +1066,8 @@ mod tests
                         reason: err,
                         dependency_name: "Foo"
                     })?
-            })?
+            })
+            .unwrap()
         );
-
-        Ok(())
     }
 }

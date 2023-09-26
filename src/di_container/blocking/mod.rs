@@ -388,15 +388,13 @@ impl DIContainer
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use super::*;
     use crate::provider::blocking::MockIProvider;
     use crate::ptr::{SingletonPtr, TransientPtr};
     use crate::test_utils::subjects;
 
     #[test]
-    fn can_get() -> Result<(), Box<dyn Error>>
+    fn can_get()
     {
         let di_container = DIContainer::new();
 
@@ -417,14 +415,14 @@ mod tests
             );
 
         di_container
-            .get::<dyn subjects::IUserManager>()?
-            .transient()?;
-
-        Ok(())
+            .get::<dyn subjects::IUserManager>()
+            .unwrap()
+            .transient()
+            .unwrap();
     }
 
     #[test]
-    fn can_get_named() -> Result<(), Box<dyn Error>>
+    fn can_get_named()
     {
         let di_container = DIContainer::new();
 
@@ -445,14 +443,14 @@ mod tests
             );
 
         di_container
-            .get_named::<dyn subjects::IUserManager>("special")?
-            .transient()?;
-
-        Ok(())
+            .get_named::<dyn subjects::IUserManager>("special")
+            .unwrap()
+            .transient()
+            .unwrap();
     }
 
     #[test]
-    fn can_get_singleton() -> Result<(), Box<dyn Error>>
+    fn can_get_singleton()
     {
         let di_container = DIContainer::new();
 
@@ -471,20 +469,25 @@ mod tests
             .borrow_mut()
             .set::<dyn subjects::INumber>(BindingOptions::new(), Box::new(mock_provider));
 
-        let first_number_rc = di_container.get::<dyn subjects::INumber>()?.singleton()?;
+        let first_number_rc = di_container
+            .get::<dyn subjects::INumber>()
+            .unwrap()
+            .singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.get(), 2820);
 
-        let second_number_rc =
-            di_container.get::<dyn subjects::INumber>()?.singleton()?;
+        let second_number_rc = di_container
+            .get::<dyn subjects::INumber>()
+            .unwrap()
+            .singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
-
-        Ok(())
     }
 
     #[test]
-    fn can_get_singleton_named() -> Result<(), Box<dyn Error>>
+    fn can_get_singleton_named()
     {
         let di_container = DIContainer::new();
 
@@ -507,23 +510,25 @@ mod tests
             );
 
         let first_number_rc = di_container
-            .get_named::<dyn subjects::INumber>("cool")?
-            .singleton()?;
+            .get_named::<dyn subjects::INumber>("cool")
+            .unwrap()
+            .singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.get(), 2820);
 
         let second_number_rc = di_container
-            .get_named::<dyn subjects::INumber>("cool")?
-            .singleton()?;
+            .get_named::<dyn subjects::INumber>("cool")
+            .unwrap()
+            .singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
-
-        Ok(())
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_get_factory() -> Result<(), Box<dyn Error>>
+    fn can_get_factory()
     {
         use crate::private::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
@@ -593,14 +598,16 @@ mod tests
             .borrow_mut()
             .set::<IUserManagerFactory>(BindingOptions::new(), Box::new(mock_provider));
 
-        di_container.get::<IUserManagerFactory>()?.factory()?;
-
-        Ok(())
+        di_container
+            .get::<IUserManagerFactory>()
+            .unwrap()
+            .factory()
+            .unwrap();
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_get_factory_named() -> Result<(), Box<dyn Error>>
+    fn can_get_factory_named()
     {
         use crate::private::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
@@ -674,10 +681,10 @@ mod tests
             );
 
         di_container
-            .get_named::<IUserManagerFactory>("special")?
-            .factory()?;
-
-        Ok(())
+            .get_named::<IUserManagerFactory>("special")
+            .unwrap()
+            .factory()
+            .unwrap();
     }
 
     #[test]

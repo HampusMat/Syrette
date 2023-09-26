@@ -88,8 +88,6 @@ impl ToTokens for FnTrait
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use quote::{format_ident, quote};
     use syn::token::{Dyn, RArrow};
     use syn::{parse2, PathSegment};
@@ -98,12 +96,13 @@ mod tests
     use crate::test_utils;
 
     #[test]
-    fn can_parse_fn_trait() -> Result<(), Box<dyn Error>>
+    fn can_parse_fn_trait()
     {
         assert_eq!(
             parse2::<FnTrait>(quote! {
                 dyn Fn(String, u32) -> Handle
-            })?,
+            })
+            .unwrap(),
             FnTrait {
                 dyn_token: Dyn::default(),
                 trait_ident: format_ident!("Fn"),
@@ -128,8 +127,6 @@ mod tests
             Fn(u32) -> Handle
         })
         .is_err());
-
-        Ok(())
     }
 
     #[test]

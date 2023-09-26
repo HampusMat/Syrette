@@ -299,8 +299,6 @@ where
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use mockall::predicate::eq;
 
     use super::*;
@@ -309,7 +307,7 @@ mod tests
     use crate::test_utils::subjects;
 
     #[test]
-    fn can_bind_to() -> Result<(), Box<dyn Error>>
+    fn can_bind_to()
     {
         let mut mock_di_container = MockDIContainer::new();
 
@@ -330,14 +328,12 @@ mod tests
             MockDependencyHistory::new,
         );
 
-        binding_builder.to::<subjects::Number>()?;
-
-        Ok(())
+        binding_builder.to::<subjects::Number>().unwrap();
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
+    fn can_bind_to_factory()
     {
         use crate as syrette;
         use crate::factory;
@@ -366,21 +362,21 @@ mod tests
             MockDependencyHistory::new,
         );
 
-        binding_builder.to_factory(&|_| {
-            Box::new(move |_num, _text| {
-                let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                    TransientPtr::new(subjects::UserManager::new());
+        binding_builder
+            .to_factory(&|_| {
+                Box::new(move |_num, _text| {
+                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                        TransientPtr::new(subjects::UserManager::new());
 
-                user_manager
+                    user_manager
+                })
             })
-        })?;
-
-        Ok(())
+            .unwrap();
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_default_factory() -> Result<(), Box<dyn Error>>
+    fn can_bind_to_default_factory()
     {
         use syrette_macros::declare_default_factory;
 
@@ -408,15 +404,15 @@ mod tests
             MockDependencyHistory::new,
         );
 
-        binding_builder.to_default_factory(&|_| {
-            Box::new(move || {
-                let user_manager: TransientPtr<dyn subjects::IUserManager> =
-                    TransientPtr::new(subjects::UserManager::new());
+        binding_builder
+            .to_default_factory(&|_| {
+                Box::new(move || {
+                    let user_manager: TransientPtr<dyn subjects::IUserManager> =
+                        TransientPtr::new(subjects::UserManager::new());
 
-                user_manager
+                    user_manager
+                })
             })
-        })?;
-
-        Ok(())
+            .unwrap();
     }
 }

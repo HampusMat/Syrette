@@ -57,8 +57,6 @@ impl Parse for DeclareDefaultFactoryMacroArgs
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use proc_macro2::Span;
     use quote::{format_ident, quote};
     use syn::token::Dyn;
@@ -80,13 +78,14 @@ mod tests
     use crate::macro_flag::MacroFlagValue;
 
     #[test]
-    fn can_parse_with_interface_only() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_interface_only()
     {
         let input_args = quote! {
             dyn IFoo
         };
 
-        let dec_def_fac_args = parse2::<DeclareDefaultFactoryMacroArgs>(input_args)?;
+        let dec_def_fac_args =
+            parse2::<DeclareDefaultFactoryMacroArgs>(input_args).unwrap();
 
         assert_eq!(
             dec_def_fac_args.interface,
@@ -108,18 +107,17 @@ mod tests
         );
 
         assert!(dec_def_fac_args.flags.is_empty());
-
-        Ok(())
     }
 
     #[test]
-    fn can_parse_with_interface_and_single_flag() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_interface_and_single_flag()
     {
         let input_args = quote! {
             dyn IBar, threadsafe = true
         };
 
-        let dec_def_fac_args = parse2::<DeclareDefaultFactoryMacroArgs>(input_args)?;
+        let dec_def_fac_args =
+            parse2::<DeclareDefaultFactoryMacroArgs>(input_args).unwrap();
 
         assert_eq!(
             dec_def_fac_args.interface,
@@ -150,18 +148,17 @@ mod tests
                 )))
             }])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn can_parse_with_interface_and_multiple_flags() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_interface_and_multiple_flags()
     {
         let input_args = quote! {
             dyn IBar, threadsafe = true, async = false
         };
 
-        let dec_def_fac_args = parse2::<DeclareDefaultFactoryMacroArgs>(input_args)?;
+        let dec_def_fac_args =
+            parse2::<DeclareDefaultFactoryMacroArgs>(input_args).unwrap();
 
         assert_eq!(
             dec_def_fac_args.interface,
@@ -201,8 +198,6 @@ mod tests
                 }
             ])
         );
-
-        Ok(())
     }
 
     #[test]

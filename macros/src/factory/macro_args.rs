@@ -46,8 +46,6 @@ impl Parse for FactoryMacroArgs
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use proc_macro2::Span;
     use quote::{format_ident, quote};
     use syn::{parse2, Lit, LitBool};
@@ -56,13 +54,13 @@ mod tests
     use crate::macro_flag::MacroFlagValue;
 
     #[test]
-    fn can_parse_with_single_flag() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_single_flag()
     {
         let input_args = quote! {
             threadsafe = true
         };
 
-        let factory_macro_args = parse2::<FactoryMacroArgs>(input_args)?;
+        let factory_macro_args = parse2::<FactoryMacroArgs>(input_args).unwrap();
 
         assert_eq!(
             factory_macro_args.flags,
@@ -74,8 +72,6 @@ mod tests
                 )))
             }])
         );
-
-        Ok(())
     }
 
     #[test]

@@ -502,8 +502,6 @@ where
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use mockall::predicate::eq;
 
     use super::*;
@@ -512,7 +510,7 @@ mod tests
     use crate::test_utils::subjects_async;
 
     #[tokio::test]
-    async fn can_bind_to() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to()
     {
         let mut di_container_mock = MockAsyncDIContainer::new();
 
@@ -534,14 +532,15 @@ mod tests
                 MockDependencyHistory::new,
             );
 
-        binding_builder.to::<subjects_async::UserManager>().await?;
-
-        Ok(())
+        binding_builder
+            .to::<subjects_async::UserManager>()
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_factory() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to_factory()
     {
         use crate as syrette;
         use crate::factory;
@@ -584,14 +583,13 @@ mod tests
                     user_manager
                 })
             })
-            .await?;
-
-        Ok(())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_async_factory() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to_async_factory()
     {
         use crate::future::BoxFuture;
         use crate::ptr::TransientPtr;
@@ -633,14 +631,13 @@ mod tests
                     user_manager
                 })
             })
-            .await?;
-
-        Ok(())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_default_factory() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to_default_factory()
     {
         use syrette_macros::declare_default_factory;
 
@@ -678,14 +675,13 @@ mod tests
                     user_manager
                 })
             })
-            .await?;
-
-        Ok(())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_async_default_factory() -> Result<(), Box<dyn Error>>
+    async fn can_bind_to_async_default_factory()
     {
         use syrette_macros::declare_default_factory;
 
@@ -724,8 +720,7 @@ mod tests
                     user_manager
                 })
             })
-            .await?;
-
-        Ok(())
+            .await
+            .unwrap();
     }
 }

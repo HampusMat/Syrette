@@ -496,15 +496,13 @@ impl AsyncDIContainer
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use super::*;
     use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
     use crate::test_utils::mocks::async_provider::MockAsyncProvider;
     use crate::test_utils::subjects_async;
 
     #[tokio::test]
-    async fn can_get() -> Result<(), Box<dyn Error>>
+    async fn can_get()
     {
         let di_container = AsyncDIContainer::new();
 
@@ -535,14 +533,14 @@ mod tests
 
         di_container
             .get::<dyn subjects_async::IUserManager>()
-            .await?
-            .transient()?;
-
-        Ok(())
+            .await
+            .unwrap()
+            .transient()
+            .unwrap();
     }
 
     #[tokio::test]
-    async fn can_get_named() -> Result<(), Box<dyn Error>>
+    async fn can_get_named()
     {
         let di_container = AsyncDIContainer::new();
 
@@ -573,14 +571,14 @@ mod tests
 
         di_container
             .get_named::<dyn subjects_async::IUserManager>("special")
-            .await?
-            .transient()?;
-
-        Ok(())
+            .await
+            .unwrap()
+            .transient()
+            .unwrap();
     }
 
     #[tokio::test]
-    async fn can_get_singleton() -> Result<(), Box<dyn Error>>
+    async fn can_get_singleton()
     {
         let di_container = AsyncDIContainer::new();
 
@@ -615,23 +613,25 @@ mod tests
 
         let first_number_rc = di_container
             .get::<dyn subjects_async::INumber>()
-            .await?
-            .threadsafe_singleton()?;
+            .await
+            .unwrap()
+            .threadsafe_singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.get(), 2820);
 
         let second_number_rc = di_container
             .get::<dyn subjects_async::INumber>()
-            .await?
-            .threadsafe_singleton()?;
+            .await
+            .unwrap()
+            .threadsafe_singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
-
-        Ok(())
     }
 
     #[tokio::test]
-    async fn can_get_singleton_named() -> Result<(), Box<dyn Error>>
+    async fn can_get_singleton_named()
     {
         let di_container = AsyncDIContainer::new();
 
@@ -666,24 +666,26 @@ mod tests
 
         let first_number_rc = di_container
             .get_named::<dyn subjects_async::INumber>("cool")
-            .await?
-            .threadsafe_singleton()?;
+            .await
+            .unwrap()
+            .threadsafe_singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.get(), 2820);
 
         let second_number_rc = di_container
             .get_named::<dyn subjects_async::INumber>("cool")
-            .await?
-            .threadsafe_singleton()?;
+            .await
+            .unwrap()
+            .threadsafe_singleton()
+            .unwrap();
 
         assert_eq!(first_number_rc.as_ref(), second_number_rc.as_ref());
-
-        Ok(())
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_get_factory() -> Result<(), Box<dyn Error>>
+    async fn can_get_factory()
     {
         trait IUserManager: Send + Sync
         {
@@ -761,15 +763,15 @@ mod tests
 
         di_container
             .get::<IUserManagerFactory>()
-            .await?
-            .threadsafe_factory()?;
-
-        Ok(())
+            .await
+            .unwrap()
+            .threadsafe_factory()
+            .unwrap();
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_get_factory_named() -> Result<(), Box<dyn Error>>
+    async fn can_get_factory_named()
     {
         trait IUserManager: Send + Sync
         {
@@ -852,10 +854,10 @@ mod tests
 
         di_container
             .get_named::<IUserManagerFactory>("special")
-            .await?
-            .threadsafe_factory()?;
-
-        Ok(())
+            .await
+            .unwrap()
+            .threadsafe_factory()
+            .unwrap();
     }
 
     #[tokio::test]

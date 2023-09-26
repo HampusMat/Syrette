@@ -111,8 +111,6 @@ pub enum InjectableMacroArgsError
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use proc_macro2::Span;
     use quote::{format_ident, quote};
     use syn::{parse2, Lit, LitBool};
@@ -122,13 +120,13 @@ mod tests
     use crate::test_utils;
 
     #[test]
-    fn can_parse_with_only_interface() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_only_interface()
     {
         let input_args = quote! {
             IFoo
         };
 
-        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
+        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
 
         assert!(matches!(injectable_macro_args.interface, Some(interface)
             if interface == TypePath {
@@ -140,31 +138,27 @@ mod tests
         ));
 
         assert!(injectable_macro_args.flags.is_empty());
-
-        Ok(())
     }
 
     #[test]
-    fn can_parse_with_nothing() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_nothing()
     {
         let input_args = quote! {};
 
-        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
+        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
 
         assert!(injectable_macro_args.interface.is_none());
         assert!(injectable_macro_args.flags.is_empty());
-
-        Ok(())
     }
 
     #[test]
-    fn can_parse_with_interface_and_flags() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_interface_and_flags()
     {
         let input_args = quote! {
             IFoo, no_doc_hidden = true, async = false
         };
 
-        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
+        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
 
         assert!(matches!(injectable_macro_args.interface, Some(interface)
             if interface == TypePath {
@@ -194,18 +188,16 @@ mod tests
                 }
             ])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn can_parse_with_flags_only() -> Result<(), Box<dyn Error>>
+    fn can_parse_with_flags_only()
     {
         let input_args = quote! {
             async = false, no_declare_concrete_interface = false
         };
 
-        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
+        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
 
         assert!(injectable_macro_args.interface.is_none());
 
@@ -228,8 +220,6 @@ mod tests
                 }
             ])
         );
-
-        Ok(())
     }
 
     #[test]
@@ -257,34 +247,32 @@ mod tests
     }
 
     #[test]
-    fn check_flags_fail_with_unknown_flag() -> Result<(), Box<dyn Error>>
+    fn check_flags_fail_with_unknown_flag()
     {
         let input_args = quote! {
             IFoo, haha = true, async = false
         };
 
-        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args)?;
+        let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
 
         assert!(injectable_macro_args.check_flags().is_err());
-
-        Ok(())
     }
 
     #[test]
-    fn check_flags_fail_with_duplicate_flag() -> Result<(), Box<dyn Error>>
+    fn check_flags_fail_with_duplicate_flag()
     {
         let macro_args = parse2::<InjectableMacroArgs>(quote! {
             IFoo, async = false, no_doc_hidden = true, async = false
-        })?;
+        })
+        .unwrap();
 
         assert!(macro_args.check_flags().is_err());
 
         let macro_args_two = parse2::<InjectableMacroArgs>(quote! {
             IFoo, async = true , no_doc_hidden = true, async = false
-        })?;
+        })
+        .unwrap();
 
         assert!(macro_args_two.check_flags().is_err());
-
-        Ok(())
     }
 }

@@ -252,15 +252,13 @@ impl Clone for AsyncFactoryProvider
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
     use crate::di_container::asynchronous::MockAsyncDIContainer;
     use crate::test_utils::subjects_async;
 
     #[tokio::test]
-    async fn async_transient_type_provider_works() -> Result<(), Box<dyn Error>>
+    async fn async_transient_type_provider_works()
     {
         let transient_type_provider = AsyncTransientTypeProvider::<
             subjects_async::UserManager,
@@ -273,17 +271,16 @@ mod tests
             matches!(
                 transient_type_provider
                     .provide(&di_container, MockDependencyHistory::new())
-                    .await?,
+                    .await
+                    .unwrap(),
                 AsyncProvidable::Transient(_)
             ),
             "The provided type is not transient"
         );
-
-        Ok(())
     }
 
     #[tokio::test]
-    async fn async_singleton_provider_works() -> Result<(), Box<dyn Error>>
+    async fn async_singleton_provider_works()
     {
         let singleton_provider = AsyncSingletonProvider::<
             subjects_async::UserManager,
@@ -298,18 +295,17 @@ mod tests
             matches!(
                 singleton_provider
                     .provide(&di_container, MockDependencyHistory::new())
-                    .await?,
+                    .await
+                    .unwrap(),
                 AsyncProvidable::Singleton(_)
             ),
             "The provided type is not a singleton"
         );
-
-        Ok(())
     }
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn async_factory_provider_works() -> Result<(), Box<dyn Error>>
+    async fn async_factory_provider_works()
     {
         use crate::private::any_factory::AnyThreadsafeFactory;
         use crate::ptr::ThreadsafeFactoryPtr;
@@ -340,7 +336,8 @@ mod tests
             matches!(
                 factory_provider
                     .provide(&di_container, MockDependencyHistory::new())
-                    .await?,
+                    .await
+                    .unwrap(),
                 AsyncProvidable::Factory(_)
             ),
             "The provided type is not a factory"
@@ -350,7 +347,8 @@ mod tests
             matches!(
                 default_factory_provider
                     .provide(&di_container, MockDependencyHistory::new())
-                    .await?,
+                    .await
+                    .unwrap(),
                 AsyncProvidable::DefaultFactory(_)
             ),
             "The provided type is not a default factory"
@@ -360,12 +358,11 @@ mod tests
             matches!(
                 async_default_factory_provider
                     .provide(&di_container, MockDependencyHistory::new())
-                    .await?,
+                    .await
+                    .unwrap(),
                 AsyncProvidable::AsyncDefaultFactory(_)
             ),
             "The provided type is not a async default factory"
         );
-
-        Ok(())
     }
 }

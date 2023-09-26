@@ -31,8 +31,6 @@ impl Parse for FactoryTypeAlias
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use quote::{format_ident, quote};
     use syn::punctuated::Punctuated;
     use syn::token::And;
@@ -42,13 +40,13 @@ mod tests
     use crate::test_utils;
 
     #[test]
-    fn can_parse() -> Result<(), Box<dyn Error>>
+    fn can_parse()
     {
         let input_args = quote! {
             type FooFactory = dyn Fn(String, &u32) -> Foo;
         };
 
-        let factory_type_alias = parse2::<FactoryTypeAlias>(input_args)?;
+        let factory_type_alias = parse2::<FactoryTypeAlias>(input_args).unwrap();
 
         assert_eq!(
             factory_type_alias.factory_interface.inputs,
@@ -66,7 +64,5 @@ mod tests
                 })
             ])
         );
-
-        Ok(())
     }
 }

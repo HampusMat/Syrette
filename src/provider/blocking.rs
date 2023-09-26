@@ -147,15 +147,13 @@ impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
 #[cfg(test)]
 mod tests
 {
-    use std::error::Error;
-
     use super::*;
     use crate::dependency_history::MockDependencyHistory;
     use crate::di_container::blocking::MockDIContainer;
     use crate::test_utils::subjects;
 
     #[test]
-    fn transient_type_provider_works() -> Result<(), Box<dyn Error>>
+    fn transient_type_provider_works()
     {
         let transient_type_provider =
             TransientTypeProvider::<subjects::UserManager, MockDIContainer>::new();
@@ -166,18 +164,15 @@ mod tests
 
         assert!(
             matches!(
-                transient_type_provider
-                    .provide(&di_container, dependency_history_mock)?,
-                Providable::Transient(_)
+                transient_type_provider.provide(&di_container, dependency_history_mock),
+                Ok(Providable::Transient(_))
             ),
             "The provided type is not transient"
         );
-
-        Ok(())
     }
 
     #[test]
-    fn singleton_provider_works() -> Result<(), Box<dyn Error>>
+    fn singleton_provider_works()
     {
         let singleton_provider =
             SingletonProvider::<subjects::UserManager, MockDIContainer>::new(
@@ -189,18 +184,17 @@ mod tests
         assert!(
             matches!(
                 singleton_provider
-                    .provide(&di_container, MockDependencyHistory::new())?,
+                    .provide(&di_container, MockDependencyHistory::new())
+                    .unwrap(),
                 Providable::Singleton(_)
             ),
             "The provided type is not a singleton"
         );
-
-        Ok(())
     }
 
     #[test]
     #[cfg(feature = "factory")]
-    fn factory_provider_works() -> Result<(), Box<dyn Error>>
+    fn factory_provider_works()
     {
         use crate::private::any_factory::AnyFactory;
         use crate::ptr::FactoryPtr;
@@ -218,8 +212,8 @@ mod tests
 
         assert!(
             matches!(
-                factory_provider.provide(&di_container, MockDependencyHistory::new())?,
-                Providable::Factory(_)
+                factory_provider.provide(&di_container, MockDependencyHistory::new()),
+                Ok(Providable::Factory(_))
             ),
             "The provided type is not a factory"
         );
@@ -227,12 +221,10 @@ mod tests
         assert!(
             matches!(
                 default_factory_provider
-                    .provide(&di_container, MockDependencyHistory::new())?,
-                Providable::DefaultFactory(_)
+                    .provide(&di_container, MockDependencyHistory::new()),
+                Ok(Providable::DefaultFactory(_))
             ),
             "The provided type is not a default factory"
         );
-
-        Ok(())
     }
 }
