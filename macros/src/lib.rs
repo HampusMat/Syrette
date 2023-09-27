@@ -26,11 +26,9 @@ mod macro_flag;
 mod util;
 
 #[cfg(feature = "factory")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 mod factory;
 
 #[cfg(feature = "factory")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
 mod fn_trait;
 
 #[cfg(test)]
