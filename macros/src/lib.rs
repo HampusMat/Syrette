@@ -457,14 +457,11 @@ pub fn declare_interface(input: TokenStream) -> TokenStream
     generate_caster(&implementation, &interface_type, is_async).into()
 }
 
-/// Declares the name of a dependency.
+/// Used to declare the name of a dependency in the constructor of a impl block decorated
+/// with [`macro@injectable`].
 ///
-/// This macro attribute doesn't actually do anything. It only exists for the
-/// convenience of having intellisense and autocompletion.
-/// You might as well just use `named` if you don't care about that.
-///
-/// Only means something inside a `new` method inside a impl with
-/// the [`macro@injectable`] macro attribute.
+/// **This macro attribute doesn't actually do anything**. It only exists for the
+/// convenience of having intellisense, autocompletion and documentation.
 ///
 /// # Examples
 /// ```
