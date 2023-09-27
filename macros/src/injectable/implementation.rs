@@ -319,20 +319,14 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         let generics = &self.generics;
         let self_type = &self.self_type;
 
-        let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
-        let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
-
         quote! {
             impl #generics syrette::interfaces::injectable::Injectable<
                 syrette::di_container::blocking::DIContainer,
-                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve(
-                    #di_container_var: &std::rc::Rc<
-                        syrette::di_container::blocking::DIContainer
-                    >,
-                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
+                    _: &syrette::di_container::blocking::DIContainer,
+                    _: syrette::dependency_history::DependencyHistory
                 ) -> Result<
                     syrette::ptr::TransientPtr<Self>,
                     syrette::errors::injectable::InjectableError>
@@ -349,20 +343,15 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         let generics = &self.generics;
         let self_type = &self.self_type;
 
-        let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
-        let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
-
         quote! {
             impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
                 syrette::di_container::asynchronous::AsyncDIContainer,
-                syrette::dependency_history::DependencyHistory
             > for #self_type
             {
                 fn resolve<'di_container, 'fut>(
-                    #di_container_var: &'di_container std::sync::Arc<
-                        syrette::di_container::asynchronous::AsyncDIContainer
-                    >,
-                    mut #dependency_history_var: syrette::dependency_history::DependencyHistory
+                    _: &'di_container
+                        syrette::di_container::asynchronous::AsyncDIContainer,
+                    _: syrette::dependency_history::DependencyHistory
                 ) -> syrette::future::BoxFuture<
                     'fut,
                     Result<
