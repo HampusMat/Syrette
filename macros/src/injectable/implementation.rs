@@ -1,10 +1,9 @@
 use std::error::Error;
 
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
 use syn::{
-    parse2,
     parse_str,
     ExprMethodCall,
     FnArg,
@@ -37,17 +36,11 @@ pub struct InjectableImpl<Dep: IDependency>
 impl<Dep: IDependency> InjectableImpl<Dep>
 {
     #[cfg(not(tarpaulin_include))]
-    pub fn parse(
-        input: TokenStream,
+    pub fn new(
+        mut item_impl: ItemImpl,
         constructor: &Ident,
     ) -> Result<Self, InjectableImplError>
     {
-        let mut item_impl = parse2::<ItemImpl>(input).map_err(|err| {
-            InjectableImplError::NotAImplementation {
-                err_span: err.span(),
-            }
-        })?;
-
         if let Some((_, trait_path, _)) = item_impl.trait_ {
             return Err(InjectableImplError::TraitImpl {
                 trait_path_span: trait_path.span(),
@@ -308,62 +301,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                     return Ok(syrette::ptr::TransientPtr::new(Self::#constructor(
                         #(#get_dep_method_calls),*
                     )));
-                }
-            }
-        }
-    }
-
-    #[cfg(not(tarpaulin_include))]
-    pub fn expand_dummy_blocking_impl(&self) -> proc_macro2::TokenStream
-    {
-        let generics = &self.generics;
-        let self_type = &self.self_type;
-
-        quote! {
-            impl #generics syrette::interfaces::injectable::Injectable<
-                syrette::di_container::blocking::DIContainer,
-            > for #self_type
-            {
-                fn resolve(
-                    _: &syrette::di_container::blocking::DIContainer,
-                    _: syrette::dependency_history::DependencyHistory
-                ) -> Result<
-                    syrette::ptr::TransientPtr<Self>,
-                    syrette::errors::injectable::InjectableError>
-                {
-                    unimplemented!();
-                }
-            }
-        }
-    }
-
-    #[cfg(not(tarpaulin_include))]
-    pub fn expand_dummy_async_impl(&self) -> proc_macro2::TokenStream
-    {
-        let generics = &self.generics;
-        let self_type = &self.self_type;
-
-        quote! {
-            impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
-                syrette::di_container::asynchronous::AsyncDIContainer,
-            > for #self_type
-            {
-                fn resolve<'di_container, 'fut>(
-                    _: &'di_container
-                        syrette::di_container::asynchronous::AsyncDIContainer,
-                    _: syrette::dependency_history::DependencyHistory
-                ) -> syrette::future::BoxFuture<
-                    'fut,
-                    Result<
-                        syrette::ptr::TransientPtr<Self>,
-                        syrette::errors::injectable::InjectableError
-                    >
-                >
-                where
-                    Self: Sized + 'fut,
-                    'di_container: 'fut
-                {
-                    unimplemented!();
                 }
             }
         }

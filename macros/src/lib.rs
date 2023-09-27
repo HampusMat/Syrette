@@ -7,15 +7,24 @@
 
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy, ResultExt};
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::punctuated::Punctuated;
 use syn::token::Dyn;
-use syn::{parse, TraitBound, TraitBoundModifier, Type, TypeParamBound, TypeTraitObject};
+use syn::{
+    parse,
+    ItemImpl,
+    TraitBound,
+    TraitBoundModifier,
+    Type,
+    TypeParamBound,
+    TypeTraitObject,
+};
 
 use crate::caster::generate_caster;
 use crate::declare_interface_args::DeclareInterfaceArgs;
 use crate::injectable::dependency::Dependency;
-use crate::injectable::implementation::InjectableImpl;
+use crate::injectable::dummy::expand_dummy_blocking_impl;
+use crate::injectable::implementation::{InjectableImpl, InjectableImplError};
 use crate::injectable::macro_args::InjectableMacroArgs;
 use crate::macro_flag::MacroFlag;
 
@@ -33,6 +42,9 @@ mod fn_trait;
 
 #[cfg(test)]
 mod test_utils;
+
+#[cfg(feature = "async")]
+use crate::injectable::dummy::expand_dummy_async_impl;
 
 #[allow(dead_code)]
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -147,11 +159,32 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[proc_macro_attribute]
 pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenStream
 {
-    use quote::format_ident;
+    let item_impl = parse::<ItemImpl>(input_stream)
+        .map_err(|err| InjectableImplError::NotAImplementation {
+            err_span: err.span(),
+        })
+        .unwrap_or_abort();
 
-    let input_stream: proc_macro2::TokenStream = input_stream.into();
+    let dummy_blocking_impl =
+        expand_dummy_blocking_impl(&item_impl.generics, &item_impl.self_ty);
 
-    set_dummy(input_stream.clone());
+    #[cfg(not(feature = "async"))]
+    set_dummy(quote! {
+        #item_impl
+        #dummy_blocking_impl
+    });
+
+    #[cfg(feature = "async")]
+    {
+        let dummy_async_impl =
+            expand_dummy_async_impl(&item_impl.generics, &item_impl.self_ty);
+
+        set_dummy(quote! {
+            #item_impl
+            #dummy_blocking_impl
+            #dummy_async_impl
+        });
+    }
 
     let args = parse::<InjectableMacroArgs>(args_stream).unwrap_or_abort();
 
@@ -200,13 +233,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     }
 
     let injectable_impl =
-        InjectableImpl::<Dependency>::parse(input_stream, &constructor).unwrap_or_abort();
-
-    set_dummy(if is_async {
-        injectable_impl.expand_dummy_async_impl()
-    } else {
-        injectable_impl.expand_dummy_blocking_impl()
-    });
+        InjectableImpl::<Dependency>::new(item_impl, &constructor).unwrap_or_abort();
 
     injectable_impl.validate().unwrap_or_abort();
 
