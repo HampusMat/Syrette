@@ -18,7 +18,6 @@ From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 - Autowiring dependencies
 - API inspired from the one of [InversifyJS](https://github.com/inversify/InversifyJS)
 - Helpful error messages
-- Enforces the use of interface traits
 - Supports generic implementations & generic interface traits
 - Binding singletons
 - Injection of third-party structs & traits
