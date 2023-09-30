@@ -528,7 +528,12 @@ mod tests
     use super::*;
     use crate::injectable::dependency::MockIDependency;
     use crate::injectable::named_attr_input::NamedAttrInput;
-    use crate::test_utils;
+    use crate::test_utils::{
+        create_path,
+        create_path_segment,
+        create_signature,
+        create_type,
+    };
 
     static TEST_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 
@@ -552,41 +557,34 @@ mod tests
             attrs: vec![],
             vis: Visibility::Inherited,
             defaultness: None,
-            sig: test_utils::create_signature(
+            sig: create_signature(
                 format_ident!("new"),
                 vec![
                     (
-                        test_utils::create_type(test_utils::create_path(&[
-                            test_utils::create_path_segment(
-                                format_ident!("TransientPtr"),
-                                &[test_utils::create_type(test_utils::create_path(&[
-                                    test_utils::create_path_segment(
-                                        format_ident!("Foo"),
-                                        &[],
-                                    ),
-                                ]))],
-                            ),
-                        ])),
+                        create_type(create_path(&[create_path_segment(
+                            format_ident!("TransientPtr"),
+                            &[create_type(create_path(&[create_path_segment(
+                                format_ident!("Foo"),
+                                &[],
+                            )]))],
+                        )])),
                         vec![],
                     ),
                     (
-                        test_utils::create_type(test_utils::create_path(&[
-                            test_utils::create_path_segment(
-                                format_ident!("FactoryPtr"),
-                                &[test_utils::create_type(test_utils::create_path(&[
-                                    test_utils::create_path_segment(
-                                        format_ident!("BarFactory"),
-                                        &[],
-                                    ),
-                                ]))],
-                            ),
-                        ])),
+                        create_type(create_path(&[create_path_segment(
+                            format_ident!("FactoryPtr"),
+                            &[create_type(create_path(&[create_path_segment(
+                                format_ident!("BarFactory"),
+                                &[],
+                            )]))],
+                        )])),
                         vec![],
                     ),
                 ],
-                test_utils::create_type(test_utils::create_path(&[
-                    test_utils::create_path_segment(format_ident!("Self"), &[]),
-                ])),
+                create_type(create_path(&[create_path_segment(
+                    format_ident!("Self"),
+                    &[],
+                )])),
             ),
             block: Block {
                 brace_token: Brace::default(),
@@ -615,45 +613,35 @@ mod tests
             attrs: vec![],
             vis: Visibility::Inherited,
             defaultness: None,
-            sig: test_utils::create_signature(
+            sig: create_signature(
                 format_ident!("new"),
                 vec![
                     (
-                        test_utils::create_type(test_utils::create_path(&[
-                            test_utils::create_path_segment(
-                                format_ident!("TransientPtr"),
-                                &[test_utils::create_type(test_utils::create_path(&[
-                                    test_utils::create_path_segment(
-                                        format_ident!("Foo"),
-                                        &[],
-                                    ),
-                                ]))],
-                            ),
-                        ])),
+                        create_type(create_path(&[create_path_segment(
+                            format_ident!("TransientPtr"),
+                            &[create_type(create_path(&[create_path_segment(
+                                format_ident!("Foo"),
+                                &[],
+                            )]))],
+                        )])),
                         vec![],
                     ),
                     (
-                        test_utils::create_type(test_utils::create_path(&[
-                            test_utils::create_path_segment(
-                                format_ident!("FactoryPtr"),
-                                &[test_utils::create_type(test_utils::create_path(&[
-                                    test_utils::create_path_segment(
-                                        format_ident!("BarFactory"),
-                                        &[],
-                                    ),
-                                ]))],
-                            ),
-                        ])),
+                        create_type(create_path(&[create_path_segment(
+                            format_ident!("FactoryPtr"),
+                            &[create_type(create_path(&[create_path_segment(
+                                format_ident!("BarFactory"),
+                                &[],
+                            )]))],
+                        )])),
                         vec![Attribute {
                             pound_token: Pound::default(),
                             style: AttrStyle::Outer,
                             bracket_token: Bracket::default(),
-                            path: test_utils::create_path(&[
-                                test_utils::create_path_segment(
-                                    format_ident!("named"),
-                                    &[],
-                                ),
-                            ]),
+                            path: create_path(&[create_path_segment(
+                                format_ident!("named"),
+                                &[],
+                            )]),
                             tokens: NamedAttrInput {
                                 paren: Paren::default(),
                                 name: LitStr::new("awesome", Span::call_site()),
@@ -662,9 +650,10 @@ mod tests
                         }],
                     ),
                 ],
-                test_utils::create_type(test_utils::create_path(&[
-                    test_utils::create_path_segment(format_ident!("Self"), &[]),
-                ])),
+                create_type(create_path(&[create_path_segment(
+                    format_ident!("Self"),
+                    &[],
+                )])),
             ),
             block: Block {
                 brace_token: Brace::default(),
@@ -690,29 +679,27 @@ mod tests
     #[test]
     fn can_remove_method_argument_attrs()
     {
-        let first_arg_type = test_utils::create_type(test_utils::create_path(&[
-            test_utils::create_path_segment(
-                format_ident!("TransientPtr"),
-                &[test_utils::create_type(test_utils::create_path(&[
-                    test_utils::create_path_segment(format_ident!("Foo"), &[]),
-                ]))],
-            ),
-        ]));
+        let first_arg_type = create_type(create_path(&[create_path_segment(
+            format_ident!("TransientPtr"),
+            &[create_type(create_path(&[create_path_segment(
+                format_ident!("Foo"),
+                &[],
+            )]))],
+        )]));
 
-        let second_arg_type = test_utils::create_type(test_utils::create_path(&[
-            test_utils::create_path_segment(
-                format_ident!("FactoryPtr"),
-                &[test_utils::create_type(test_utils::create_path(&[
-                    test_utils::create_path_segment(format_ident!("BarFactory"), &[]),
-                ]))],
-            ),
-        ]));
+        let second_arg_type = create_type(create_path(&[create_path_segment(
+            format_ident!("FactoryPtr"),
+            &[create_type(create_path(&[create_path_segment(
+                format_ident!("BarFactory"),
+                &[],
+            )]))],
+        )]));
 
         let mut method = ImplItemMethod {
             attrs: vec![],
             vis: Visibility::Inherited,
             defaultness: None,
-            sig: test_utils::create_signature(
+            sig: create_signature(
                 format_ident!("new"),
                 vec![
                     (
@@ -721,12 +708,10 @@ mod tests
                             pound_token: Pound::default(),
                             style: AttrStyle::Outer,
                             bracket_token: Bracket::default(),
-                            path: test_utils::create_path(&[
-                                test_utils::create_path_segment(
-                                    format_ident!("named"),
-                                    &[],
-                                ),
-                            ]),
+                            path: create_path(&[create_path_segment(
+                                format_ident!("named"),
+                                &[],
+                            )]),
                             tokens: NamedAttrInput {
                                 paren: Paren::default(),
                                 name: LitStr::new("cool", Span::call_site()),
@@ -740,12 +725,10 @@ mod tests
                             pound_token: Pound::default(),
                             style: AttrStyle::Outer,
                             bracket_token: Bracket::default(),
-                            path: test_utils::create_path(&[
-                                test_utils::create_path_segment(
-                                    format_ident!("named"),
-                                    &[],
-                                ),
-                            ]),
+                            path: create_path(&[create_path_segment(
+                                format_ident!("named"),
+                                &[],
+                            )]),
                             tokens: NamedAttrInput {
                                 paren: Paren::default(),
                                 name: LitStr::new("awesome", Span::call_site()),
@@ -754,9 +737,10 @@ mod tests
                         }],
                     ),
                 ],
-                test_utils::create_type(test_utils::create_path(&[
-                    test_utils::create_path_segment(format_ident!("Self"), &[]),
-                ])),
+                create_type(create_path(&[create_path_segment(
+                    format_ident!("Self"),
+                    &[],
+                )])),
             ),
             block: Block {
                 brace_token: Brace::default(),
@@ -794,9 +778,10 @@ mod tests
 
         mock_dependency
             .expect_get_interface()
-            .return_const(test_utils::create_type(test_utils::create_path(&[
-                test_utils::create_path_segment(format_ident!("Foo"), &[]),
-            ])));
+            .return_const(create_type(create_path(&[create_path_segment(
+                format_ident!("Foo"),
+                &[],
+            )])));
 
         mock_dependency.expect_get_name().return_const(None);
 
@@ -843,9 +828,10 @@ mod tests
 
         mock_dependency
             .expect_get_interface()
-            .return_const(test_utils::create_type(test_utils::create_path(&[
-                test_utils::create_path_segment(format_ident!("Foo"), &[]),
-            ])));
+            .return_const(create_type(create_path(&[create_path_segment(
+                format_ident!("Foo"),
+                &[],
+            )])));
 
         mock_dependency
             .expect_get_name()
@@ -894,9 +880,10 @@ mod tests
 
         mock_dependency
             .expect_get_interface()
-            .return_const(test_utils::create_type(test_utils::create_path(&[
-                test_utils::create_path_segment(format_ident!("Foo"), &[]),
-            ])));
+            .return_const(create_type(create_path(&[create_path_segment(
+                format_ident!("Foo"),
+                &[],
+            )])));
 
         mock_dependency.expect_get_name().return_const(None);
 
@@ -944,9 +931,10 @@ mod tests
 
         mock_dependency
             .expect_get_interface()
-            .return_const(test_utils::create_type(test_utils::create_path(&[
-                test_utils::create_path_segment(format_ident!("Foo"), &[]),
-            ])));
+            .return_const(create_type(create_path(&[create_path_segment(
+                format_ident!("Foo"),
+                &[],
+            )])));
 
         mock_dependency
             .expect_get_name()
