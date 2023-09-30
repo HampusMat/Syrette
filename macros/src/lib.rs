@@ -239,7 +239,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 
     let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 
-    let self_type = &injectable_impl.self_type;
+    let self_type = injectable_impl.self_type();
 
     let opt_interface = args.interface.map(Type::Path).or_else(|| {
         if no_declare_concrete_interface {

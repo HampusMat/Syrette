@@ -3,16 +3,7 @@ use std::error::Error;
 use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{
-    parse_str,
-    ExprMethodCall,
-    FnArg,
-    Generics,
-    ImplItemMethod,
-    ItemImpl,
-    ReturnType,
-    Type,
-};
+use syn::{parse_str, ExprMethodCall, FnArg, ImplItemMethod, ItemImpl, ReturnType, Type};
 
 use crate::injectable::dependency::{DependencyError, IDependency};
 use crate::util::error::diagnostic_error_enum;
@@ -25,10 +16,8 @@ const DEPENDENCY_HISTORY_VAR_NAME: &str = "dependency_history";
 
 pub struct InjectableImpl<Dep: IDependency>
 {
-    pub dependencies: Vec<Dep>,
-    pub self_type: Type,
-    pub generics: Generics,
-    pub original_impl: ItemImpl,
+    dependencies: Vec<Dep>,
+    original_impl: ItemImpl,
 
     constructor_method: ImplItemMethod,
 }
@@ -71,8 +60,6 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         Ok(Self {
             dependencies,
-            self_type: item_impl.self_ty.as_ref().clone(),
-            generics: item_impl.generics.clone(),
             original_impl: item_impl,
             constructor_method,
         })
@@ -134,6 +121,11 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             });
         }
         Ok(())
+    }
+
+    pub fn self_type(&self) -> &Type
+    {
+        &self.original_impl.self_ty
     }
 
     #[cfg(not(tarpaulin_include))]
@@ -210,8 +202,8 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         get_dep_method_calls: &Vec<proc_macro2::TokenStream>,
     ) -> proc_macro2::TokenStream
     {
-        let generics = &self.generics;
-        let self_type = &self.self_type;
+        let generics = &self.original_impl.generics;
+        let self_type = &self.original_impl.self_ty;
         let constructor = &self.constructor_method.sig.ident;
 
         let dependency_idents = (0..get_dep_method_calls.len())
@@ -273,8 +265,8 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         get_dep_method_calls: &Vec<proc_macro2::TokenStream>,
     ) -> proc_macro2::TokenStream
     {
-        let generics = &self.generics;
-        let self_type = &self.self_type;
+        let generics = &self.original_impl.generics;
+        let self_type = &self.original_impl.self_ty;
         let constructor = &self.constructor_method.sig.ident;
 
         quote! {
