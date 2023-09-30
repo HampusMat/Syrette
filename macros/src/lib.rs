@@ -227,7 +227,10 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
         abort!(
             is_async_flag.name().span(),
             "The 'async' crate feature must be enabled to use this flag";
-            suggestion = "In your Cargo.toml: syrette = {{ version = \"{}\", features = [\"async\"] }}",
+            suggestion = concat!(
+                "In your Cargo.toml: syrette = {{ version = \"{}\", features = ",
+                "[\"async\"] }}"
+            ),
             PACKAGE_VERSION
         );
     }
@@ -257,7 +260,9 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
         };
 
         quote! {
-            syrette::declare_interface!(#self_type -> #interface #threadsafe_sharable_flag);
+            syrette::declare_interface!(
+                #self_type -> #interface #threadsafe_sharable_flag
+            );
         }
     } else {
         quote! {}
