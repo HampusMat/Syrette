@@ -1,6 +1,38 @@
 ## Unreleased
 
 
+## v0.5.1 - 2023-10-01
+### Bug Fixes
+- allow dependency interface types other than trait & path
+- set injectable macro dummies directly after parsing input
+- make dummy Injectable & AsyncInjectable impls valid
+
+### Build System/Dependency Changes
+- bump version to 0.5.1
+- remove examples from files excluded when packaging
+
+### Chores
+- make docs style html for macro crate not a symlink
+
+### Code Refactoring
+- remove impossible unwrap in injectable macro
+- make camel cased text snake cased without regex
+- remove unnecessary cloning of impl generics & self type
+- remove unnecessary doc(cfg) attrs on private modules
+
+### Code Testing
+- import test util functions for injectable macro tests
+- make unit tests not return Result
+
+### Documentation Changes
+- remove nonexistent feature from feature list in readme
+- clarify named macro documentation
+- fix custom CSS not used by docs.rs
+
+### Style Improvements
+- shorten lines exceeding 90 in width in injectable macro
+
+
 ## v0.5.0 - 2023-09-21
 ### Bug Fixes
 - make the factory macro not change its input
@@ -71,6 +103,7 @@
 - fix create_single_get_dep_method_call unit tests
 
 ### Documentation Changes
+- add release 0.5.0 to changelog
 - add examples to DI container & related functions
 - add threadsafe flag to IFooFactory in async-factory example
 - add existance reason to DependencyHistory docs
