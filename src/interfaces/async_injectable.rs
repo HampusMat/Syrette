@@ -1,5 +1,6 @@
 //! Interface for structs that can be injected into or be injected to.
 use std::fmt::Debug;
+use std::future::ready;
 
 use crate::errors::injectable::InjectableError;
 use crate::future::BoxFuture;
@@ -30,5 +31,21 @@ impl<DIContainerT> Debug for dyn AsyncInjectable<DIContainerT>
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
         f.write_str("{}")
+    }
+}
+
+impl<T, DIContainerT> AsyncInjectable<DIContainerT> for T
+where
+    T: Default + 'static + Send + Sync,
+{
+    fn resolve<'di_container, 'fut>(
+        _: &'di_container DIContainerT,
+        _: DependencyHistory,
+    ) -> BoxFuture<'fut, Result<TransientPtr<Self>, InjectableError>>
+    where
+        Self: Sized + 'fut,
+        'di_container: 'fut,
+    {
+        Box::pin(ready(Ok(TransientPtr::new(Self::default()))))
     }
 }

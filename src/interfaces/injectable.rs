@@ -30,3 +30,16 @@ impl<DIContainerT> Debug for dyn Injectable<DIContainerT>
         f.write_str("{}")
     }
 }
+
+impl<T, DIContainerT> Injectable<DIContainerT> for T
+where
+    T: Default + 'static,
+{
+    fn resolve(
+        _: &DIContainerT,
+        _: DependencyHistory,
+    ) -> Result<TransientPtr<Self>, InjectableError>
+    {
+        Ok(TransientPtr::new(Self::default()))
+    }
+}
