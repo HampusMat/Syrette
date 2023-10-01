@@ -1,15 +1,33 @@
-use std::error::Error;
-
 use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{parse2, ExprMethodCall, FnArg, ImplItemMethod, ItemImpl, ReturnType, Type};
+use syn::{
+    Expr,
+    ExprCall,
+    ExprLit,
+    ExprMethodCall,
+    ExprPath,
+    FnArg,
+    GenericMethodArgument,
+    ImplItemMethod,
+    ItemImpl,
+    MethodTurbofish,
+    ReturnType,
+    Type,
+};
 
 use crate::injectable::dependency::{DependencyError, IDependency};
 use crate::util::error::diagnostic_error_enum;
 use crate::util::item_impl::find_impl_method_by_name_mut;
 use crate::util::string::camelcase_to_snakecase;
-use crate::util::syn_path::SynPathExt;
+use crate::util::syn_ext::{
+    ExprCallExt,
+    ExprLitExt,
+    ExprMethodCallExt,
+    ExprPathExt,
+    MethodTurbofishExt,
+};
+use crate::util::syn_path::{syn_path, SynPathExt};
 
 const DI_CONTAINER_VAR_NAME: &str = "di_container";
 const DEPENDENCY_HISTORY_VAR_NAME: &str = "dependency_history";
@@ -152,8 +170,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             is_async,
             &di_container_var,
             &dependency_history_var,
-        )
-        .unwrap();
+        );
 
         let injectable_impl = if is_async {
             self.expand_async_impl(
@@ -311,7 +328,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         is_async: bool,
         di_container_var: &Ident,
         dependency_history_var: &Ident,
-    ) -> Result<Vec<proc_macro2::TokenStream>, Box<dyn Error>>
+    ) -> Vec<proc_macro2::TokenStream>
     {
         dependencies
             .iter()
@@ -326,27 +343,49 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             .collect()
     }
 
+    fn create_binding_options(dependency: &Dep) -> Expr
+    {
+        let binding_options_new = Expr::Call(ExprCall::new(
+            Expr::Path(ExprPath::new(syn_path!(
+                syrette::di_container::BindingOptions::new
+            ))),
+            [],
+        ));
+
+        match dependency.get_name() {
+            Some(name) => Expr::MethodCall(ExprMethodCall::new(
+                binding_options_new,
+                format_ident!("name"),
+                [Expr::Lit(ExprLit::new(name.clone()))],
+            )),
+            None => binding_options_new,
+        }
+    }
+
     fn create_single_get_dep_method_call(
         dependency: &Dep,
         is_async: bool,
         di_container_var: &Ident,
         dependency_history_var: &Ident,
-    ) -> Result<proc_macro2::TokenStream, Box<dyn Error>>
+    ) -> proc_macro2::TokenStream
     {
         let dep_interface = dependency.get_interface();
 
-        let maybe_name_fn = dependency
-            .get_name()
-            .as_ref()
-            .map(|name| quote! { .name(#name) });
-
-        let method_call = parse2::<ExprMethodCall>(quote! {
-            #di_container_var.get_bound::<#dep_interface>(
-                #dependency_history_var.clone(),
-                syrette::di_container::BindingOptions::new()
-                    #maybe_name_fn
-            )
-        })?;
+        let method_call = ExprMethodCall::new(
+            Expr::Path(ExprPath::new(di_container_var.clone().into())),
+            format_ident!("get_bound"),
+            [
+                Expr::MethodCall(ExprMethodCall::new(
+                    Expr::Path(ExprPath::new(dependency_history_var.clone().into())),
+                    format_ident!("clone"),
+                    [],
+                )),
+                Self::create_binding_options(dependency),
+            ],
+        )
+        .with_turbofish(MethodTurbofish::new([GenericMethodArgument::Type(
+            dep_interface.clone(),
+        )]));
 
         let ptr_name = dependency.get_ptr().to_string();
 
@@ -367,7 +406,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
         let dep_interface_str = dep_interface.to_token_stream().to_string();
 
-        Ok(quote! {
+        quote! {
             #do_method_call
                 .map_err(|err| #resolve_failed_error {
                     reason: Box::new(err),
@@ -378,7 +417,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
                     reason: err,
                     dependency_name: #dep_interface_str
                 })?
-        })
+        }
     }
 
     fn build_dependencies(
@@ -793,14 +832,12 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output =
-            InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
-                &mock_dependency,
-                false,
-                &format_ident!("{}", DI_CONTAINER_VAR_NAME),
-                &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
-            )
-            .unwrap();
+        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+            &mock_dependency,
+            false,
+            &format_ident!("{}", DI_CONTAINER_VAR_NAME),
+            &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
+        );
 
         assert_eq!(
             parse2::<Expr>(output).unwrap(),
@@ -847,14 +884,12 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output =
-            InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
-                &mock_dependency,
-                false,
-                &format_ident!("{}", DI_CONTAINER_VAR_NAME),
-                &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
-            )
-            .unwrap();
+        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+            &mock_dependency,
+            false,
+            &format_ident!("{}", DI_CONTAINER_VAR_NAME),
+            &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
+        );
 
         assert_eq!(
             parse2::<Expr>(output).unwrap(),
@@ -899,14 +934,12 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output =
-            InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
-                &mock_dependency,
-                true,
-                &format_ident!("{}", DI_CONTAINER_VAR_NAME),
-                &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
-            )
-            .unwrap();
+        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+            &mock_dependency,
+            true,
+            &format_ident!("{}", DI_CONTAINER_VAR_NAME),
+            &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
+        );
 
         assert_eq!(
             parse2::<Expr>(output).unwrap(),
@@ -954,14 +987,12 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output =
-            InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
-                &mock_dependency,
-                true,
-                &format_ident!("{}", DI_CONTAINER_VAR_NAME),
-                &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
-            )
-            .unwrap();
+        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+            &mock_dependency,
+            true,
+            &format_ident!("{}", DI_CONTAINER_VAR_NAME),
+            &format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME),
+        );
 
         assert_eq!(
             parse2::<Expr>(output).unwrap(),

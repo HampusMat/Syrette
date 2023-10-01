@@ -1,5 +1,6 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 #![deny(clippy::all, clippy::pedantic, missing_docs, unsafe_code)]
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::panic))]
 #![allow(unknown_lints)]
 #![allow(clippy::module_name_repetitions, clippy::manual_let_else)]
 

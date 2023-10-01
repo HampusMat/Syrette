@@ -2,6 +2,7 @@ pub mod error;
 pub mod item_impl;
 pub mod iterator_ext;
 pub mod string;
+pub mod syn_ext;
 pub mod syn_path;
 pub mod tokens;
 
