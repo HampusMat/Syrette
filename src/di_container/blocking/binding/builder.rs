@@ -19,7 +19,7 @@ pub struct BindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container DIContainer,
+    di_container: &'di_container mut DIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
@@ -30,7 +30,7 @@ where
     Interface: 'static + ?Sized,
 {
     pub(crate) fn new(
-        di_container: &'di_container DIContainer,
+        di_container: &'di_container mut DIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -98,7 +98,7 @@ where
             >()));
         }
 
-        let binding_scope_configurator = BindingScopeConfigurator::new(
+        let mut binding_scope_configurator = BindingScopeConfigurator::new(
             self.di_container,
             self.dependency_history_factory,
         );
@@ -324,7 +324,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<dyn subjects::INumber>::new(
-            &mock_di_container,
+            &mut mock_di_container,
             MockDependencyHistory::new,
         );
 
@@ -358,7 +358,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<IUserManagerFactory>::new(
-            &mock_di_container,
+            &mut mock_di_container,
             MockDependencyHistory::new,
         );
 
@@ -400,7 +400,7 @@ mod tests
             .once();
 
         let binding_builder = BindingBuilder::<dyn subjects::IUserManager>::new(
-            &mock_di_container,
+            &mut mock_di_container,
             MockDependencyHistory::new,
         );
 

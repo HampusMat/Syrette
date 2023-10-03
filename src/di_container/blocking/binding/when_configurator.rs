@@ -13,7 +13,7 @@ pub struct BindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    di_container: &'di_container DIContainer,
+    di_container: &'di_container mut DIContainer,
 
     interface_phantom: PhantomData<Interface>,
 }
@@ -22,7 +22,7 @@ impl<'di_container, Interface> BindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized,
 {
-    pub(crate) fn new(di_container: &'di_container DIContainer) -> Self
+    pub(crate) fn new(di_container: &'di_container mut DIContainer) -> Self
     {
         Self {
             di_container,
@@ -115,7 +115,7 @@ mod tests
             .once();
 
         let binding_when_configurator =
-            BindingWhenConfigurator::<dyn subjects::INumber>::new(&di_container_mock);
+            BindingWhenConfigurator::<dyn subjects::INumber>::new(&mut di_container_mock);
 
         assert!(binding_when_configurator.when_named("cool").is_ok());
     }

@@ -50,7 +50,6 @@
 //! }
 //! ```
 use std::any::type_name;
-use std::cell::RefCell;
 
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
@@ -76,7 +75,7 @@ pub(crate) type BindingOptionsWithLt = BindingOptions<'static>;
 #[derive(Default)]
 pub struct DIContainer
 {
-    binding_storage: RefCell<DIContainerBindingStorage<dyn IProvider<Self>>>,
+    binding_storage: DIContainerBindingStorage<dyn IProvider<Self>>,
 }
 
 impl DIContainer
@@ -86,7 +85,7 @@ impl DIContainer
     pub fn new() -> Self
     {
         Self {
-            binding_storage: RefCell::new(DIContainerBindingStorage::new()),
+            binding_storage: DIContainerBindingStorage::new(),
         }
     }
 }
@@ -323,33 +322,28 @@ impl DIContainer
     where
         Interface: ?Sized + 'static,
     {
-        self.binding_storage
-            .borrow()
-            .has::<Interface>(binding_options)
+        self.binding_storage.has::<Interface>(binding_options)
     }
 
     fn set_binding<Interface>(
-        &self,
+        &mut self,
         binding_options: BindingOptions<'static>,
         provider: Box<dyn IProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
     {
         self.binding_storage
-            .borrow_mut()
             .set::<Interface>(binding_options, provider);
     }
 
     fn remove_binding<Interface>(
-        &self,
+        &mut self,
         binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
-        self.binding_storage
-            .borrow_mut()
-            .remove::<Interface>(binding_options)
+        self.binding_storage.remove::<Interface>(binding_options)
     }
 }
 
@@ -366,7 +360,6 @@ impl DIContainer
         let name = binding_options.name;
 
         self.binding_storage
-            .borrow()
             .get::<Interface>(binding_options)
             .map_or_else(
                 || {
@@ -396,7 +389,7 @@ mod tests
     #[test]
     fn can_get()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let mut mock_provider = MockIProvider::new();
 
@@ -408,7 +401,6 @@ mod tests
 
         di_container
             .binding_storage
-            .borrow_mut()
             .set::<dyn subjects::IUserManager>(
                 BindingOptions::new(),
                 Box::new(mock_provider),
@@ -424,7 +416,7 @@ mod tests
     #[test]
     fn can_get_named()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let mut mock_provider = MockIProvider::new();
 
@@ -436,7 +428,6 @@ mod tests
 
         di_container
             .binding_storage
-            .borrow_mut()
             .set::<dyn subjects::IUserManager>(
                 BindingOptions::new().name("special"),
                 Box::new(mock_provider),
@@ -452,7 +443,7 @@ mod tests
     #[test]
     fn can_get_singleton()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let mut mock_provider = MockIProvider::new();
 
@@ -466,7 +457,6 @@ mod tests
 
         di_container
             .binding_storage
-            .borrow_mut()
             .set::<dyn subjects::INumber>(BindingOptions::new(), Box::new(mock_provider));
 
         let first_number_rc = di_container
@@ -489,7 +479,7 @@ mod tests
     #[test]
     fn can_get_singleton_named()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let mut mock_provider = MockIProvider::new();
 
@@ -501,13 +491,10 @@ mod tests
             .expect_provide()
             .returning_st(move |_, _| Ok(Providable::Singleton(singleton.clone())));
 
-        di_container
-            .binding_storage
-            .borrow_mut()
-            .set::<dyn subjects::INumber>(
-                BindingOptions::new().name("cool"),
-                Box::new(mock_provider),
-            );
+        di_container.binding_storage.set::<dyn subjects::INumber>(
+            BindingOptions::new().name("cool"),
+            Box::new(mock_provider),
+        );
 
         let first_number_rc = di_container
             .get_named::<dyn subjects::INumber>("cool")
@@ -574,7 +561,7 @@ mod tests
         #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let factory_func: &dyn Fn(&DIContainer) -> Box<IUserManagerFactory> = &|_| {
             Box::new(move |users| {
@@ -595,7 +582,6 @@ mod tests
 
         di_container
             .binding_storage
-            .borrow_mut()
             .set::<IUserManagerFactory>(BindingOptions::new(), Box::new(mock_provider));
 
         di_container
@@ -653,7 +639,7 @@ mod tests
         #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         let factory_func: &dyn Fn(&DIContainer) -> Box<IUserManagerFactory> = &|_| {
             Box::new(move |users| {
@@ -672,13 +658,10 @@ mod tests
             ))))
         });
 
-        di_container
-            .binding_storage
-            .borrow_mut()
-            .set::<IUserManagerFactory>(
-                BindingOptions::new().name("special"),
-                Box::new(mock_provider),
-            );
+        di_container.binding_storage.set::<IUserManagerFactory>(
+            BindingOptions::new().name("special"),
+            Box::new(mock_provider),
+        );
 
         di_container
             .get_named::<IUserManagerFactory>("special")
@@ -690,18 +673,15 @@ mod tests
     #[test]
     fn has_binding_works()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         // No binding is present yet
         assert!(!di_container.has_binding::<subjects::Ninja>(BindingOptions::new()));
 
-        di_container
-            .binding_storage
-            .borrow_mut()
-            .set::<subjects::Ninja>(
-                BindingOptions::new(),
-                Box::new(MockIProvider::new()),
-            );
+        di_container.binding_storage.set::<subjects::Ninja>(
+            BindingOptions::new(),
+            Box::new(MockIProvider::new()),
+        );
 
         assert!(di_container.has_binding::<subjects::Ninja>(BindingOptions::new()));
     }
@@ -709,7 +689,7 @@ mod tests
     #[test]
     fn set_binding_works()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
         di_container.set_binding::<subjects::Ninja>(
             BindingOptions::new(),
@@ -718,22 +698,18 @@ mod tests
 
         assert!(di_container
             .binding_storage
-            .borrow_mut()
             .has::<subjects::Ninja>(BindingOptions::new()));
     }
 
     #[test]
     fn remove_binding_works()
     {
-        let di_container = DIContainer::new();
+        let mut di_container = DIContainer::new();
 
-        di_container
-            .binding_storage
-            .borrow_mut()
-            .set::<subjects::Ninja>(
-                BindingOptions::new(),
-                Box::new(MockIProvider::new()),
-            );
+        di_container.binding_storage.set::<subjects::Ninja>(
+            BindingOptions::new(),
+            Box::new(MockIProvider::new()),
+        );
 
         assert!(
             // Formatting is weird without this comment
@@ -746,7 +722,6 @@ mod tests
             // Formatting is weird without this comment
             !di_container
                 .binding_storage
-                .borrow_mut()
                 .has::<subjects::Ninja>(BindingOptions::new())
         );
     }

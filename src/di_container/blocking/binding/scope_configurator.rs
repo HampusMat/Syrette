@@ -18,7 +18,7 @@ where
     Interface: 'static + ?Sized,
     Implementation: Injectable<DIContainer>,
 {
-    di_container: &'di_container DIContainer,
+    di_container: &'di_container mut DIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
@@ -32,7 +32,7 @@ where
     Implementation: Injectable<DIContainer>,
 {
     pub(crate) fn new(
-        di_container: &'di_container DIContainer,
+        di_container: &'di_container mut DIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -75,7 +75,9 @@ where
     /// # }
     /// ```
     #[allow(clippy::must_use_candidate)]
-    pub fn in_transient_scope(self) -> BindingWhenConfigurator<'di_container, Interface>
+    pub fn in_transient_scope(
+        mut self,
+    ) -> BindingWhenConfigurator<'di_container, Interface>
     {
         self.set_in_transient_scope();
 
@@ -161,7 +163,7 @@ where
         Ok(BindingWhenConfigurator::new(self.di_container))
     }
 
-    pub(crate) fn set_in_transient_scope(&self)
+    pub(crate) fn set_in_transient_scope(&mut self)
     {
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
@@ -193,7 +195,8 @@ mod tests
             dyn subjects::IUserManager,
             subjects::UserManager,
         >::new(
-            &di_container_mock, MockDependencyHistory::new
+            &mut di_container_mock,
+            MockDependencyHistory::new,
         );
 
         binding_scope_configurator.in_transient_scope();
@@ -214,7 +217,8 @@ mod tests
             dyn subjects::IUserManager,
             subjects::UserManager,
         >::new(
-            &di_container_mock, MockDependencyHistory::new
+            &mut di_container_mock,
+            MockDependencyHistory::new,
         );
 
         assert!(binding_scope_configurator.in_singleton_scope().is_ok());
