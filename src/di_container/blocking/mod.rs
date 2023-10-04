@@ -285,11 +285,12 @@ impl DIContainer
             )),
             #[cfg(feature = "factory")]
             Providable::Factory(factory_binding) => {
-                use crate::private::factory::IFactory;
+                use crate::castable_factory::CastableFactory;
 
                 let factory = factory_binding
-                    .cast::<dyn IFactory<Interface, Self>>()
-                    .map_err(|_| DIContainerError::CastFailed {
+                    .as_any()
+                    .downcast_ref::<CastableFactory<Interface, Self>>()
+                    .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "factory",
                     })?;
@@ -298,17 +299,16 @@ impl DIContainer
             }
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
-                use crate::private::factory::IFactory;
+                use crate::castable_factory::CastableFactory;
                 use crate::ptr::TransientPtr;
 
-                type DefaultFactoryFn<Interface> = dyn IFactory<
-                    dyn Fn<(), Output = TransientPtr<Interface>>,
-                    DIContainer,
-                >;
+                type DefaultFactoryFn<Interface> =
+                    CastableFactory<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
 
                 let default_factory = factory_binding
-                    .cast::<DefaultFactoryFn<Interface>>()
-                    .map_err(|_| DIContainerError::CastFailed {
+                    .as_any()
+                    .downcast_ref::<DefaultFactoryFn<Interface>>()
+                    .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "default factory",
                     })?;
@@ -517,7 +517,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory()
     {
-        use crate::private::castable_factory::CastableFactory;
+        use crate::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -556,9 +556,6 @@ mod tests
             }
         }
 
-        use crate as syrette;
-
-        #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         let mut di_container = DIContainer::new();
@@ -595,7 +592,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named()
     {
-        use crate::private::castable_factory::CastableFactory;
+        use crate::castable_factory::CastableFactory;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -634,9 +631,6 @@ mod tests
             }
         }
 
-        use crate as syrette;
-
-        #[crate::factory]
         type IUserManagerFactory = dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager>;
 
         let mut di_container = DIContainer::new();

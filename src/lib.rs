@@ -102,9 +102,6 @@ pub mod future;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
 pub use di_container::asynchronous::AsyncDIContainer;
 pub use di_container::blocking::DIContainer;
-#[cfg(feature = "factory")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-pub use syrette_macros::{declare_default_factory, factory};
 pub use syrette_macros::{declare_interface, injectable, named};
 
 #[doc(hidden)]
@@ -112,6 +109,12 @@ pub mod private;
 
 mod provider;
 mod util;
+
+#[cfg(feature = "factory")]
+mod castable_factory;
+
+#[cfg(feature = "factory")]
+mod any_factory;
 
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]

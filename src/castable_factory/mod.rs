@@ -1,8 +1,7 @@
-use std::any::type_name;
+use std::any::{type_name, Any};
 use std::fmt::Debug;
 
-use crate::private::any_factory::AnyFactory;
-use crate::private::factory::IFactory;
+use crate::any_factory::AnyFactory;
 use crate::ptr::TransientPtr;
 
 #[cfg(feature = "async")]
@@ -26,14 +25,8 @@ where
     {
         Self { func }
     }
-}
 
-impl<ReturnInterface, DIContainerT> IFactory<ReturnInterface, DIContainerT>
-    for CastableFactory<ReturnInterface, DIContainerT>
-where
-    ReturnInterface: 'static + ?Sized,
-{
-    fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>
+    pub fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>
     {
         (self.func)(di_container)
     }
@@ -45,6 +38,10 @@ where
     ReturnInterface: 'static + ?Sized,
     DIContainerT: 'static,
 {
+    fn as_any(&self) -> &dyn Any
+    {
+        self
+    }
 }
 
 impl<ReturnInterface, DIContainerT> Debug

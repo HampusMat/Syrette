@@ -4,12 +4,3 @@
 pub mod cast;
 
 pub extern crate linkme;
-
-#[cfg(feature = "factory")]
-pub mod any_factory;
-
-#[cfg(feature = "factory")]
-pub mod factory;
-
-#[cfg(feature = "factory")]
-pub mod castable_factory;

@@ -348,93 +348,62 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {
-                use crate::private::factory::IThreadsafeFactory;
+                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
                 let factory = factory_binding
-                    .cast::<dyn IThreadsafeFactory<Interface, Self>>()
-                    .map_err(|err| match err {
-                        CastError::NotArcCastable(_) => {
-                            AsyncDIContainerError::InterfaceNotAsync(
-                                type_name::<Interface>(),
-                            )
-                        }
-                        CastError::CastFailed {
-                            source: _,
-                            from: _,
-                            to: _,
-                        }
-                        | CastError::GetCasterFailed(_) => {
-                            AsyncDIContainerError::CastFailed {
-                                interface: type_name::<Interface>(),
-                                binding_kind: "factory",
-                            }
-                        }
+                    .as_any()
+                    .downcast_ref::<ThreadsafeCastableFactory<Interface, Self>>()
+                    .ok_or_else(|| AsyncDIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "factory",
                     })?;
 
                 Ok(SomePtr::ThreadsafeFactory(factory.call(self).into()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
-                use crate::private::factory::IThreadsafeFactory;
+                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
                 use crate::ptr::TransientPtr;
 
-                type DefaultFactoryFn<Interface> = dyn IThreadsafeFactory<
-                    dyn Fn<(), Output = TransientPtr<Interface>> + Send + Sync,
+                type DefaultFactoryFn<Interface> = ThreadsafeCastableFactory<
+                    dyn Fn() -> TransientPtr<Interface> + Send + Sync,
                     AsyncDIContainer,
                 >;
 
-                let default_factory = Self::cast_factory_binding::<
-                    DefaultFactoryFn<Interface>,
-                >(binding, "default factory")?;
+                let default_factory = binding
+                    .as_any()
+                    .downcast_ref::<DefaultFactoryFn<Interface>>()
+                    .ok_or_else(|| AsyncDIContainerError::CastFailed {
+                        interface: type_name::<DefaultFactoryFn<Interface>>(),
+                        binding_kind: "default factory",
+                    })?;
 
                 Ok(SomePtr::Transient(default_factory.call(self)()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
+                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
                 use crate::future::BoxFuture;
-                use crate::private::factory::IThreadsafeFactory;
                 use crate::ptr::TransientPtr;
 
-                type AsyncDefaultFactoryFn<Interface> = dyn IThreadsafeFactory<
+                type AsyncDefaultFactoryFn<Interface> = ThreadsafeCastableFactory<
                     dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
                         + Send
                         + Sync,
                     AsyncDIContainer,
                 >;
 
-                let async_default_factory = Self::cast_factory_binding::<
-                    AsyncDefaultFactoryFn<Interface>,
-                >(
-                    binding, "async default factory"
-                )?;
+                let async_default_factory = binding
+                    .as_any()
+                    .downcast_ref::<AsyncDefaultFactoryFn<Interface>>()
+                    .ok_or_else(|| AsyncDIContainerError::CastFailed {
+                        interface: type_name::<AsyncDefaultFactoryFn<Interface>>(),
+                        binding_kind: "async default factory",
+                    })?;
 
                 Ok(SomePtr::Transient(async_default_factory.call(self)().await))
             }
         }
-    }
-
-    #[cfg(feature = "factory")]
-    fn cast_factory_binding<Type: 'static + ?Sized>(
-        factory_binding: std::sync::Arc<
-            dyn crate::private::any_factory::AnyThreadsafeFactory,
-        >,
-        binding_kind: &'static str,
-    ) -> Result<std::sync::Arc<Type>, AsyncDIContainerError>
-    {
-        factory_binding.cast::<Type>().map_err(|err| match err {
-            CastError::NotArcCastable(_) => {
-                AsyncDIContainerError::InterfaceNotAsync(type_name::<Type>())
-            }
-            CastError::CastFailed {
-                source: _,
-                from: _,
-                to: _,
-            }
-            | CastError::GetCasterFailed(_) => AsyncDIContainerError::CastFailed {
-                interface: type_name::<Type>(),
-                binding_kind,
-            },
-        })
     }
 
     async fn get_binding_providable<Interface>(
@@ -683,10 +652,8 @@ mod tests
             }
         }
 
-        use crate as syrette;
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
-        #[crate::factory(threadsafe = true)]
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 
@@ -767,10 +734,8 @@ mod tests
             }
         }
 
-        use crate as syrette;
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
 
-        #[crate::factory(threadsafe = true)]
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 

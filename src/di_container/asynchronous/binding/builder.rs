@@ -127,7 +127,6 @@ where
     /// ```
     /// # use std::error::Error;
     /// #
-    /// # use syrette::{factory};
     /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
@@ -141,7 +140,6 @@ where
     /// #
     /// # impl Foo for Bar {}
     /// #
-    /// # #[factory(threadsafe = true)]
     /// # type FooFactory = dyn Fn(i32, String) -> TransientPtr<dyn Foo> + Send + Sync;
     /// #
     /// # #[tokio::main]
@@ -175,7 +173,7 @@ where
         Interface: Fn<Args, Output = Return> + Send + Sync,
         FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<Args, Return> + Send + Sync,
     {
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -213,7 +211,6 @@ where
     /// # use std::error::Error;
     /// # use std::time::Duration;
     /// #
-    /// # use syrette::{factory};
     /// # use syrette::AsyncDIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// # use syrette::future::BoxFuture;
@@ -228,7 +225,6 @@ where
     /// #
     /// # impl Foo for Bar {}
     /// #
-    /// # #[factory]
     /// # type FooFactory = dyn Fn(i32, String) -> BoxFuture<
     /// #   'static,
     /// #   TransientPtr<dyn Foo>
@@ -274,7 +270,7 @@ where
             + Send
             + Sync,
     {
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -358,7 +354,7 @@ where
             + Send
             + Sync,
     {
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -449,7 +445,7 @@ where
             + Send
             + Sync,
     {
-        use crate::private::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -516,11 +512,8 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_factory()
     {
-        use crate as syrette;
-        use crate::factory;
         use crate::ptr::TransientPtr;
 
-        #[factory(threadsafe = true)]
         type IUserManagerFactory = dyn Fn(
                 String,
                 i32,
@@ -567,10 +560,8 @@ mod tests
         use crate::future::BoxFuture;
         use crate::ptr::TransientPtr;
         use crate::test_utils::async_closure;
-        use crate::{self as syrette, factory};
 
         #[rustfmt::skip]
-        #[factory]
         type IUserManagerFactory = dyn Fn(String) -> BoxFuture<
             'static,
             TransientPtr<dyn subjects_async::IUserManager>
@@ -611,12 +602,7 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_default_factory()
     {
-        use syrette_macros::declare_default_factory;
-
-        use crate as syrette;
         use crate::ptr::TransientPtr;
-
-        declare_default_factory!(dyn subjects_async::IUserManager);
 
         let mut di_container_mock = MockAsyncDIContainer::new();
 
@@ -654,13 +640,8 @@ mod tests
     #[cfg(feature = "factory")]
     async fn can_bind_to_async_default_factory()
     {
-        use syrette_macros::declare_default_factory;
-
         use crate::ptr::TransientPtr;
         use crate::test_utils::async_closure;
-        use crate::{self as syrette};
-
-        declare_default_factory!(dyn subjects_async::IUserManager, async = true);
 
         let mut di_container_mock = MockAsyncDIContainer::new();
 

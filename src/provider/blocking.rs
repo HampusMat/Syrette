@@ -13,9 +13,9 @@ pub enum Providable<DIContainerType>
     Transient(TransientPtr<dyn Injectable<DIContainerType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
     #[cfg(feature = "factory")]
-    Factory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
+    Factory(crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>),
     #[cfg(feature = "factory")]
-    DefaultFactory(crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>),
+    DefaultFactory(crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>),
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -108,7 +108,7 @@ where
 #[cfg(feature = "factory")]
 pub struct FactoryProvider
 {
-    factory: crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>,
+    factory: crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>,
     is_default_factory: bool,
 }
 
@@ -116,7 +116,7 @@ pub struct FactoryProvider
 impl FactoryProvider
 {
     pub fn new(
-        factory: crate::ptr::FactoryPtr<dyn crate::private::any_factory::AnyFactory>,
+        factory: crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>,
         is_default_factory: bool,
     ) -> Self
     {
@@ -196,13 +196,21 @@ mod tests
     #[cfg(feature = "factory")]
     fn factory_provider_works()
     {
-        use crate::private::any_factory::AnyFactory;
+        use std::any::Any;
+
+        use crate::any_factory::AnyFactory;
         use crate::ptr::FactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
 
-        impl AnyFactory for FooFactory {}
+        impl AnyFactory for FooFactory
+        {
+            fn as_any(&self) -> &dyn Any
+            {
+                self
+            }
+        }
 
         let factory_provider = FactoryProvider::new(FactoryPtr::new(FooFactory), false);
         let default_factory_provider =

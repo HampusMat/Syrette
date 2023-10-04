@@ -1,4 +1,3 @@
-use syrette::factory;
 use syrette::ptr::TransientPtr;
 
 pub trait IUser
@@ -8,6 +7,5 @@ pub trait IUser
     fn get_password(&self) -> &'static str;
 }
 
-#[factory]
 pub type IUserFactory =
     dyn Fn(&'static str, &'static str, &'static str) -> TransientPtr<dyn IUser>;

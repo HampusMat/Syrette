@@ -1,8 +1,7 @@
-use std::any::type_name;
+use std::any::{type_name, Any};
 use std::fmt::Debug;
 
-use crate::private::any_factory::{AnyFactory, AnyThreadsafeFactory};
-use crate::private::factory::IThreadsafeFactory;
+use crate::any_factory::{AnyFactory, AnyThreadsafeFactory};
 use crate::ptr::TransientPtr;
 
 pub struct ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
@@ -27,15 +26,8 @@ where
     {
         Self { func }
     }
-}
 
-impl<ReturnInterface, DIContainerT> IThreadsafeFactory<ReturnInterface, DIContainerT>
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
-where
-    DIContainerT: 'static,
-    ReturnInterface: 'static + ?Sized,
-{
-    fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>
+    pub fn call(&self, di_container: &DIContainerT) -> TransientPtr<ReturnInterface>
     {
         (self.func)(di_container)
     }
@@ -47,6 +39,10 @@ where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
 {
+    fn as_any(&self) -> &dyn Any
+    {
+        self
+    }
 }
 
 impl<ReturnInterface, DIContainerT> AnyThreadsafeFactory

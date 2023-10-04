@@ -1,13 +1,11 @@
 use std::error::Error;
 
 use syrette::ptr::TransientPtr;
-use syrette::{declare_default_factory, DIContainer};
+use syrette::DIContainer;
 use third_party_lib::Shuriken;
 
 use crate::interfaces::ninja::INinja;
 use crate::ninja::Ninja;
-
-declare_default_factory!(Shuriken);
 
 pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
 {

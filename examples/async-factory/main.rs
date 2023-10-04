@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use syrette::future::BoxFuture;
 use syrette::ptr::TransientPtr;
-use syrette::{declare_default_factory, factory, AsyncDIContainer};
+use syrette::AsyncDIContainer;
 use tokio::time::sleep;
 
 trait IFoo: Send + Sync
@@ -15,7 +15,6 @@ trait IFoo: Send + Sync
     fn bar(&self);
 }
 
-#[factory(threadsafe = true)]
 type IFooFactory =
     dyn Fn(i32) -> BoxFuture<'static, TransientPtr<dyn IFoo>> + Send + Sync;
 
@@ -67,8 +66,6 @@ impl IPerson for Person
         self.name.clone()
     }
 }
-
-declare_default_factory!(dyn IPerson, async = true);
 
 #[tokio::main]
 async fn main() -> Result<()>

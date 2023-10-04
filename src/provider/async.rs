@@ -16,21 +16,15 @@ pub enum AsyncProvidable<DIContainerT>
     Singleton(ThreadsafeSingletonPtr<dyn AsyncInjectable<DIContainerT>>),
     #[cfg(feature = "factory")]
     Factory(
-        crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::private::any_factory::AnyThreadsafeFactory,
-        >,
+        crate::ptr::ThreadsafeFactoryPtr<dyn crate::any_factory::AnyThreadsafeFactory>,
     ),
     #[cfg(feature = "factory")]
     DefaultFactory(
-        crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::private::any_factory::AnyThreadsafeFactory,
-        >,
+        crate::ptr::ThreadsafeFactoryPtr<dyn crate::any_factory::AnyThreadsafeFactory>,
     ),
     #[cfg(feature = "factory")]
     AsyncDefaultFactory(
-        crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::private::any_factory::AnyThreadsafeFactory,
-        >,
+        crate::ptr::ThreadsafeFactoryPtr<dyn crate::any_factory::AnyThreadsafeFactory>,
     ),
 }
 
@@ -188,9 +182,8 @@ pub enum AsyncFactoryVariant
 #[cfg(feature = "factory")]
 pub struct AsyncFactoryProvider
 {
-    factory: crate::ptr::ThreadsafeFactoryPtr<
-        dyn crate::private::any_factory::AnyThreadsafeFactory,
-    >,
+    factory:
+        crate::ptr::ThreadsafeFactoryPtr<dyn crate::any_factory::AnyThreadsafeFactory>,
     variant: AsyncFactoryVariant,
 }
 
@@ -199,7 +192,7 @@ impl AsyncFactoryProvider
 {
     pub fn new(
         factory: crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::private::any_factory::AnyThreadsafeFactory,
+            dyn crate::any_factory::AnyThreadsafeFactory,
         >,
         variant: AsyncFactoryVariant,
     ) -> Self
@@ -307,11 +300,21 @@ mod tests
     #[cfg(feature = "factory")]
     async fn async_factory_provider_works()
     {
-        use crate::private::any_factory::AnyThreadsafeFactory;
+        use std::any::Any;
+
+        use crate::any_factory::{AnyFactory, AnyThreadsafeFactory};
         use crate::ptr::ThreadsafeFactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
+
+        impl AnyFactory for FooFactory
+        {
+            fn as_any(&self) -> &dyn Any
+            {
+                self
+            }
+        }
 
         impl AnyThreadsafeFactory for FooFactory {}
 

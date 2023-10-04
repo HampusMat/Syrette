@@ -119,7 +119,7 @@ where
     /// ```
     /// # use std::error::Error;
     /// #
-    /// # use syrette::{DIContainer, factory};
+    /// # use syrette::DIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
     /// # trait ICustomerID {}
@@ -140,10 +140,8 @@ where
     /// #
     /// # impl ICustomer for Customer {}
     /// #
-    /// # #[factory]
     /// # type ICustomerFactory = dyn Fn(String, u32) -> TransientPtr<dyn ICustomer>;
     /// #
-    /// # #[factory]
     /// # type ICustomerIDFactory = dyn Fn(u32) -> TransientPtr<dyn ICustomerID>;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>>
@@ -183,7 +181,7 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn(&DIContainer) -> Box<Interface>,
     {
-        use crate::private::castable_factory::CastableFactory;
+        use crate::castable_factory::CastableFactory;
 
         if self
             .di_container
@@ -218,7 +216,7 @@ where
     /// ```
     /// # use std::error::Error;
     /// #
-    /// # use syrette::{DIContainer, factory};
+    /// # use syrette::DIContainer;
     /// # use syrette::ptr::TransientPtr;
     /// #
     /// # trait IBuffer {}
@@ -271,7 +269,7 @@ where
             dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
         >,
     {
-        use crate::private::castable_factory::CastableFactory;
+        use crate::castable_factory::CastableFactory;
 
         if self
             .di_container
@@ -335,11 +333,8 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_bind_to_factory()
     {
-        use crate as syrette;
-        use crate::factory;
         use crate::ptr::TransientPtr;
 
-        #[factory]
         type IUserManagerFactory =
             dyn Fn(i32, String) -> TransientPtr<dyn subjects::IUserManager>;
 
@@ -378,12 +373,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_bind_to_default_factory()
     {
-        use syrette_macros::declare_default_factory;
-
-        use crate as syrette;
         use crate::ptr::TransientPtr;
-
-        declare_default_factory!(dyn subjects::IUserManager);
 
         let mut mock_di_container = MockDIContainer::new();
 

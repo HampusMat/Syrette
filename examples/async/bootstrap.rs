@@ -1,5 +1,5 @@
 use syrette::ptr::TransientPtr;
-use syrette::{declare_default_factory, AsyncDIContainer};
+use syrette::AsyncDIContainer;
 
 use crate::animals::cat::Cat;
 use crate::animals::dog::Dog;
@@ -9,8 +9,6 @@ use crate::interfaces::cat::ICat;
 use crate::interfaces::dog::IDog;
 use crate::interfaces::food::{IFood, IFoodFactory};
 use crate::interfaces::human::IHuman;
-
-declare_default_factory!(dyn ICat, threadsafe = true);
 
 pub async fn bootstrap() -> Result<AsyncDIContainer, anyhow::Error>
 {
