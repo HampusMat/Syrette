@@ -75,18 +75,15 @@ async fn main() -> Result<()>
 {
     let mut di_container = AsyncDIContainer::new();
 
-    di_container
-        .bind::<IFooFactory>()
-        .to_async_factory(&|_| {
-            Box::new(|cnt| {
-                Box::pin(async move {
-                    let foo_ptr = Box::new(Foo::new(cnt));
+    di_container.bind::<IFooFactory>().to_async_factory(&|_| {
+        Box::new(|cnt| {
+            Box::pin(async move {
+                let foo_ptr = Box::new(Foo::new(cnt));
 
-                    foo_ptr as Box<dyn IFoo>
-                })
+                foo_ptr as Box<dyn IFoo>
             })
         })
-        .await?;
+    })?;
 
     di_container
         .bind::<dyn IPerson>()
@@ -101,8 +98,7 @@ async fn main() -> Result<()>
                     person as TransientPtr<dyn IPerson>
                 })
             })
-        })
-        .await?;
+        })?;
 
     let foo_factory = di_container
         .get::<IFooFactory>()

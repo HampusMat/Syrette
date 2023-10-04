@@ -18,7 +18,7 @@ where
     Interface: 'static + ?Sized + Send + Sync,
     Implementation: AsyncInjectable<AsyncDIContainer>,
 {
-    di_container: &'di_container AsyncDIContainer,
+    di_container: &'di_container mut AsyncDIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
@@ -32,7 +32,7 @@ where
     Implementation: AsyncInjectable<AsyncDIContainer>,
 {
     pub(crate) fn new(
-        di_container: &'di_container AsyncDIContainer,
+        di_container: &'di_container mut AsyncDIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -69,19 +69,18 @@ where
     ///
     /// di_container
     ///     .bind::<Authenticator>()
-    ///     .to::<Authenticator>()
-    ///     .await?
-    ///     .in_transient_scope()
-    ///     .await;
+    ///     .to::<Authenticator>()?
+    ///     .in_transient_scope();
     /// #
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn in_transient_scope(
-        self,
+    #[allow(clippy::must_use_candidate)]
+    pub fn in_transient_scope(
+        mut self,
     ) -> AsyncBindingWhenConfigurator<'di_container, Interface>
     {
-        self.set_in_transient_scope().await;
+        self.set_in_transient_scope();
 
         AsyncBindingWhenConfigurator::new(self.di_container)
     }
@@ -127,8 +126,7 @@ where
     ///
     /// di_container
     ///     .bind::<AudioManager>()
-    ///     .to::<AudioManager>()
-    ///     .await?
+    ///     .to::<AudioManager>()?
     ///     .in_singleton_scope()
     ///     .await;
     ///
@@ -168,26 +166,22 @@ where
                 .map_err(AsyncBindingScopeConfiguratorError::SingletonResolveFailed)?,
             );
 
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(AsyncSingletonProvider::new(singleton)),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(AsyncSingletonProvider::new(singleton)),
+        );
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
-    pub(crate) async fn set_in_transient_scope(&self)
+    pub(crate) fn set_in_transient_scope(&mut self)
     {
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(
-                    AsyncTransientTypeProvider::<Implementation, AsyncDIContainer>::new(),
-                ),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(
+                AsyncTransientTypeProvider::<Implementation, AsyncDIContainer>::new(),
+            ),
+        );
     }
 }
 
@@ -214,9 +208,9 @@ mod tests
             AsyncBindingScopeConfigurator::<
                 dyn subjects_async::IUserManager,
                 subjects_async::UserManager,
-            >::new(&di_container_mock, MockDependencyHistory::new);
+            >::new(&mut di_container_mock, MockDependencyHistory::new);
 
-        binding_scope_configurator.in_transient_scope().await;
+        binding_scope_configurator.in_transient_scope();
     }
 
     #[tokio::test]
@@ -234,7 +228,7 @@ mod tests
             AsyncBindingScopeConfigurator::<
                 dyn subjects_async::IUserManager,
                 subjects_async::UserManager,
-            >::new(&di_container_mock, MockDependencyHistory::new);
+            >::new(&mut di_container_mock, MockDependencyHistory::new);
 
         assert!(binding_scope_configurator
             .in_singleton_scope()

@@ -24,7 +24,7 @@ pub struct AsyncBindingBuilder<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    di_container: &'di_container AsyncDIContainer,
+    di_container: &'di_container mut AsyncDIContainer,
     dependency_history_factory: fn() -> DependencyHistory,
 
     interface_phantom: PhantomData<Interface>,
@@ -35,7 +35,7 @@ where
     Interface: 'static + ?Sized + Send + Sync,
 {
     pub(crate) fn new(
-        di_container: &'di_container AsyncDIContainer,
+        di_container: &'di_container mut AsyncDIContainer,
         dependency_history_factory: fn() -> DependencyHistory,
     ) -> Self
     {
@@ -82,12 +82,12 @@ where
     /// # {
     /// # let mut di_container = AsyncDIContainer::new();
     /// #
-    /// di_container.bind::<dyn Foo>().to::<Bar>().await?;
+    /// di_container.bind::<dyn Foo>().to::<Bar>()?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn to<Implementation>(
+    pub fn to<Implementation>(
         self,
     ) -> Result<
         AsyncBindingScopeConfigurator<'di_container, Interface, Implementation>,
@@ -99,7 +99,6 @@ where
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
-            .await
         {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
@@ -107,12 +106,12 @@ where
             )));
         }
 
-        let binding_scope_configurator = AsyncBindingScopeConfigurator::new(
+        let mut binding_scope_configurator = AsyncBindingScopeConfigurator::new(
             self.di_container,
             self.dependency_history_factory,
         );
 
-        binding_scope_configurator.set_in_transient_scope().await;
+        binding_scope_configurator.set_in_transient_scope();
 
         Ok(binding_scope_configurator)
     }
@@ -150,23 +149,20 @@ where
     /// # {
     /// # let mut di_container = AsyncDIContainer::new();
     /// #
-    /// di_container
-    ///     .bind::<FooFactory>()
-    ///     .to_factory(&|_| {
-    ///         Box::new(|num, some_str| {
-    ///             let bar = TransientPtr::new(Bar { num, some_str });
+    /// di_container.bind::<FooFactory>().to_factory(&|_| {
+    ///     Box::new(|num, some_str| {
+    ///         let bar = TransientPtr::new(Bar { num, some_str });
     ///
-    ///             bar as TransientPtr<dyn Foo>
-    ///         })
+    ///         bar as TransientPtr<dyn Foo>
     ///     })
-    ///     .await?;
+    /// })?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub async fn to_factory<Args, Return, FactoryFunc>(
+    pub fn to_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
@@ -185,7 +181,6 @@ where
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
-            .await
         {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
@@ -195,15 +190,13 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                    crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                    AsyncFactoryVariant::Normal,
-                )),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                AsyncFactoryVariant::Normal,
+            )),
+        );
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
@@ -246,27 +239,24 @@ where
     /// # {
     /// # let mut di_container = AsyncDIContainer::new();
     /// #
-    /// di_container
-    ///     .bind::<FooFactory>()
-    ///     .to_async_factory(&|_| {
-    ///         Box::new(|num, some_str| {
-    ///             Box::pin(async move {
-    ///                 let bar = TransientPtr::new(Bar { num, some_str });
+    /// di_container.bind::<FooFactory>().to_async_factory(&|_| {
+    ///     Box::new(|num, some_str| {
+    ///         Box::pin(async move {
+    ///             let bar = TransientPtr::new(Bar { num, some_str });
     ///
-    ///                 tokio::time::sleep(Duration::from_secs(2)).await;
+    ///             tokio::time::sleep(Duration::from_secs(2)).await;
     ///
-    ///                 bar as TransientPtr<dyn Foo>
-    ///             })
+    ///             bar as TransientPtr<dyn Foo>
     ///         })
     ///     })
-    ///     .await?;
+    /// })?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub async fn to_async_factory<Args, Return, FactoryFunc>(
+    pub fn to_async_factory<Args, Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
@@ -290,7 +280,6 @@ where
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
-            .await
         {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
@@ -300,15 +289,13 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                    crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                    AsyncFactoryVariant::Normal,
-                )),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                AsyncFactoryVariant::Normal,
+            )),
+        );
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
@@ -342,26 +329,23 @@ where
     /// # {
     /// # let mut di_container = AsyncDIContainer::new();
     /// #
-    /// di_container
-    ///     .bind::<dyn Foo>()
-    ///     .to_default_factory(&|_| {
-    ///         Box::new(|| {
-    ///             let bar = TransientPtr::new(Bar {
-    ///                 num: 42,
-    ///                 some_str: "hello".to_string(),
-    ///             });
+    /// di_container.bind::<dyn Foo>().to_default_factory(&|_| {
+    ///     Box::new(|| {
+    ///         let bar = TransientPtr::new(Bar {
+    ///             num: 42,
+    ///             some_str: "hello".to_string(),
+    ///         });
     ///
-    ///             bar as TransientPtr<dyn Foo>
-    ///         })
+    ///         bar as TransientPtr<dyn Foo>
     ///     })
-    ///     .await?;
+    /// })?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub async fn to_default_factory<Return, FactoryFunc>(
+    pub fn to_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
@@ -380,7 +364,6 @@ where
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
-            .await
         {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
@@ -390,15 +373,13 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                    crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                    AsyncFactoryVariant::Default,
-                )),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                AsyncFactoryVariant::Default,
+            )),
+        );
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
@@ -448,15 +429,14 @@ where
     ///                 bar as TransientPtr<dyn Foo>
     ///             })
     ///         })
-    ///     })
-    ///     .await?;
+    ///     })?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub async fn to_async_default_factory<Return, FactoryFunc>(
+    pub fn to_async_default_factory<Return, FactoryFunc>(
         self,
         factory_func: &'static FactoryFunc,
     ) -> Result<
@@ -475,7 +455,6 @@ where
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
-            .await
         {
             return Err(AsyncBindingBuilderError::BindingAlreadyExists(type_name::<
                 Interface,
@@ -485,15 +464,13 @@ where
 
         let factory_impl = ThreadsafeCastableFactory::new(factory_func);
 
-        self.di_container
-            .set_binding::<Interface>(
-                BindingOptions::new(),
-                Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                    crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                    AsyncFactoryVariant::AsyncDefault,
-                )),
-            )
-            .await;
+        self.di_container.set_binding::<Interface>(
+            BindingOptions::new(),
+            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
+                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
+                AsyncFactoryVariant::AsyncDefault,
+            )),
+        );
 
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
@@ -528,14 +505,11 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                &di_container_mock,
+                &mut di_container_mock,
                 MockDependencyHistory::new,
             );
 
-        binding_builder
-            .to::<subjects_async::UserManager>()
-            .await
-            .unwrap();
+        binding_builder.to::<subjects_async::UserManager>().unwrap();
     }
 
     #[tokio::test]
@@ -570,7 +544,7 @@ mod tests
             .once();
 
         let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
-            &di_container_mock,
+            &mut di_container_mock,
             MockDependencyHistory::new,
         );
 
@@ -583,7 +557,6 @@ mod tests
                     user_manager
                 })
             })
-            .await
             .unwrap();
     }
 
@@ -618,7 +591,7 @@ mod tests
             .once();
 
         let binding_builder = AsyncBindingBuilder::<IUserManagerFactory>::new(
-            &di_container_mock,
+            &mut di_container_mock,
             MockDependencyHistory::new,
         );
 
@@ -631,7 +604,6 @@ mod tests
                     user_manager
                 })
             })
-            .await
             .unwrap();
     }
 
@@ -662,7 +634,7 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                &di_container_mock,
+                &mut di_container_mock,
                 MockDependencyHistory::new,
             );
 
@@ -675,7 +647,6 @@ mod tests
                     user_manager
                 })
             })
-            .await
             .unwrap();
     }
 
@@ -707,7 +678,7 @@ mod tests
 
         let binding_builder =
             AsyncBindingBuilder::<dyn subjects_async::IUserManager>::new(
-                &di_container_mock,
+                &mut di_container_mock,
                 MockDependencyHistory::new,
             );
 
@@ -720,7 +691,6 @@ mod tests
                     user_manager
                 })
             })
-            .await
             .unwrap();
     }
 }

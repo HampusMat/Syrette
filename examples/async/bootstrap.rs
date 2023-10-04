@@ -18,34 +18,27 @@ pub async fn bootstrap() -> Result<AsyncDIContainer, anyhow::Error>
 
     di_container
         .bind::<dyn IDog>()
-        .to::<Dog>()
-        .await?
+        .to::<Dog>()?
         .in_singleton_scope()
         .await?;
 
-    di_container
-        .bind::<dyn ICat>()
-        .to_default_factory(&|_| {
-            Box::new(|| {
-                let cat: TransientPtr<dyn ICat> = TransientPtr::new(Cat::new());
+    di_container.bind::<dyn ICat>().to_default_factory(&|_| {
+        Box::new(|| {
+            let cat: TransientPtr<dyn ICat> = TransientPtr::new(Cat::new());
 
-                cat
-            })
+            cat
         })
-        .await?;
+    })?;
 
-    di_container.bind::<dyn IHuman>().to::<Human>().await?;
+    di_container.bind::<dyn IHuman>().to::<Human>()?;
 
-    di_container
-        .bind::<IFoodFactory>()
-        .to_factory(&|_| {
-            Box::new(|| {
-                let food: Box<dyn IFood> = Box::new(Food::new());
+    di_container.bind::<IFoodFactory>().to_factory(&|_| {
+        Box::new(|| {
+            let food: Box<dyn IFood> = Box::new(Food::new());
 
-                food
-            })
+            food
         })
-        .await?;
+    })?;
 
     Ok(di_container)
 }

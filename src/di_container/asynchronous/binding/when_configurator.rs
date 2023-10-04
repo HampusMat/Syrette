@@ -13,7 +13,7 @@ pub struct AsyncBindingWhenConfigurator<'di_container, Interface>
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    di_container: &'di_container AsyncDIContainer,
+    di_container: &'di_container mut AsyncDIContainer,
 
     interface_phantom: PhantomData<Interface>,
 }
@@ -22,7 +22,7 @@ impl<'di_container, Interface> AsyncBindingWhenConfigurator<'di_container, Inter
 where
     Interface: 'static + ?Sized + Send + Sync,
 {
-    pub(crate) fn new(di_container: &'di_container AsyncDIContainer) -> Self
+    pub(crate) fn new(di_container: &'di_container mut AsyncDIContainer) -> Self
     {
         Self {
             di_container,
@@ -56,17 +56,14 @@ where
     ///
     /// di_container
     ///     .bind::<Kitten>()
-    ///     .to::<Kitten>()
-    ///     .await?
+    ///     .to::<Kitten>()?
     ///     .in_transient_scope()
-    ///     .await
-    ///     .when_named("Billy")
-    ///     .await?;
+    ///     .when_named("Billy")?;
     /// #
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn when_named(
+    pub fn when_named(
         self,
         name: &'static str,
     ) -> Result<(), AsyncBindingWhenConfiguratorError>
@@ -74,7 +71,6 @@ where
         let binding = self
             .di_container
             .remove_binding::<Interface>(BindingOptions::new())
-            .await
             .map_or_else(
                 || {
                     Err(AsyncBindingWhenConfiguratorError::BindingNotFound(
@@ -85,8 +81,7 @@ where
             )?;
 
         self.di_container
-            .set_binding::<Interface>(BindingOptions::new().name(name), binding)
-            .await;
+            .set_binding::<Interface>(BindingOptions::new().name(name), binding);
 
         Ok(())
     }
@@ -121,11 +116,8 @@ mod tests
 
         let binding_when_configurator = AsyncBindingWhenConfigurator::<
             dyn subjects_async::INumber,
-        >::new(&di_container_mock);
+        >::new(&mut di_container_mock);
 
-        assert!(binding_when_configurator
-            .when_named("awesome")
-            .await
-            .is_ok());
+        assert!(binding_when_configurator.when_named("awesome").is_ok());
     }
 }

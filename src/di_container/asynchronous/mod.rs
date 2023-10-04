@@ -39,8 +39,7 @@
 //!
 //!     di_container
 //!         .bind::<dyn IDatabaseService>()
-//!         .to::<DatabaseService>()
-//!         .await?;
+//!         .to::<DatabaseService>()?;
 //!
 //!     let database_service = di_container
 //!         .get::<dyn IDatabaseService>()
@@ -52,8 +51,6 @@
 //! ```
 use std::any::type_name;
 use std::sync::Arc;
-
-use async_lock::Mutex;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
@@ -74,7 +71,7 @@ pub mod binding;
 #[derive(Default)]
 pub struct AsyncDIContainer
 {
-    binding_storage: Mutex<DIContainerBindingStorage<dyn IAsyncProvider<Self>>>,
+    binding_storage: DIContainerBindingStorage<dyn IAsyncProvider<Self>>,
 }
 
 impl AsyncDIContainer
@@ -84,7 +81,7 @@ impl AsyncDIContainer
     pub fn new() -> Self
     {
         Self {
-            binding_storage: Mutex::new(DIContainerBindingStorage::new()),
+            binding_storage: DIContainerBindingStorage::new(),
         }
     }
 }
@@ -113,7 +110,7 @@ impl AsyncDIContainer
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut di_container = AsyncDIContainer::new();
     ///
-    /// di_container.bind::<DiskWriter>().to::<DiskWriter>().await?;
+    /// di_container.bind::<DiskWriter>().to::<DiskWriter>()?;
     /// #
     /// # Ok(())
     /// # }
@@ -157,10 +154,7 @@ impl AsyncDIContainer
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut di_container = AsyncDIContainer::new();
     ///
-    /// di_container
-    ///     .bind::<DeviceManager>()
-    ///     .to::<DeviceManager>()
-    ///     .await?;
+    /// di_container.bind::<DeviceManager>().to::<DeviceManager>()?;
     ///
     /// let device_manager = di_container.get::<DeviceManager>().await?.transient();
     /// #
@@ -206,12 +200,9 @@ impl AsyncDIContainer
     ///
     /// di_container
     ///     .bind::<DeviceManager>()
-    ///     .to::<DeviceManager>()
-    ///     .await?
+    ///     .to::<DeviceManager>()?
     ///     .in_transient_scope()
-    ///     .await
-    ///     .when_named("usb")
-    ///     .await;
+    ///     .when_named("usb");
     ///
     /// let device_manager = di_container
     ///     .get_named::<DeviceManager>("usb")
@@ -284,43 +275,32 @@ impl AsyncDIContainer
         self.handle_binding_providable(binding_providable).await
     }
 
-    async fn has_binding<Interface>(
-        &self,
-        binding_options: BindingOptions<'static>,
-    ) -> bool
+    fn has_binding<Interface>(&self, binding_options: BindingOptions<'static>) -> bool
     where
         Interface: ?Sized + 'static,
     {
-        self.binding_storage
-            .lock()
-            .await
-            .has::<Interface>(binding_options)
+        self.binding_storage.has::<Interface>(binding_options)
     }
 
-    async fn set_binding<Interface>(
-        &self,
+    fn set_binding<Interface>(
+        &mut self,
         binding_options: BindingOptions<'static>,
         provider: Box<dyn IAsyncProvider<Self>>,
     ) where
         Interface: 'static + ?Sized,
     {
         self.binding_storage
-            .lock()
-            .await
             .set::<Interface>(binding_options, provider);
     }
 
-    async fn remove_binding<Interface>(
-        &self,
+    fn remove_binding<Interface>(
+        &mut self,
         binding_options: BindingOptions<'static>,
     ) -> Option<Box<dyn IAsyncProvider<Self>>>
     where
         Interface: 'static + ?Sized,
     {
-        self.binding_storage
-            .lock()
-            .await
-            .remove::<Interface>(binding_options)
+        self.binding_storage.remove::<Interface>(binding_options)
     }
 }
 
@@ -464,24 +444,19 @@ impl AsyncDIContainer
     where
         Interface: 'static + ?Sized + Send + Sync,
     {
-        let provider;
-
-        {
-            let bindings_lock = self.binding_storage.lock().await;
-
-            provider = bindings_lock
-                .get::<Interface>(binding_options.clone())
-                .map_or_else(
-                    || {
-                        Err(AsyncDIContainerError::BindingNotFound {
-                            interface: type_name::<Interface>(),
-                            name: binding_options.name,
-                        })
-                    },
-                    Ok,
-                )?
-                .clone();
-        }
+        let provider = self
+            .binding_storage
+            .get::<Interface>(binding_options.clone())
+            .map_or_else(
+                || {
+                    Err(AsyncDIContainerError::BindingNotFound {
+                        interface: type_name::<Interface>(),
+                        name: binding_options.name,
+                    })
+                },
+                Ok,
+            )?
+            .clone();
 
         provider
             .provide(self, dependency_history)
@@ -504,7 +479,7 @@ mod tests
     #[tokio::test]
     async fn can_get()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -520,16 +495,12 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<dyn subjects_async::IUserManager>(
-                    BindingOptions::new(),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container
+            .binding_storage
+            .set::<dyn subjects_async::IUserManager>(
+                BindingOptions::new(),
+                Box::new(mock_provider),
+            );
 
         di_container
             .get::<dyn subjects_async::IUserManager>()
@@ -542,7 +513,7 @@ mod tests
     #[tokio::test]
     async fn can_get_named()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -558,16 +529,12 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<dyn subjects_async::IUserManager>(
-                    BindingOptions::new().name("special"),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container
+            .binding_storage
+            .set::<dyn subjects_async::IUserManager>(
+                BindingOptions::new().name("special"),
+                Box::new(mock_provider),
+            );
 
         di_container
             .get_named::<dyn subjects_async::IUserManager>("special")
@@ -580,7 +547,7 @@ mod tests
     #[tokio::test]
     async fn can_get_singleton()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -600,16 +567,12 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<dyn subjects_async::INumber>(
-                    BindingOptions::new(),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container
+            .binding_storage
+            .set::<dyn subjects_async::INumber>(
+                BindingOptions::new(),
+                Box::new(mock_provider),
+            );
 
         let first_number_rc = di_container
             .get::<dyn subjects_async::INumber>()
@@ -633,7 +596,7 @@ mod tests
     #[tokio::test]
     async fn can_get_singleton_named()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -653,16 +616,12 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<dyn subjects_async::INumber>(
-                    BindingOptions::new().name("cool"),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container
+            .binding_storage
+            .set::<dyn subjects_async::INumber>(
+                BindingOptions::new().name("cool"),
+                Box::new(mock_provider),
+            );
 
         let first_number_rc = di_container
             .get_named::<dyn subjects_async::INumber>("cool")
@@ -730,7 +689,7 @@ mod tests
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -757,8 +716,6 @@ mod tests
 
         di_container
             .binding_storage
-            .lock()
-            .await
             .set::<IUserManagerFactory>(BindingOptions::new(), Box::new(mock_provider));
 
         di_container
@@ -816,7 +773,7 @@ mod tests
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
 
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         let mut mock_provider = MockAsyncProvider::new();
 
@@ -841,16 +798,10 @@ mod tests
             Box::new(inner_mock_provider)
         });
 
-        {
-            di_container
-                .binding_storage
-                .lock()
-                .await
-                .set::<IUserManagerFactory>(
-                    BindingOptions::new().name("special"),
-                    Box::new(mock_provider),
-                );
-        }
+        di_container.binding_storage.set::<IUserManagerFactory>(
+            BindingOptions::new().name("special"),
+            Box::new(mock_provider),
+        );
 
         di_container
             .get_named::<IUserManagerFactory>("special")
@@ -863,59 +814,43 @@ mod tests
     #[tokio::test]
     async fn has_binding_works()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         // No binding is present yet
         assert!(
-            !di_container
-                .has_binding::<subjects_async::Number>(BindingOptions::new())
-                .await
+            !di_container.has_binding::<subjects_async::Number>(BindingOptions::new())
         );
 
-        di_container
-            .binding_storage
-            .lock()
-            .await
-            .set::<subjects_async::Number>(
-                BindingOptions::new(),
-                Box::new(MockAsyncProvider::new()),
-            );
-
-        assert!(
-            di_container
-                .has_binding::<subjects_async::Number>(BindingOptions::new())
-                .await
+        di_container.binding_storage.set::<subjects_async::Number>(
+            BindingOptions::new(),
+            Box::new(MockAsyncProvider::new()),
         );
+
+        assert!(di_container.has_binding::<subjects_async::Number>(BindingOptions::new()));
     }
 
     #[tokio::test]
     async fn set_binding_works()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
-        di_container
-            .set_binding::<subjects_async::UserManager>(
-                BindingOptions::new(),
-                Box::new(MockAsyncProvider::new()),
-            )
-            .await;
+        di_container.set_binding::<subjects_async::UserManager>(
+            BindingOptions::new(),
+            Box::new(MockAsyncProvider::new()),
+        );
 
         assert!(di_container
             .binding_storage
-            .lock()
-            .await
             .has::<subjects_async::UserManager>(BindingOptions::new()));
     }
 
     #[tokio::test]
     async fn remove_binding_works()
     {
-        let di_container = AsyncDIContainer::new();
+        let mut di_container = AsyncDIContainer::new();
 
         di_container
             .binding_storage
-            .lock()
-            .await
             .set::<subjects_async::UserManager>(
                 BindingOptions::new(),
                 Box::new(MockAsyncProvider::new()),
@@ -925,7 +860,6 @@ mod tests
             // Formatting is weird without this comment
             di_container
                 .remove_binding::<subjects_async::UserManager>(BindingOptions::new())
-                .await
                 .is_some()
         );
 
@@ -933,8 +867,6 @@ mod tests
             // Formatting is weird without this comment
             !di_container
                 .binding_storage
-                .lock()
-                .await
                 .has::<subjects_async::UserManager>(BindingOptions::new())
         );
     }
