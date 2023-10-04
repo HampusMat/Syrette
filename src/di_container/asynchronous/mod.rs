@@ -50,7 +50,6 @@
 //! }
 //! ```
 use std::any::type_name;
-use std::sync::Arc;
 
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
@@ -416,9 +415,11 @@ impl AsyncDIContainer
 
     #[cfg(feature = "factory")]
     fn cast_factory_binding<Type: 'static + ?Sized>(
-        factory_binding: Arc<dyn crate::private::any_factory::AnyThreadsafeFactory>,
+        factory_binding: std::sync::Arc<
+            dyn crate::private::any_factory::AnyThreadsafeFactory,
+        >,
         binding_kind: &'static str,
-    ) -> Result<Arc<Type>, AsyncDIContainerError>
+    ) -> Result<std::sync::Arc<Type>, AsyncDIContainerError>
     {
         factory_binding.cast::<Type>().map_err(|err| match err {
             CastError::NotArcCastable(_) => {
