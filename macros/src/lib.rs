@@ -100,6 +100,30 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 ///     }
 /// }
 /// ```
+/// <br>
+///
+/// When the `async` crate feature is enabled, the constructor can be [`async`].
+/// ```
+/// # #[cfg(feature = "async")]
+/// # mod example {
+/// # use syrette::injectable;
+/// #
+/// # struct PasswordManager { value: u32}
+/// #
+/// # async fn some_async_computation() -> u32 { 1 }
+/// #
+/// #[injectable(async = true)]
+/// impl PasswordManager
+/// {
+///     pub async fn new() -> Self
+///     {
+///         let value = some_async_computation().await;
+///
+///         Self { value }
+///     }
+/// }
+/// # }
+/// ```
 ///
 /// # Attributes
 /// Attributes specific to impls with this attribute macro.
@@ -149,6 +173,7 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// [`Injectable`]: ../syrette/interfaces/injectable/trait.Injectable.html
 /// [`AsyncInjectable`]: ../syrette/interfaces/async_injectable/trait.AsyncInjectable.html
 /// [`di_container_bind`]: ../syrette/macro.di_container_bind.html
+/// [`async`]: https://doc.rust-lang.org/std/keyword.async.html
 #[cfg(not(tarpaulin_include))]
 #[proc_macro_error]
 #[proc_macro_attribute]
@@ -233,7 +258,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
     let injectable_impl =
         InjectableImpl::<Dependency>::new(item_impl, &constructor).unwrap_or_abort();
 
-    injectable_impl.validate().unwrap_or_abort();
+    injectable_impl.validate(is_async).unwrap_or_abort();
 
     let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
 

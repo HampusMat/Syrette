@@ -18,7 +18,7 @@ rustdoc-args = ["--cfg", "doc_cfg", "--html-in-header", "docs-style.html"]
 [features]
 factory = ["syrette/factory"]
 prevent-circular = []
-async = []
+async = ["syrette/async"]
 
 [dependencies]
 syn = { version = "1.0.96", features = ["full"] }

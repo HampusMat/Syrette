@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use syrette::injectable;
 use syrette::ptr::{ThreadsafeSingletonPtr, TransientPtr};
+use tokio::time::sleep;
 
 use crate::interfaces::cat::ICat;
 use crate::interfaces::dog::IDog;
@@ -14,9 +17,14 @@ pub struct Human
 #[injectable(IHuman, async = true)]
 impl Human
 {
-    pub fn new(dog: ThreadsafeSingletonPtr<dyn IDog>, cat: TransientPtr<dyn ICat>)
-        -> Self
+    pub async fn new(
+        dog: ThreadsafeSingletonPtr<dyn IDog>,
+        cat: TransientPtr<dyn ICat>,
+    ) -> Self
     {
+        // The human needs some rest first
+        sleep(Duration::from_secs(1)).await;
+
         Self { dog, cat }
     }
 }

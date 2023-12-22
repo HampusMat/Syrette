@@ -83,7 +83,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
         })
     }
 
-    pub fn validate(&self) -> Result<(), InjectableImplError>
+    pub fn validate(&self, is_async: bool) -> Result<(), InjectableImplError>
     {
         if matches!(self.constructor_method.sig.output, ReturnType::Default) {
             return Err(InjectableImplError::InvalidConstructorMethodReturnType {
@@ -127,10 +127,14 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             });
         }
 
-        if let Some(asyncness) = self.constructor_method.sig.asyncness {
-            return Err(InjectableImplError::ConstructorMethodAsync {
-                asyncness_span: asyncness.span,
-            });
+        if !is_async {
+            if let Some(asyncness) = self.constructor_method.sig.asyncness {
+                return Err(
+                    InjectableImplError::ConstructorMethodAsyncWithMissingAsyncAttr {
+                        asyncness_span: asyncness.span,
+                    },
+                );
+            }
         }
 
         if !self.constructor_method.sig.generics.params.is_empty() {
@@ -235,6 +239,12 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             .map(|index| format_ident!("dependency_{index}"))
             .collect::<Vec<_>>();
 
+        let maybe_await_constructor = if self.constructor_method.sig.asyncness.is_some() {
+            quote! { .await }
+        } else {
+            quote! {}
+        };
+
         quote! {
             #maybe_doc_hidden
             impl #generics syrette::interfaces::async_injectable::AsyncInjectable<
@@ -273,7 +283,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
                         Ok(syrette::ptr::TransientPtr::new(Self::#constructor(
                             #(#dependency_idents),*
-                        )))
+                        )#maybe_await_constructor))
                     })
                 }
             }
@@ -522,9 +532,15 @@ pub enum InjectableImplError
         unsafety_span: Span
     },
 
-    #[error("Constructor method is not allowed to be async"), span = asyncness_span]
-    #[note("Required by the 'injectable' attribute macro")]
-    ConstructorMethodAsync {
+    #[
+        error(concat!(
+            "Constructor method is not allowed to be async when the 'async' flag of the ",
+            "'injectable' macro is not set to true"
+        )),
+        span = asyncness_span
+    ]
+    #[help("Enable the 'async' flag here")]
+    ConstructorMethodAsyncWithMissingAsyncAttr {
         asyncness_span: Span
     },
 
