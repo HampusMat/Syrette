@@ -519,6 +519,7 @@ version = "0.5.1"
 dependencies = [
  "mockall",
  "once_cell",
+ "paste",
  "pretty_assertions",
  "proc-macro-error",
  "proc-macro2",

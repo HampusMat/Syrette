@@ -6,23 +6,6 @@ use crate::injectable::named_attr_input::NamedAttrInput;
 use crate::util::error::diagnostic_error_enum;
 use crate::util::syn_path::SynPathExt;
 
-/// Interface for a dependency of a `Injectable`.
-#[cfg_attr(test, mockall::automock)]
-pub trait IDependency: Sized
-{
-    /// Build a new `Dependency` from a argument in a constructor method.
-    fn build(ctor_method_arg: &FnArg) -> Result<Self, DependencyError>;
-
-    /// Returns the interface type.
-    fn get_interface(&self) -> &Type;
-
-    /// Returns the pointer type identity.
-    fn get_ptr(&self) -> &Ident;
-
-    /// Returns optional name of the dependency.
-    fn get_name(&self) -> &Option<LitStr>;
-}
-
 /// Representation of a dependency of a injectable type.
 ///
 /// Found as a argument in the constructor method of a `Injectable`.
@@ -34,9 +17,11 @@ pub struct Dependency
     name: Option<LitStr>,
 }
 
-impl IDependency for Dependency
+#[cfg_attr(test, mockall::automock)]
+impl Dependency
 {
-    fn build(ctor_method_arg: &FnArg) -> Result<Self, DependencyError>
+    /// Build a new `Dependency` from a argument in a constructor method.
+    pub fn build(ctor_method_arg: &FnArg) -> Result<Self, DependencyError>
     {
         let typed_ctor_method_arg = match ctor_method_arg {
             FnArg::Typed(typed_arg) => Ok(typed_arg),
@@ -116,17 +101,23 @@ impl IDependency for Dependency
         })
     }
 
-    fn get_interface(&self) -> &Type
+    /// Returns the dependency's interface type.
+    #[allow(dead_code)] // Mock function is never used
+    pub fn get_interface(&self) -> &Type
     {
         &self.interface
     }
 
-    fn get_ptr(&self) -> &Ident
+    /// Returns the dependency's pointer type name.
+    #[allow(dead_code)] // Mock function is never used
+    pub fn get_ptr(&self) -> &Ident
     {
         &self.ptr
     }
 
-    fn get_name(&self) -> &Option<LitStr>
+    /// Returns the dependency's name.
+    #[allow(dead_code)] // Mock function is never used
+    pub fn get_name(&self) -> &Option<LitStr>
     {
         &self.name
     }

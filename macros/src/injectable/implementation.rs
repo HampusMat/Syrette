@@ -16,7 +16,7 @@ use syn::{
     Type,
 };
 
-use crate::injectable::dependency::{DependencyError, IDependency};
+use crate::injectable::dependency::DependencyError;
 use crate::util::error::diagnostic_error_enum;
 use crate::util::item_impl::find_impl_method_by_name_mut;
 use crate::util::string::camelcase_to_snakecase;
@@ -28,19 +28,22 @@ use crate::util::syn_ext::{
     MethodTurbofishExt,
 };
 use crate::util::syn_path::{syn_path, SynPathExt};
+use crate::util::use_double;
+
+use_double!(crate::injectable::dependency::Dependency);
 
 const DI_CONTAINER_VAR_NAME: &str = "di_container";
 const DEPENDENCY_HISTORY_VAR_NAME: &str = "dependency_history";
 
-pub struct InjectableImpl<Dep: IDependency>
+pub struct InjectableImpl
 {
-    dependencies: Vec<Dep>,
+    dependencies: Vec<Dependency>,
     original_impl: ItemImpl,
 
     constructor_method: ImplItemMethod,
 }
 
-impl<Dep: IDependency> InjectableImpl<Dep>
+impl InjectableImpl
 {
     #[cfg(not(tarpaulin_include))]
     pub fn new(
@@ -334,7 +337,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     }
 
     fn create_get_dep_method_calls(
-        dependencies: &[Dep],
+        dependencies: &[Dependency],
         is_async: bool,
         di_container_var: &Ident,
         dependency_history_var: &Ident,
@@ -353,7 +356,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
             .collect()
     }
 
-    fn create_binding_options(dependency: &Dep) -> Expr
+    fn create_binding_options(dependency: &Dependency) -> Expr
     {
         let binding_options_new = Expr::Call(ExprCall::new(
             Expr::Path(ExprPath::new(syn_path!(
@@ -373,7 +376,7 @@ impl<Dep: IDependency> InjectableImpl<Dep>
     }
 
     fn create_single_get_dep_method_call(
-        dependency: &Dep,
+        dependency: &Dependency,
         is_async: bool,
         di_container_var: &Ident,
         dependency_history_var: &Ident,
@@ -432,12 +435,12 @@ impl<Dep: IDependency> InjectableImpl<Dep>
 
     fn build_dependencies(
         ctor_method: &ImplItemMethod,
-    ) -> Result<Vec<Dep>, DependencyError>
+    ) -> Result<Vec<Dependency>, DependencyError>
     {
         let ctor_method_args = &ctor_method.sig.inputs;
 
         let dependencies_result: Result<Vec<_>, _> =
-            ctor_method_args.iter().map(Dep::build).collect();
+            ctor_method_args.iter().map(Dependency::build).collect();
 
         let deps = dependencies_result?;
 
@@ -582,7 +585,7 @@ mod tests
     };
 
     use super::*;
-    use crate::injectable::dependency::MockIDependency;
+    use crate::injectable::dependency::MockDependency;
     use crate::injectable::named_attr_input::NamedAttrInput;
     use crate::test_utils::{
         create_path,
@@ -650,14 +653,14 @@ mod tests
 
         let _lock = get_lock(&TEST_MUTEX);
 
-        let build_context = MockIDependency::build_context();
+        let build_context = MockDependency::build_context();
 
         build_context
             .expect()
-            .returning(|_| Ok(MockIDependency::new()));
+            .returning(|_| Ok(MockDependency::new()));
 
-        let dependencies = InjectableImpl::<MockIDependency>::build_dependencies(&method)
-            .expect("Expected Ok");
+        let dependencies =
+            InjectableImpl::build_dependencies(&method).expect("Expected Ok");
 
         assert_eq!(dependencies.len(), 2);
     }
@@ -719,15 +722,15 @@ mod tests
 
         let _lock = get_lock(&TEST_MUTEX);
 
-        let build_context = MockIDependency::build_context();
+        let build_context = MockDependency::build_context();
 
         build_context
             .expect()
-            .returning(|_| Ok(MockIDependency::new()))
+            .returning(|_| Ok(MockDependency::new()))
             .times(2);
 
-        let dependencies = InjectableImpl::<MockIDependency>::build_dependencies(&method)
-            .expect("Expected Ok");
+        let dependencies =
+            InjectableImpl::build_dependencies(&method).expect("Expected Ok");
 
         assert_eq!(dependencies.len(), 2);
     }
@@ -804,7 +807,7 @@ mod tests
             },
         };
 
-        InjectableImpl::<MockIDependency>::remove_method_argument_attrs(&mut method);
+        InjectableImpl::remove_method_argument_attrs(&mut method);
 
         assert_eq!(
             method.sig.inputs.first().unwrap().clone(),
@@ -830,7 +833,7 @@ mod tests
     #[test]
     fn can_create_single_get_dep_method_call()
     {
-        let mut mock_dependency = MockIDependency::new();
+        let mut mock_dependency = MockDependency::new();
 
         mock_dependency
             .expect_get_interface()
@@ -848,7 +851,7 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+        let output = InjectableImpl::create_single_get_dep_method_call(
             &mock_dependency,
             false,
             &format_ident!("{}", DI_CONTAINER_VAR_NAME),
@@ -880,7 +883,7 @@ mod tests
     #[test]
     fn can_create_single_get_dep_method_call_with_name()
     {
-        let mut mock_dependency = MockIDependency::new();
+        let mut mock_dependency = MockDependency::new();
 
         mock_dependency
             .expect_get_interface()
@@ -900,7 +903,7 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+        let output = InjectableImpl::create_single_get_dep_method_call(
             &mock_dependency,
             false,
             &format_ident!("{}", DI_CONTAINER_VAR_NAME),
@@ -932,7 +935,7 @@ mod tests
     #[test]
     fn can_create_single_get_dep_method_call_async()
     {
-        let mut mock_dependency = MockIDependency::new();
+        let mut mock_dependency = MockDependency::new();
 
         mock_dependency
             .expect_get_interface()
@@ -950,7 +953,7 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+        let output = InjectableImpl::create_single_get_dep_method_call(
             &mock_dependency,
             true,
             &format_ident!("{}", DI_CONTAINER_VAR_NAME),
@@ -983,7 +986,7 @@ mod tests
     #[test]
     fn can_create_single_get_dep_method_call_async_with_name()
     {
-        let mut mock_dependency = MockIDependency::new();
+        let mut mock_dependency = MockDependency::new();
 
         mock_dependency
             .expect_get_interface()
@@ -1003,7 +1006,7 @@ mod tests
         let di_container_var_ident = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dep_history_var_ident = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
 
-        let output = InjectableImpl::<MockIDependency>::create_single_get_dep_method_call(
+        let output = InjectableImpl::create_single_get_dep_method_call(
             &mock_dependency,
             true,
             &format_ident!("{}", DI_CONTAINER_VAR_NAME),

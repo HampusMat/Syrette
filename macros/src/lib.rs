@@ -23,7 +23,6 @@ use syn::{
 
 use crate::caster::generate_caster;
 use crate::declare_interface_args::DeclareInterfaceArgs;
-use crate::injectable::dependency::Dependency;
 use crate::injectable::dummy::expand_dummy_blocking_impl;
 use crate::injectable::implementation::{InjectableImpl, InjectableImplError};
 use crate::injectable::macro_args::InjectableMacroArgs;
@@ -255,8 +254,7 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
         );
     }
 
-    let injectable_impl =
-        InjectableImpl::<Dependency>::new(item_impl, &constructor).unwrap_or_abort();
+    let injectable_impl = InjectableImpl::new(item_impl, &constructor).unwrap_or_abort();
 
     injectable_impl.validate(is_async).unwrap_or_abort();
 
