@@ -3,11 +3,10 @@ pub mod subjects
     //! Test subjects.
 
     use std::fmt::Debug;
-
-    use syrette_macros::declare_interface;
+    use std::rc::Rc;
+    use std::sync::Arc;
 
     use crate::interfaces::injectable::Injectable;
-    use crate::private::cast::CastFromArc;
     use crate::ptr::TransientPtr;
 
     use_double!(crate::dependency_history::DependencyHistory);
@@ -42,10 +41,8 @@ pub mod subjects
         }
     }
 
-    use crate as syrette;
+    use crate::ptr_buffer::PtrBuffer;
     use crate::util::use_double;
-
-    declare_interface!(UserManager -> IUserManager);
 
     impl<DIContainerT> Injectable<DIContainerT> for UserManager
     {
@@ -57,6 +54,27 @@ pub mod subjects
             Self: Sized,
         {
             Ok(TransientPtr::new(Self::new()))
+        }
+
+        fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer
+        {
+            let me: Box<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer
+        {
+            let me: Rc<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer
+        {
+            let me: Arc<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
         }
     }
 
@@ -109,8 +127,6 @@ pub mod subjects
         }
     }
 
-    declare_interface!(Number -> INumber);
-
     impl<DIContainerT> Injectable<DIContainerT> for Number
     {
         fn resolve(
@@ -122,12 +138,33 @@ pub mod subjects
         {
             Ok(TransientPtr::new(Self::new()))
         }
+
+        fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer
+        {
+            let me: Box<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer
+        {
+            let me: Rc<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer
+        {
+            let me: Arc<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
+        }
     }
 
     #[derive(Debug)]
     pub struct Ninja;
 
-    pub trait INinja: CastFromArc {}
+    pub trait INinja {}
 
     impl INinja for Ninja {}
 }
@@ -138,9 +175,10 @@ pub mod subjects_async
     //! Test subjects.
 
     use std::fmt::Debug;
+    use std::rc::Rc;
+    use std::sync::Arc;
 
     use async_trait::async_trait;
-    use syrette_macros::declare_interface;
 
     use crate::interfaces::async_injectable::AsyncInjectable;
     use crate::ptr::TransientPtr;
@@ -177,10 +215,8 @@ pub mod subjects_async
         }
     }
 
-    use crate as syrette;
+    use crate::ptr_buffer::PtrBuffer;
     use crate::util::use_double;
-
-    declare_interface!(UserManager -> IUserManager);
 
     #[async_trait]
     impl<DIContainerType> AsyncInjectable<DIContainerType> for UserManager
@@ -193,6 +229,27 @@ pub mod subjects_async
             Self: Sized,
         {
             Ok(TransientPtr::new(Self::new()))
+        }
+
+        fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer
+        {
+            let me: Box<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer
+        {
+            let me: Rc<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer
+        {
+            let me: Arc<dyn IUserManager> = self;
+
+            PtrBuffer::new_from(me)
         }
     }
 
@@ -245,8 +302,6 @@ pub mod subjects_async
         }
     }
 
-    declare_interface!(Number -> INumber, threadsafe_sharable = true);
-
     #[async_trait]
     impl<DIContainerType> AsyncInjectable<DIContainerType> for Number
     {
@@ -258,6 +313,27 @@ pub mod subjects_async
             Self: Sized,
         {
             Ok(TransientPtr::new(Self::new()))
+        }
+
+        fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer
+        {
+            let me: Box<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer
+        {
+            let me: Rc<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
+        }
+
+        fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer
+        {
+            let me: Arc<dyn INumber> = self;
+
+            PtrBuffer::new_from(me)
         }
     }
 }

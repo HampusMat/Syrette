@@ -7,12 +7,7 @@ use crate::macro_flag::MacroFlag;
 use crate::util::error::diagnostic_error_enum;
 use crate::util::iterator_ext::IteratorExt;
 
-pub const INJECTABLE_MACRO_FLAGS: &[&str] = &[
-    "no_doc_hidden",
-    "async",
-    "no_declare_concrete_interface",
-    "constructor",
-];
+pub const INJECTABLE_MACRO_FLAGS: &[&str] = &["no_doc_hidden", "async", "constructor"];
 
 pub struct InjectableMacroArgs
 {
@@ -194,7 +189,7 @@ mod tests
     fn can_parse_with_flags_only()
     {
         let input_args = quote! {
-            async = false, no_declare_concrete_interface = false
+            async = false, no_doc_hidden = false
         };
 
         let injectable_macro_args = parse2::<InjectableMacroArgs>(input_args).unwrap();
@@ -212,7 +207,7 @@ mod tests
                     )))
                 },
                 MacroFlag {
-                    name: format_ident!("no_declare_concrete_interface"),
+                    name: format_ident!("no_doc_hidden"),
                     value: MacroFlagValue::Literal(Lit::Bool(LitBool::new(
                         false,
                         Span::call_site()

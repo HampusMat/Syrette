@@ -1,4 +1,4 @@
-use proc_macro2::{Ident, Span};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
 use syn::{
@@ -12,8 +12,10 @@ use syn::{
     ImplItemMethod,
     ItemImpl,
     MethodTurbofish,
+    Path,
     ReturnType,
     Type,
+    TypePath,
 };
 
 use crate::injectable::dependency::DependencyError;
@@ -148,14 +150,13 @@ impl InjectableImpl
         Ok(())
     }
 
-    pub fn self_type(&self) -> &Type
-    {
-        &self.original_impl.self_ty
-    }
-
     #[cfg(not(tarpaulin_include))]
-    pub fn expand(&self, no_doc_hidden: bool, is_async: bool)
-        -> proc_macro2::TokenStream
+    pub fn expand(
+        &self,
+        no_doc_hidden: bool,
+        is_async: bool,
+        interface_trait: Option<&TypePath>,
+    ) -> proc_macro2::TokenStream
     {
         let di_container_var = format_ident!("{}", DI_CONTAINER_VAR_NAME);
         let dependency_history_var = format_ident!("{}", DEPENDENCY_HISTORY_VAR_NAME);
@@ -186,6 +187,7 @@ impl InjectableImpl
                 &dependency_history_var,
                 &maybe_prevent_circular_deps,
                 &get_dep_method_calls,
+                interface_trait,
             )
         } else {
             self.expand_blocking_impl(
@@ -194,6 +196,7 @@ impl InjectableImpl
                 &dependency_history_var,
                 &maybe_prevent_circular_deps,
                 &get_dep_method_calls,
+                interface_trait,
             )
         };
 
@@ -232,11 +235,30 @@ impl InjectableImpl
         dependency_history_var: &Ident,
         maybe_prevent_circular_deps: &proc_macro2::TokenStream,
         get_dep_method_calls: &Vec<proc_macro2::TokenStream>,
+        interface_trait: Option<&TypePath>,
     ) -> proc_macro2::TokenStream
     {
         let generics = &self.original_impl.generics;
         let self_type = &self.original_impl.self_ty;
         let constructor = &self.constructor_method.sig.ident;
+
+        let into_ptr_buf_fns = &[
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Box"),
+                Path::new_empty(),
+            ),
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Rc"),
+                syn_path!(std::rc),
+            ),
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Arc"),
+                syn_path!(std::sync),
+            ),
+        ] as &[TokenStream];
 
         let dependency_idents = (0..get_dep_method_calls.len())
             .map(|index| format_ident!("dependency_{index}"))
@@ -289,6 +311,8 @@ impl InjectableImpl
                         )#maybe_await_constructor))
                     })
                 }
+
+                #(#into_ptr_buf_fns)*
             }
         }
     }
@@ -301,11 +325,30 @@ impl InjectableImpl
         dependency_history_var: &Ident,
         maybe_prevent_circular_deps: &proc_macro2::TokenStream,
         get_dep_method_calls: &Vec<proc_macro2::TokenStream>,
+        interface_trait: Option<&TypePath>,
     ) -> proc_macro2::TokenStream
     {
         let generics = &self.original_impl.generics;
         let self_type = &self.original_impl.self_ty;
         let constructor = &self.constructor_method.sig.ident;
+
+        let into_ptr_buf_fns = &[
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Box"),
+                Path::new_empty(),
+            ),
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Rc"),
+                syn_path!(std::rc),
+            ),
+            Self::create_to_ptr_buf_fn(
+                interface_trait,
+                &format_ident!("Arc"),
+                syn_path!(std::sync),
+            ),
+        ] as &[TokenStream];
 
         quote! {
             #maybe_doc_hidden
@@ -332,6 +375,52 @@ impl InjectableImpl
                         #(#get_dep_method_calls),*
                     )));
                 }
+
+                #(#into_ptr_buf_fns)*
+            }
+        }
+    }
+
+    fn create_to_ptr_buf_fn(
+        interface_trait: Option<&TypePath>,
+        smart_ptr_ident: &Ident,
+        smart_ptr_parent_path: Path,
+    ) -> TokenStream
+    {
+        let ptr_buf_path = quote! { syrette::ptr_buffer::PtrBuffer };
+
+        let mut smart_ptr = smart_ptr_parent_path;
+
+        smart_ptr.segments.push(smart_ptr_ident.clone().into());
+
+        let body = match interface_trait {
+            Some(interface_trait) => {
+                quote! {
+                    let me: #smart_ptr<dyn #interface_trait> = self;
+
+                    #ptr_buf_path::new_from(
+                        syrette::ptr_buffer::SmartPtr::#smart_ptr_ident(me)
+                    )
+                }
+            }
+            None => {
+                quote! {
+                    #ptr_buf_path::new_from(
+                        syrette::ptr_buffer::SmartPtr::#smart_ptr_ident(self)
+                    )
+                }
+            }
+        };
+
+        let into_ptr_buf_fn = format_ident!(
+            "into_ptr_buffer_{}",
+            smart_ptr_ident.to_string().to_lowercase()
+        );
+
+        quote! {
+            fn #into_ptr_buf_fn(self: #smart_ptr<Self>) -> #ptr_buf_path
+            {
+                #body
             }
         }
     }

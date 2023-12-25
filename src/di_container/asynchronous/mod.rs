@@ -55,9 +55,6 @@ use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncDIContainerError;
-use crate::private::cast::arc::CastArc;
-use crate::private::cast::boxed::CastBox;
-use crate::private::cast::error::CastError;
 use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
 use crate::ptr::SomePtr;
 use crate::util::use_double;
@@ -313,38 +310,27 @@ impl AsyncDIContainer
         Interface: 'static + ?Sized + Send + Sync,
     {
         match binding_providable {
-            AsyncProvidable::Transient(transient_binding) => Ok(SomePtr::Transient(
-                transient_binding.cast::<Interface>().map_err(|_| {
-                    AsyncDIContainerError::CastFailed {
+            AsyncProvidable::Transient(transient_binding) => {
+                let ptr_buf = transient_binding.into_ptr_buffer_box();
+
+                ptr_buf
+                    .cast_into_boxed::<Interface>()
+                    .ok_or_else(|| AsyncDIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "transient",
-                    }
-                })?,
-            )),
+                    })
+                    .map(SomePtr::Transient)
+            }
             AsyncProvidable::Singleton(singleton_binding) => {
-                Ok(SomePtr::ThreadsafeSingleton(
-                    singleton_binding
-                        .cast::<Interface>()
-                        .map_err(|err| match err {
-                            CastError::NotArcCastable(_) => {
-                                AsyncDIContainerError::InterfaceNotAsync(type_name::<
-                                    Interface,
-                                >(
-                                ))
-                            }
-                            CastError::CastFailed {
-                                source: _,
-                                from: _,
-                                to: _,
-                            }
-                            | CastError::GetCasterFailed(_) => {
-                                AsyncDIContainerError::CastFailed {
-                                    interface: type_name::<Interface>(),
-                                    binding_kind: "singleton",
-                                }
-                            }
-                        })?,
-                ))
+                let ptr_buf = singleton_binding.into_ptr_buffer_arc();
+
+                ptr_buf
+                    .cast_into_arc::<Interface>()
+                    .ok_or_else(|| AsyncDIContainerError::CastFailed {
+                        interface: type_name::<Interface>(),
+                        binding_kind: "singleton",
+                    })
+                    .map(SomePtr::ThreadsafeSingleton)
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {
