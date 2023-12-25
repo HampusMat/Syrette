@@ -1,15 +1,17 @@
 //! Interface for structs that can be injected into or be injected to.
 use std::fmt::Debug;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::errors::injectable::InjectableError;
-use crate::private::cast::CastFrom;
 use crate::ptr::TransientPtr;
+use crate::ptr_buffer::{PtrBuffer, SmartPtr};
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
 
 /// Interface for structs that can be injected into or be injected to.
-pub trait Injectable<DIContainerT>: CastFrom
+pub trait Injectable<DIContainerT>: 'static
 {
     /// Resolves the dependencies of the injectable.
     ///
@@ -21,6 +23,15 @@ pub trait Injectable<DIContainerT>: CastFrom
     ) -> Result<TransientPtr<Self>, InjectableError>
     where
         Self: Sized;
+
+    /// A.
+    fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer;
+
+    /// A.
+    fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer;
+
+    /// A.
+    fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer;
 }
 
 impl<DIContainerT> Debug for dyn Injectable<DIContainerT>
@@ -41,5 +52,20 @@ where
     ) -> Result<TransientPtr<Self>, InjectableError>
     {
         Ok(TransientPtr::new(Self::default()))
+    }
+
+    fn into_ptr_buffer_box(self: Box<Self>) -> PtrBuffer
+    {
+        PtrBuffer::new_from(SmartPtr::Box(self))
+    }
+
+    fn into_ptr_buffer_rc(self: Rc<Self>) -> PtrBuffer
+    {
+        PtrBuffer::new_from(SmartPtr::Rc(self))
+    }
+
+    fn into_ptr_buffer_arc(self: Arc<Self>) -> PtrBuffer
+    {
+        PtrBuffer::new_from(SmartPtr::Arc(self))
     }
 }

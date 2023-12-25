@@ -1,16 +1,26 @@
 use std::fmt::Write;
 
 use quote::ToTokens;
-use syn::punctuated::Pair;
+use syn::punctuated::{Pair, Punctuated};
 
 pub trait SynPathExt
 {
+    fn new_empty() -> Self;
+
     /// Converts the [`syn::Path`] to a [`String`].
     fn to_string(&self) -> String;
 }
 
 impl SynPathExt for syn::Path
 {
+    fn new_empty() -> Self
+    {
+        Self {
+            leading_colon: None,
+            segments: Punctuated::new(),
+        }
+    }
+
     fn to_string(&self) -> String
     {
         self.segments.pairs().map(Pair::into_tuple).fold(

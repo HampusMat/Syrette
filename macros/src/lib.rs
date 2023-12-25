@@ -9,27 +9,13 @@
 use proc_macro::TokenStream;
 use proc_macro_error::{proc_macro_error, set_dummy, ResultExt};
 use quote::{format_ident, quote};
-use syn::punctuated::Punctuated;
-use syn::token::Dyn;
-use syn::{
-    parse,
-    ItemImpl,
-    TraitBound,
-    TraitBoundModifier,
-    Type,
-    TypeParamBound,
-    TypeTraitObject,
-};
+use syn::{parse, ItemImpl};
 
-use crate::caster::generate_caster;
-use crate::declare_interface_args::DeclareInterfaceArgs;
 use crate::injectable::dummy::expand_dummy_blocking_impl;
 use crate::injectable::implementation::{InjectableImpl, InjectableImplError};
 use crate::injectable::macro_args::InjectableMacroArgs;
 use crate::macro_flag::MacroFlag;
 
-mod caster;
-mod declare_interface_args;
 mod injectable;
 mod macro_flag;
 mod util;
@@ -57,12 +43,6 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// **Default:** `false`<br>
 /// Don't hide the impl of the [`Injectable`] trait from documentation.
 ///
-/// #### `no_declare_concrete_interface`
-/// **Value:** boolean literal<br>
-/// **Default:** `false`<br>
-/// Disable declaring the concrete type as the interface when no interface trait argument
-/// is given.
-///
 /// #### `async`
 /// <span class="cf">Available on <strong>crate feature <code>async</code></strong> only.
 /// </span>
@@ -79,10 +59,7 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Constructor method name.
 ///
 /// # Important
-/// When no interface trait argument is given, you have three options
-/// - Manually declare the interface with the [`declare_interface!`] macro.
-/// - Use the [`di_container_bind`] macro to create a DI container binding.
-/// - Use the concrete type as the interface.
+/// When no interface trait argument is given, the concrete type is used as a interface.
 ///
 /// # Examples
 /// ```
@@ -216,13 +193,6 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
         .map_or(Ok(false), MacroFlag::get_bool)
         .unwrap_or_abort();
 
-    let no_declare_concrete_interface = args
-        .flags
-        .iter()
-        .find(|flag| flag.name() == "no_declare_concrete_interface")
-        .map_or(Ok(false), MacroFlag::get_bool)
-        .unwrap_or_abort();
-
     let constructor = args
         .flags
         .iter()
@@ -258,101 +228,13 @@ pub fn injectable(args_stream: TokenStream, input_stream: TokenStream) -> TokenS
 
     injectable_impl.validate(is_async).unwrap_or_abort();
 
-    let expanded_injectable_impl = injectable_impl.expand(no_doc_hidden, is_async);
-
-    let self_type = injectable_impl.self_type();
-
-    let opt_interface = args.interface.map(Type::Path).or_else(|| {
-        if no_declare_concrete_interface {
-            None
-        } else {
-            Some(self_type.clone())
-        }
-    });
-
-    let maybe_decl_interface = if let Some(interface) = opt_interface {
-        let threadsafe_sharable_flag = if is_async {
-            quote! { , threadsafe_sharable = true }
-        } else {
-            quote! {}
-        };
-
-        quote! {
-            syrette::declare_interface!(
-                #self_type -> #interface #threadsafe_sharable_flag
-            );
-        }
-    } else {
-        quote! {}
-    };
+    let expanded_injectable_impl =
+        injectable_impl.expand(no_doc_hidden, is_async, args.interface.as_ref());
 
     quote! {
         #expanded_injectable_impl
-
-        #maybe_decl_interface
     }
     .into()
-}
-
-/// Declares the interface trait of a implementation.
-///
-/// # Arguments
-/// {Implementation} -> {Interface}
-/// * (Zero or more) Flags. Like `a = true, b = false`
-///
-/// # Flags
-/// - `threadsafe_sharable` - Enables the use of thread-safe shared instances of the
-///   implementation accessed with the interface.
-///
-/// # Examples
-/// ```
-/// # use syrette::declare_interface;
-/// #
-/// # trait INinja {}
-/// #
-/// # struct Ninja {}
-/// #
-/// # impl INinja for Ninja {}
-/// #
-/// declare_interface!(Ninja -> INinja);
-/// ```
-#[cfg(not(tarpaulin_include))]
-#[proc_macro_error]
-#[proc_macro]
-pub fn declare_interface(input: TokenStream) -> TokenStream
-{
-    let DeclareInterfaceArgs {
-        implementation,
-        interface,
-        flags,
-    } = parse(input).unwrap_or_abort();
-
-    let threadsafe_sharable_flag = flags
-        .iter()
-        .find(|flag| flag.name() == "threadsafe_sharable");
-
-    let is_async = threadsafe_sharable_flag
-        .map_or_else(|| Ok(false), MacroFlag::get_bool)
-        .unwrap_or_abort();
-
-    #[cfg(syrette_macros_logging)]
-    init_logging();
-
-    let interface_type = if interface == implementation {
-        Type::Path(interface)
-    } else {
-        Type::TraitObject(TypeTraitObject {
-            dyn_token: Some(Dyn::default()),
-            bounds: Punctuated::from_iter(vec![TypeParamBound::Trait(TraitBound {
-                paren_token: None,
-                modifier: TraitBoundModifier::None,
-                lifetimes: None,
-                path: interface.path,
-            })]),
-        })
-    };
-
-    generate_caster(&implementation, &interface_type, is_async).into()
 }
 
 /// Used to declare the name of a dependency in the constructor of a impl block decorated

@@ -93,6 +93,7 @@ pub mod di_container;
 pub mod errors;
 pub mod interfaces;
 pub mod ptr;
+pub mod ptr_buffer;
 
 #[cfg(feature = "async")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
@@ -102,10 +103,7 @@ pub mod future;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "async")))]
 pub use di_container::asynchronous::AsyncDIContainer;
 pub use di_container::blocking::DIContainer;
-pub use syrette_macros::{declare_interface, injectable, named};
-
-#[doc(hidden)]
-pub mod private;
+pub use syrette_macros::{injectable, named};
 
 mod provider;
 mod util;
@@ -157,8 +155,9 @@ mod test_utils;
 #[macro_export]
 macro_rules! di_container_bind {
     ($interface: path => $implementation: ty, $di_container: ident) => {
-        $di_container.bind::<dyn $interface>().to::<$implementation>().unwrap();
-
-        syrette::declare_interface!($implementation -> $interface);
+        $di_container
+            .bind::<dyn $interface>()
+            .to::<$implementation>()
+            .unwrap();
     };
 }

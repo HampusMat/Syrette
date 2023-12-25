@@ -55,8 +55,6 @@ use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::DIContainerError;
-use crate::private::cast::boxed::CastBox;
-use crate::private::cast::rc::CastRc;
 use crate::provider::blocking::{IProvider, Providable};
 use crate::ptr::SomePtr;
 use crate::util::use_double;
@@ -267,22 +265,28 @@ impl DIContainer
             .get_binding_providable::<Interface>(binding_options, dependency_history)?;
 
         match binding_providable {
-            Providable::Transient(transient_binding) => Ok(SomePtr::Transient(
-                transient_binding.cast::<Interface>().map_err(|_| {
-                    DIContainerError::CastFailed {
+            Providable::Transient(transient_binding) => {
+                let ptr_buf = transient_binding.into_ptr_buffer_box();
+
+                ptr_buf
+                    .cast_into_boxed::<Interface>()
+                    .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "transient",
-                    }
-                })?,
-            )),
-            Providable::Singleton(singleton_binding) => Ok(SomePtr::Singleton(
-                singleton_binding.cast::<Interface>().map_err(|_| {
-                    DIContainerError::CastFailed {
+                    })
+                    .map(SomePtr::Transient)
+            }
+            Providable::Singleton(singleton_binding) => {
+                let ptr_buf = singleton_binding.into_ptr_buffer_rc();
+
+                ptr_buf
+                    .cast_into_rc::<Interface>()
+                    .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "singleton",
-                    }
-                })?,
-            )),
+                    })
+                    .map(SomePtr::Singleton)
+            }
             #[cfg(feature = "factory")]
             Providable::Factory(factory_binding) => {
                 use crate::castable_factory::CastableFactory;
