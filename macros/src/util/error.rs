@@ -1,3 +1,6 @@
+use proc_macro2::Span;
+use proc_macro_error::Diagnostic;
+
 /// Used to create a error enum that converts into a [`Diagnostic`].
 ///
 /// [`Diagnostic`]: proc_macro_error::Diagnostic
@@ -30,22 +33,17 @@ macro_rules! diagnostic_error_enum {
             #[must_use]
             fn from(err: $name) -> Self
             {
-                let (error, span, notes, helps, errs, source): (
-                    String,
-                    ::proc_macro2::Span,
-                    Vec<(String, ::proc_macro2::Span)>,
-                    Vec<(String, ::proc_macro2::Span)>,
-                    Vec<(String, ::proc_macro2::Span)>,
-                    Option<::proc_macro_error::Diagnostic>
-                ) = match err {
+                use $crate::util::error::DiagnosticErrorVariantInfo;
+
+                let DiagnosticErrorVariantInfo {
+                    error, span, notes, helps, errs, source
+                } = match err {
                     $(
-                        $name::$variant {
-                            $($variant_field),*
-                        } => {
-                            (
-                                format!($($error)*),
-                                $error_span,
-                                vec![$(
+                        $name::$variant { $($variant_field),* } => {
+                            DiagnosticErrorVariantInfo {
+                                error: format!($($error)*),
+                                span: $error_span,
+                                notes: vec![$(
                                     (
                                         format!($($note)*),
                                         $crate::util::or!(
@@ -54,7 +52,7 @@ macro_rules! diagnostic_error_enum {
                                         )
                                     )
                                 ),*],
-                                vec![$(
+                                helps: vec![$(
                                     (
                                         format!($($help)*),
                                         $crate::util::or!(
@@ -63,7 +61,7 @@ macro_rules! diagnostic_error_enum {
                                         )
                                     )
                                 ),*],
-                                vec![$(
+                                errs: vec![$(
                                     (
                                         format!($($err)*),
                                         $crate::util::or!(
@@ -72,8 +70,8 @@ macro_rules! diagnostic_error_enum {
                                         )
                                     )
                                 ),*],
-                                $crate::util::to_option!($($source.into())?)
-                            )
+                                source: $crate::util::to_option!($($source.into())?)
+                            }
                         }
                     ),*
                 };
@@ -109,8 +107,18 @@ macro_rules! diagnostic_error_enum {
                 diagnostic
             }
         }
-
     };
+}
+
+/// Used by [`diagnostic_error_enum`].
+pub struct DiagnosticErrorVariantInfo
+{
+    pub error: String,
+    pub span: Span,
+    pub notes: Vec<(String, Span)>,
+    pub helps: Vec<(String, Span)>,
+    pub errs: Vec<(String, Span)>,
+    pub source: Option<Diagnostic>,
 }
 
 pub(crate) use diagnostic_error_enum;
