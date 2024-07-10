@@ -7,6 +7,14 @@
 
 The convenient dependency injection & inversion of control framework for Rust.
 
+<div class="warning">
+
+Currently, This crate does not work on nightly versions of Rust. This is because Nightly
+versions uses rust-lld. See [Linkme issue #94](https://github.com/dtolnay/linkme/issues/94).
+
+A temporary fix for this is to build with `RUSTFLAGS="-C link-args=-znostart-stop-gc"`
+</div>
+
 ## Namesake
 From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 > A syrette is a device for injecting liquid through a needle.
