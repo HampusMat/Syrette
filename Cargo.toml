@@ -47,7 +47,7 @@ strum_macros = "0.24.3"
 paste = "1.0.8"
 async-trait = { version = "0.1.57", optional = true }
 
-[dev_dependencies]
+[dev-dependencies]
 mockall = "0.11.4"
 anyhow = "1.0.62"
 third-party-lib = { path = "./examples/with-3rd-party/third-party-lib" }
