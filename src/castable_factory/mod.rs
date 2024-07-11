@@ -1,11 +1,16 @@
 use std::any::{type_name, Any};
 use std::fmt::Debug;
 
-use crate::any_factory::AnyFactory;
 use crate::ptr::TransientPtr;
 
 #[cfg(feature = "async")]
 pub mod threadsafe;
+
+/// Interface for any castable factory.
+pub trait AnyCastableFactory: Any + Debug
+{
+    fn as_any(&self) -> &dyn Any;
+}
 
 pub struct CastableFactory<ReturnInterface, DIContainerT>
 where
@@ -32,7 +37,7 @@ where
     }
 }
 
-impl<ReturnInterface, DIContainerT> AnyFactory
+impl<ReturnInterface, DIContainerT> AnyCastableFactory
     for CastableFactory<ReturnInterface, DIContainerT>
 where
     ReturnInterface: 'static + ?Sized,

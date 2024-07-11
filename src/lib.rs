@@ -113,9 +113,6 @@ mod util;
 #[cfg(feature = "factory")]
 mod castable_factory;
 
-#[cfg(feature = "factory")]
-mod any_factory;
-
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]
 mod test_utils;

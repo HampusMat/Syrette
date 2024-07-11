@@ -13,9 +13,11 @@ pub enum Providable<DIContainerType>
     Transient(TransientPtr<dyn Injectable<DIContainerType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
     #[cfg(feature = "factory")]
-    Factory(crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>),
+    Factory(crate::ptr::FactoryPtr<dyn crate::castable_factory::AnyCastableFactory>),
     #[cfg(feature = "factory")]
-    DefaultFactory(crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>),
+    DefaultFactory(
+        crate::ptr::FactoryPtr<dyn crate::castable_factory::AnyCastableFactory>,
+    ),
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -108,7 +110,7 @@ where
 #[cfg(feature = "factory")]
 pub struct FactoryProvider
 {
-    factory: crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>,
+    factory: crate::ptr::FactoryPtr<dyn crate::castable_factory::AnyCastableFactory>,
     is_default_factory: bool,
 }
 
@@ -116,7 +118,7 @@ pub struct FactoryProvider
 impl FactoryProvider
 {
     pub fn new(
-        factory: crate::ptr::FactoryPtr<dyn crate::any_factory::AnyFactory>,
+        factory: crate::ptr::FactoryPtr<dyn crate::castable_factory::AnyCastableFactory>,
         is_default_factory: bool,
     ) -> Self
     {
@@ -198,13 +200,13 @@ mod tests
     {
         use std::any::Any;
 
-        use crate::any_factory::AnyFactory;
+        use crate::castable_factory::AnyCastableFactory;
         use crate::ptr::FactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
 
-        impl AnyFactory for FooFactory
+        impl AnyCastableFactory for FooFactory
         {
             fn as_any(&self) -> &dyn Any
             {

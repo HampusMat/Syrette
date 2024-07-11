@@ -1,8 +1,11 @@
 use std::any::{type_name, Any};
 use std::fmt::Debug;
 
-use crate::any_factory::{AnyFactory, AnyThreadsafeFactory};
+use crate::castable_factory::AnyCastableFactory;
 use crate::ptr::TransientPtr;
+
+/// Interface for any threadsafe castable factory.
+pub trait AnyThreadsafeCastableFactory: AnyCastableFactory + Send + Sync + Debug {}
 
 pub struct ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
@@ -33,7 +36,7 @@ where
     }
 }
 
-impl<ReturnInterface, DIContainerT> AnyFactory
+impl<ReturnInterface, DIContainerT> AnyCastableFactory
     for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
@@ -45,7 +48,7 @@ where
     }
 }
 
-impl<ReturnInterface, DIContainerT> AnyThreadsafeFactory
+impl<ReturnInterface, DIContainerT> AnyThreadsafeCastableFactory
     for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
