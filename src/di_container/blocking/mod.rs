@@ -285,11 +285,11 @@ impl DIContainer
             )),
             #[cfg(feature = "factory")]
             Providable::Factory(factory_binding) => {
-                use crate::castable_factory::CastableFactory;
+                use crate::castable_function::CastableFunction;
 
                 let factory = factory_binding
                     .as_any()
-                    .downcast_ref::<CastableFactory<Interface, Self>>()
+                    .downcast_ref::<CastableFunction<Interface, Self>>()
                     .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "factory",
@@ -299,11 +299,11 @@ impl DIContainer
             }
             #[cfg(feature = "factory")]
             Providable::DefaultFactory(factory_binding) => {
-                use crate::castable_factory::CastableFactory;
+                use crate::castable_function::CastableFunction;
                 use crate::ptr::TransientPtr;
 
                 type DefaultFactoryFn<Interface> =
-                    CastableFactory<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
+                    CastableFunction<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
 
                 let default_factory = factory_binding
                     .as_any()
@@ -517,7 +517,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory()
     {
-        use crate::castable_factory::CastableFactory;
+        use crate::castable_function::CastableFunction;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -572,7 +572,7 @@ mod tests
         let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
-            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
+            Ok(Providable::Factory(FactoryPtr::new(CastableFunction::new(
                 factory_func,
             ))))
         });
@@ -592,7 +592,7 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named()
     {
-        use crate::castable_factory::CastableFactory;
+        use crate::castable_function::CastableFunction;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -647,7 +647,7 @@ mod tests
         let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
-            Ok(Providable::Factory(FactoryPtr::new(CastableFactory::new(
+            Ok(Providable::Factory(FactoryPtr::new(CastableFunction::new(
                 factory_func,
             ))))
         });

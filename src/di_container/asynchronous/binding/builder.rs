@@ -173,7 +173,7 @@ where
         Interface: Fn<Args, Output = Return> + Send + Sync,
         FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<Args, Return> + Send + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -186,7 +186,7 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
@@ -270,7 +270,7 @@ where
             + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -283,7 +283,7 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
@@ -354,7 +354,7 @@ where
             + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -367,7 +367,7 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
@@ -445,7 +445,7 @@ where
             + Send
             + Sync,
     {
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
         use crate::provider::r#async::AsyncFactoryVariant;
 
         if self
@@ -458,7 +458,7 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFactory::new(factory_func);
+        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),

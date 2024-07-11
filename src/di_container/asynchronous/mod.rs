@@ -348,11 +348,11 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Factory(factory_binding) => {
-                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 
                 let factory = factory_binding
                     .as_any()
-                    .downcast_ref::<ThreadsafeCastableFactory<Interface, Self>>()
+                    .downcast_ref::<ThreadsafeCastableFunction<Interface, Self>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "factory",
@@ -362,10 +362,10 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::DefaultFactory(binding) => {
-                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
                 use crate::ptr::TransientPtr;
 
-                type DefaultFactoryFn<Interface> = ThreadsafeCastableFactory<
+                type DefaultFactoryFn<Interface> = ThreadsafeCastableFunction<
                     dyn Fn() -> TransientPtr<Interface> + Send + Sync,
                     AsyncDIContainer,
                 >;
@@ -382,11 +382,11 @@ impl AsyncDIContainer
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::AsyncDefaultFactory(binding) => {
-                use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
                 use crate::future::BoxFuture;
                 use crate::ptr::TransientPtr;
 
-                type AsyncDefaultFactoryFn<Interface> = ThreadsafeCastableFactory<
+                type AsyncDefaultFactoryFn<Interface> = ThreadsafeCastableFunction<
                     dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
                         + Send
                         + Sync,
@@ -652,7 +652,7 @@ mod tests
             }
         }
 
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
@@ -674,7 +674,7 @@ mod tests
             inner_mock_provider.expect_provide().returning(|_, _| {
                 Ok(AsyncProvidable::Factory(
                     crate::ptr::ThreadsafeFactoryPtr::new(
-                        ThreadsafeCastableFactory::new(factory_func),
+                        ThreadsafeCastableFunction::new(factory_func),
                     ),
                 ))
             });
@@ -734,7 +734,7 @@ mod tests
             }
         }
 
-        use crate::castable_factory::threadsafe::ThreadsafeCastableFactory;
+        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
@@ -756,7 +756,7 @@ mod tests
             inner_mock_provider.expect_provide().returning(|_, _| {
                 Ok(AsyncProvidable::Factory(
                     crate::ptr::ThreadsafeFactoryPtr::new(
-                        ThreadsafeCastableFactory::new(factory_func),
+                        ThreadsafeCastableFunction::new(factory_func),
                     ),
                 ))
             });

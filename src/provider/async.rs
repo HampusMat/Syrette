@@ -17,19 +17,19 @@ pub enum AsyncProvidable<DIContainerT>
     #[cfg(feature = "factory")]
     Factory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory,
+            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
     ),
     #[cfg(feature = "factory")]
     DefaultFactory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory,
+            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
     ),
     #[cfg(feature = "factory")]
     AsyncDefaultFactory(
         crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory,
+            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
     ),
 }
@@ -189,7 +189,7 @@ pub enum AsyncFactoryVariant
 pub struct AsyncFactoryProvider
 {
     factory: crate::ptr::ThreadsafeFactoryPtr<
-        dyn crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory,
+        dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
     >,
     variant: AsyncFactoryVariant,
 }
@@ -199,7 +199,7 @@ impl AsyncFactoryProvider
 {
     pub fn new(
         factory: crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory,
+            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
         variant: AsyncFactoryVariant,
     ) -> Self
@@ -309,14 +309,14 @@ mod tests
     {
         use std::any::Any;
 
-        use crate::castable_factory::threadsafe::AnyThreadsafeCastableFactory;
-        use crate::castable_factory::AnyCastableFactory;
+        use crate::castable_function::threadsafe::AnyThreadsafeCastableFunction;
+        use crate::castable_function::AnyCastableFunction;
         use crate::ptr::ThreadsafeFactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
 
-        impl AnyCastableFactory for FooFactory
+        impl AnyCastableFunction for FooFactory
         {
             fn as_any(&self) -> &dyn Any
             {
@@ -324,7 +324,7 @@ mod tests
             }
         }
 
-        impl AnyThreadsafeCastableFactory for FooFactory {}
+        impl AnyThreadsafeCastableFunction for FooFactory {}
 
         let factory_provider = AsyncFactoryProvider::new(
             ThreadsafeFactoryPtr::new(FooFactory),

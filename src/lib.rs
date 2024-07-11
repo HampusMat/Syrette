@@ -111,7 +111,7 @@ mod provider;
 mod util;
 
 #[cfg(feature = "factory")]
-mod castable_factory;
+mod castable_function;
 
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]

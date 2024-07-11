@@ -181,7 +181,7 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn(&DIContainer) -> Box<Interface>,
     {
-        use crate::castable_factory::CastableFactory;
+        use crate::castable_function::CastableFunction;
 
         if self
             .di_container
@@ -192,7 +192,7 @@ where
             >()));
         }
 
-        let factory_impl = CastableFactory::new(factory_func);
+        let factory_impl = CastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
@@ -269,7 +269,7 @@ where
             dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
         >,
     {
-        use crate::castable_factory::CastableFactory;
+        use crate::castable_function::CastableFunction;
 
         if self
             .di_container
@@ -280,7 +280,7 @@ where
             >()));
         }
 
-        let factory_impl = CastableFactory::new(factory_func);
+        let factory_impl = CastableFunction::new(factory_func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),

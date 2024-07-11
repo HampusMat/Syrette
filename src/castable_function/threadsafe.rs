@@ -1,13 +1,16 @@
 use std::any::{type_name, Any};
 use std::fmt::Debug;
 
-use crate::castable_factory::AnyCastableFactory;
+use crate::castable_function::AnyCastableFunction;
 use crate::ptr::TransientPtr;
 
-/// Interface for any threadsafe castable factory.
-pub trait AnyThreadsafeCastableFactory: AnyCastableFactory + Send + Sync + Debug {}
+/// Interface for any threadsafe castable function.
+pub trait AnyThreadsafeCastableFunction:
+    AnyCastableFunction + Send + Sync + Debug
+{
+}
 
-pub struct ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
+pub struct ThreadsafeCastableFunction<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
@@ -16,7 +19,7 @@ where
 }
 
 impl<ReturnInterface, DIContainerT>
-    ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
+    ThreadsafeCastableFunction<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
@@ -36,8 +39,8 @@ where
     }
 }
 
-impl<ReturnInterface, DIContainerT> AnyCastableFactory
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
+impl<ReturnInterface, DIContainerT> AnyCastableFunction
+    for ThreadsafeCastableFunction<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
@@ -48,8 +51,8 @@ where
     }
 }
 
-impl<ReturnInterface, DIContainerT> AnyThreadsafeCastableFactory
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
+impl<ReturnInterface, DIContainerT> AnyThreadsafeCastableFunction
+    for ThreadsafeCastableFunction<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
@@ -57,7 +60,7 @@ where
 }
 
 impl<ReturnInterface, DIContainerT> Debug
-    for ThreadsafeCastableFactory<ReturnInterface, DIContainerT>
+    for ThreadsafeCastableFunction<ReturnInterface, DIContainerT>
 where
     DIContainerT: 'static,
     ReturnInterface: 'static + ?Sized,
@@ -68,7 +71,7 @@ where
         let ret = type_name::<TransientPtr<ReturnInterface>>();
 
         formatter.write_fmt(format_args!(
-            "ThreadsafeCastableFactory (&AsyncDIContainer) -> {ret} {{ ... }}",
+            "ThreadsafeCastableFunction(&AsyncDIContainer) -> {ret} {{ ... }}",
         ))
     }
 }
@@ -88,14 +91,14 @@ mod tests
     #[test]
     fn can_call()
     {
-        let castable_factory =
-            ThreadsafeCastableFactory::new(&|_: &MockAsyncDIContainer| {
+        let castable_function =
+            ThreadsafeCastableFunction::new(&|_: &MockAsyncDIContainer| {
                 TransientPtr::new(Bacon { heal_amount: 27 })
             });
 
         let mock_di_container = MockAsyncDIContainer::new();
 
-        let output = castable_factory.call(&mock_di_container);
+        let output = castable_function.call(&mock_di_container);
 
         assert_eq!(output, TransientPtr::new(Bacon { heal_amount: 27 }));
     }
