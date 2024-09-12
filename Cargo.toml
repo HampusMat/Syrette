@@ -59,3 +59,7 @@ members = [
 	"examples/with-3rd-party/third-party-lib",
 ]
 
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(doc_cfg)", "cfg(tarpaulin_include)"]
+
