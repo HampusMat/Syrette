@@ -20,7 +20,7 @@ pub async fn bootstrap() -> Result<AsyncDIContainer, anyhow::Error>
         .in_singleton_scope()
         .await?;
 
-    di_container.bind::<dyn ICat>().to_default_factory(&|_| {
+    di_container.bind::<dyn ICat>().to_dynamic_value(&|_| {
         Box::new(|| {
             let cat: TransientPtr<dyn ICat> = TransientPtr::new(Cat::new());
 

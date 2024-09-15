@@ -84,7 +84,7 @@ async fn main() -> Result<()>
 
     di_container
         .bind::<dyn IPerson>()
-        .to_async_default_factory(&|_| {
+        .to_async_dynamic_value(&|_| {
             Box::new(|| {
                 Box::pin(async {
                     // Do some time demanding thing...

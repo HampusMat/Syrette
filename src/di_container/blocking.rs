@@ -311,15 +311,15 @@ impl DIContainer
                 type Func<Interface> =
                     CastableFunction<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
 
-                let default_factory = func_bound
+                let dynamic_val_func = func_bound
                     .as_any()
                     .downcast_ref::<Func<Interface>>()
                     .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
-                        binding_kind: "default factory",
+                        binding_kind: "dynamic value function",
                     })?;
 
-                Ok(SomePtr::Transient(default_factory.call(self)()))
+                Ok(SomePtr::Transient(dynamic_val_func.call(self)()))
             }
         }
     }

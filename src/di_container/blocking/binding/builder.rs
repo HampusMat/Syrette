@@ -208,8 +208,8 @@ where
         Ok(BindingWhenConfigurator::new(self.di_container))
     }
 
-    /// Creates a binding of type `Interface` to a factory that takes no arguments
-    /// inside of the associated [`DIContainer`].
+    /// Creates a binding of type `Interface` to a value resolved using the given
+    /// function.
     ///
     /// # Errors
     /// Will return Err if the associated [`DIContainer`] already have a binding for
@@ -247,7 +247,7 @@ where
     /// # {
     /// # let mut di_container = DIContainer::new();
     /// #
-    /// di_container.bind::<dyn IBuffer>().to_default_factory(&|_| {
+    /// di_container.bind::<dyn IBuffer>().to_dynamic_value(&|_| {
     ///     Box::new(|| {
     ///         let buffer = TransientPtr::new(Buffer::<BUFFER_SIZE>::new());
     ///
@@ -260,13 +260,13 @@ where
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_default_factory<Return, FactoryFunc>(
+    pub fn to_dynamic_value<Return, Func>(
         self,
-        factory_func: &'static FactoryFunc,
+        func: &'static Func,
     ) -> Result<BindingWhenConfigurator<'di_container, Interface>, BindingBuilderError>
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn(
+        Func: Fn(
             &DIContainer,
         ) -> crate::ptr::TransientPtr<
             dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
@@ -286,12 +286,12 @@ where
             >()));
         }
 
-        let factory_impl = CastableFunction::new(factory_func);
+        let castable_func = CastableFunction::new(func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
             Box::new(crate::provider::blocking::FunctionProvider::new(
-                Rc::new(factory_impl),
+                Rc::new(castable_func),
                 ProvidableFunctionKind::Instant,
             )),
         );
@@ -377,7 +377,7 @@ mod tests
 
     #[test]
     #[cfg(feature = "factory")]
-    fn can_bind_to_default_factory()
+    fn can_bind_to_dynamic_value()
     {
         use crate::ptr::TransientPtr;
 
@@ -401,7 +401,7 @@ mod tests
         );
 
         binding_builder
-            .to_default_factory(&|_| {
+            .to_dynamic_value(&|_| {
                 Box::new(move || {
                     let user_manager: TransientPtr<dyn subjects::IUserManager> =
                         TransientPtr::new(subjects::UserManager::new());

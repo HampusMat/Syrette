@@ -371,20 +371,20 @@ impl AsyncDIContainer
                 use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
                 use crate::ptr::TransientPtr;
 
-                type DefaultFactoryFn<Interface> = ThreadsafeCastableFunction<
+                type Func<Interface> = ThreadsafeCastableFunction<
                     dyn Fn() -> TransientPtr<Interface> + Send + Sync,
                     AsyncDIContainer,
                 >;
 
-                let default_factory = func_bound
+                let dynamic_val_func = func_bound
                     .as_any()
-                    .downcast_ref::<DefaultFactoryFn<Interface>>()
+                    .downcast_ref::<Func<Interface>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
-                        interface: type_name::<DefaultFactoryFn<Interface>>(),
-                        binding_kind: "default factory",
+                        interface: type_name::<Func<Interface>>(),
+                        binding_kind: "dynamic value func",
                     })?;
 
-                Ok(SomePtr::Transient(default_factory.call(self)()))
+                Ok(SomePtr::Transient(dynamic_val_func.call(self)()))
             }
             #[cfg(feature = "factory")]
             AsyncProvidable::Function(
@@ -395,22 +395,24 @@ impl AsyncDIContainer
                 use crate::future::BoxFuture;
                 use crate::ptr::TransientPtr;
 
-                type AsyncDefaultFactoryFn<Interface> = ThreadsafeCastableFunction<
+                type Func<Interface> = ThreadsafeCastableFunction<
                     dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
                         + Send
                         + Sync,
                     AsyncDIContainer,
                 >;
 
-                let async_default_factory = func_bound
+                let async_dynamic_value_func = func_bound
                     .as_any()
-                    .downcast_ref::<AsyncDefaultFactoryFn<Interface>>()
+                    .downcast_ref::<Func<Interface>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
-                        interface: type_name::<AsyncDefaultFactoryFn<Interface>>(),
-                        binding_kind: "async default factory",
+                        interface: type_name::<Func<Interface>>(),
+                        binding_kind: "async dynamic value function",
                     })?;
 
-                Ok(SomePtr::Transient(async_default_factory.call(self)().await))
+                Ok(SomePtr::Transient(
+                    async_dynamic_value_func.call(self)().await,
+                ))
             }
         }
     }

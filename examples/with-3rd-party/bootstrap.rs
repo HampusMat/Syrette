@@ -15,7 +15,7 @@ pub fn bootstrap() -> Result<DIContainer, Box<dyn Error>>
 
     di_container
         .bind::<Shuriken>()
-        .to_default_factory(&|_| Box::new(|| TransientPtr::new(Shuriken::new())))?;
+        .to_dynamic_value(&|_| Box::new(|| TransientPtr::new(Shuriken::new())))?;
 
     Ok(di_container)
 }

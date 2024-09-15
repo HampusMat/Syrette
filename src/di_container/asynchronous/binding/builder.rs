@@ -300,8 +300,8 @@ where
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
-    /// Creates a binding of type `Interface` to a factory that takes no arguments
-    /// inside of the associated [`AsyncDIContainer`].
+    /// Creates a binding of type `Interface` to a value resolved using the given
+    /// function.
     ///
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
@@ -329,7 +329,7 @@ where
     /// # {
     /// # let mut di_container = AsyncDIContainer::new();
     /// #
-    /// di_container.bind::<dyn Foo>().to_default_factory(&|_| {
+    /// di_container.bind::<dyn Foo>().to_dynamic_value(&|_| {
     ///     Box::new(|| {
     ///         let bar = TransientPtr::new(Bar {
     ///             num: 42,
@@ -345,16 +345,16 @@ where
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_default_factory<Return, FactoryFunc>(
+    pub fn to_dynamic_value<Return, Func>(
         self,
-        factory_func: &'static FactoryFunc,
+        func: &'static Func,
     ) -> Result<
         AsyncBindingWhenConfigurator<'di_container, Interface>,
         AsyncBindingBuilderError,
     >
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<(), crate::ptr::TransientPtr<Return>>
+        Func: Fn(&AsyncDIContainer) -> BoxFn<(), crate::ptr::TransientPtr<Return>>
             + Send
             + Sync,
     {
@@ -373,12 +373,12 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
+        let castable_func = ThreadsafeCastableFunction::new(func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
             Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
-                Arc::new(factory_impl),
+                Arc::new(castable_func),
                 ProvidableFunctionKind::Instant,
             )),
         );
@@ -386,8 +386,8 @@ where
         Ok(AsyncBindingWhenConfigurator::new(self.di_container))
     }
 
-    /// Creates a binding of factory type `Interface` to a async factory inside of the
-    /// associated [`AsyncDIContainer`].
+    /// Creates a binding of type `Interface` to a value resolved using the given
+    /// async function.
     ///
     /// # Errors
     /// Will return Err if the associated [`AsyncDIContainer`] already have a binding
@@ -418,7 +418,7 @@ where
     /// #
     /// di_container
     ///     .bind::<dyn Foo>()
-    ///     .to_async_default_factory(&|_| {
+    ///     .to_async_dynamic_value(&|_| {
     ///         Box::new(|| {
     ///             Box::pin(async {
     ///                 let bar = TransientPtr::new(Bar {
@@ -438,16 +438,16 @@ where
     /// ```
     #[cfg(feature = "factory")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_async_default_factory<Return, FactoryFunc>(
+    pub fn to_async_dynamic_value<Return, Func>(
         self,
-        factory_func: &'static FactoryFunc,
+        func: &'static Func,
     ) -> Result<
         AsyncBindingWhenConfigurator<'di_container, Interface>,
         AsyncBindingBuilderError,
     >
     where
         Return: 'static + ?Sized,
-        FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<(), crate::future::BoxFuture<'static, Return>>
+        Func: Fn(&AsyncDIContainer) -> BoxFn<(), crate::future::BoxFuture<'static, Return>>
             + Send
             + Sync,
     {
@@ -466,12 +466,12 @@ where
             )));
         }
 
-        let factory_impl = ThreadsafeCastableFunction::new(factory_func);
+        let castable_func = ThreadsafeCastableFunction::new(func);
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
             Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
-                Arc::new(factory_impl),
+                Arc::new(castable_func),
                 ProvidableFunctionKind::AsyncInstant,
             )),
         );
@@ -608,7 +608,7 @@ mod tests
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_default_factory()
+    async fn can_bind_to_dynamic_value()
     {
         use crate::ptr::TransientPtr;
 
@@ -633,7 +633,7 @@ mod tests
             );
 
         binding_builder
-            .to_default_factory(&|_| {
+            .to_dynamic_value(&|_| {
                 Box::new(|| {
                     let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
                         TransientPtr::new(subjects_async::UserManager::new());
@@ -646,7 +646,7 @@ mod tests
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn can_bind_to_async_default_factory()
+    async fn can_bind_to_async_dynamic_value()
     {
         use crate::ptr::TransientPtr;
         use crate::test_utils::async_closure;
@@ -672,7 +672,7 @@ mod tests
             );
 
         binding_builder
-            .to_async_default_factory(&|_| {
+            .to_async_dynamic_value(&|_| {
                 async_closure!(|| {
                     let user_manager: TransientPtr<dyn subjects_async::IUserManager> =
                         TransientPtr::new(subjects_async::UserManager::new());
