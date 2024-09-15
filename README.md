@@ -186,9 +186,6 @@ A type or trait that represents a type (itself in the case of it being a type).
 **Factory**<br>
 A function that creates new instances of a specific type or trait.
 
-**Default factory**<br>
-A function that takes no arguments that creates new instances of a specific type or trait.
-
 ## Rust version requirements
 Syrette requires Rust >= 1.62.1 to work. This is mainly due to the dependency on [Linkme](https://crates.io/crates/linkme).
 
