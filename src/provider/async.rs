@@ -15,23 +15,21 @@ pub enum AsyncProvidable<DIContainerT>
     Transient(TransientPtr<dyn AsyncInjectable<DIContainerT>>),
     Singleton(ThreadsafeSingletonPtr<dyn AsyncInjectable<DIContainerT>>),
     #[cfg(feature = "factory")]
-    Factory(
-        crate::ptr::ThreadsafeFactoryPtr<
+    Function(
+        std::sync::Arc<
             dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
+        ProvidableFunctionKind,
     ),
-    #[cfg(feature = "factory")]
-    DefaultFactory(
-        crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
-        >,
-    ),
-    #[cfg(feature = "factory")]
-    AsyncDefaultFactory(
-        crate::ptr::ThreadsafeFactoryPtr<
-            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
-        >,
-    ),
+}
+
+#[cfg(feature = "factory")]
+#[derive(Debug, Clone, Copy)]
+pub enum ProvidableFunctionKind
+{
+    UserCalled,
+    Instant,
+    AsyncInstant,
 }
 
 #[async_trait]
@@ -177,40 +175,34 @@ where
 }
 
 #[cfg(feature = "factory")]
-#[derive(Clone, Copy)]
-pub enum AsyncFactoryVariant
+pub struct AsyncFunctionProvider
 {
-    Normal,
-    Default,
-    AsyncDefault,
-}
-
-#[cfg(feature = "factory")]
-pub struct AsyncFactoryProvider
-{
-    factory: crate::ptr::ThreadsafeFactoryPtr<
+    function: std::sync::Arc<
         dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
     >,
-    variant: AsyncFactoryVariant,
+    providable_func_kind: ProvidableFunctionKind,
 }
 
 #[cfg(feature = "factory")]
-impl AsyncFactoryProvider
+impl AsyncFunctionProvider
 {
     pub fn new(
-        factory: crate::ptr::ThreadsafeFactoryPtr<
+        function: std::sync::Arc<
             dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
         >,
-        variant: AsyncFactoryVariant,
+        providable_func_kind: ProvidableFunctionKind,
     ) -> Self
     {
-        Self { factory, variant }
+        Self {
+            function,
+            providable_func_kind,
+        }
     }
 }
 
 #[cfg(feature = "factory")]
 #[async_trait]
-impl<DIContainerT> IAsyncProvider<DIContainerT> for AsyncFactoryProvider
+impl<DIContainerT> IAsyncProvider<DIContainerT> for AsyncFunctionProvider
 where
     DIContainerT: Send + Sync,
 {
@@ -220,15 +212,10 @@ where
         _dependency_history: DependencyHistory,
     ) -> Result<AsyncProvidable<DIContainerT>, InjectableError>
     {
-        Ok(match self.variant {
-            AsyncFactoryVariant::Normal => AsyncProvidable::Factory(self.factory.clone()),
-            AsyncFactoryVariant::Default => {
-                AsyncProvidable::DefaultFactory(self.factory.clone())
-            }
-            AsyncFactoryVariant::AsyncDefault => {
-                AsyncProvidable::AsyncDefaultFactory(self.factory.clone())
-            }
-        })
+        Ok(AsyncProvidable::Function(
+            self.function.clone(),
+            self.providable_func_kind,
+        ))
     }
 
     fn do_clone(&self) -> Box<dyn IAsyncProvider<DIContainerT>>
@@ -238,13 +225,13 @@ where
 }
 
 #[cfg(feature = "factory")]
-impl Clone for AsyncFactoryProvider
+impl Clone for AsyncFunctionProvider
 {
     fn clone(&self) -> Self
     {
         Self {
-            factory: self.factory.clone(),
-            variant: self.variant,
+            function: self.function.clone(),
+            providable_func_kind: self.providable_func_kind,
         }
     }
 }
@@ -305,13 +292,13 @@ mod tests
 
     #[tokio::test]
     #[cfg(feature = "factory")]
-    async fn async_factory_provider_works()
+    async fn function_provider_works()
     {
         use std::any::Any;
+        use std::sync::Arc;
 
         use crate::castable_function::threadsafe::AnyThreadsafeCastableFunction;
         use crate::castable_function::AnyCastableFunction;
-        use crate::ptr::ThreadsafeFactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
@@ -326,54 +313,63 @@ mod tests
 
         impl AnyThreadsafeCastableFunction for FooFactory {}
 
-        let factory_provider = AsyncFactoryProvider::new(
-            ThreadsafeFactoryPtr::new(FooFactory),
-            AsyncFactoryVariant::Normal,
+        let user_called_func_provider = AsyncFunctionProvider::new(
+            Arc::new(FooFactory),
+            ProvidableFunctionKind::UserCalled,
         );
 
-        let default_factory_provider = AsyncFactoryProvider::new(
-            ThreadsafeFactoryPtr::new(FooFactory),
-            AsyncFactoryVariant::Default,
+        let instant_func_provider = AsyncFunctionProvider::new(
+            Arc::new(FooFactory),
+            ProvidableFunctionKind::Instant,
         );
 
-        let async_default_factory_provider = AsyncFactoryProvider::new(
-            ThreadsafeFactoryPtr::new(FooFactory),
-            AsyncFactoryVariant::AsyncDefault,
+        let async_instant_func_provider = AsyncFunctionProvider::new(
+            Arc::new(FooFactory),
+            ProvidableFunctionKind::AsyncInstant,
         );
 
         let di_container = MockAsyncDIContainer::new();
 
         assert!(
             matches!(
-                factory_provider
+                user_called_func_provider
                     .provide(&di_container, MockDependencyHistory::new())
                     .await
                     .unwrap(),
-                AsyncProvidable::Factory(_)
+                AsyncProvidable::Function(_, ProvidableFunctionKind::UserCalled)
             ),
-            "The provided type is not a factory"
+            concat!(
+                "The provided type is not a AsyncProvidable::Function of kind ",
+                "ProvidableFunctionKind::UserCalled"
+            )
         );
 
         assert!(
             matches!(
-                default_factory_provider
+                instant_func_provider
                     .provide(&di_container, MockDependencyHistory::new())
                     .await
                     .unwrap(),
-                AsyncProvidable::DefaultFactory(_)
+                AsyncProvidable::Function(_, ProvidableFunctionKind::Instant)
             ),
-            "The provided type is not a default factory"
+            concat!(
+                "The provided type is not a AsyncProvidable::Function of kind ",
+                "ProvidableFunctionKind::Instant"
+            )
         );
 
         assert!(
             matches!(
-                async_default_factory_provider
+                async_instant_func_provider
                     .provide(&di_container, MockDependencyHistory::new())
                     .await
                     .unwrap(),
-                AsyncProvidable::AsyncDefaultFactory(_)
+                AsyncProvidable::Function(_, ProvidableFunctionKind::AsyncInstant)
             ),
-            "The provided type is not a async default factory"
+            concat!(
+                "The provided type is not a AsyncProvidable::Function of kind ",
+                "ProvidableFunctionKind::AsyncInstant"
+            )
         );
     }
 }

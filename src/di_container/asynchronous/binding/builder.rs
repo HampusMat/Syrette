@@ -173,8 +173,10 @@ where
         Interface: Fn<Args, Output = Return> + Send + Sync,
         FactoryFunc: Fn(&AsyncDIContainer) -> BoxFn<Args, Return> + Send + Sync,
     {
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::AsyncFactoryVariant;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -190,9 +192,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                AsyncFactoryVariant::Normal,
+            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+                Arc::new(factory_impl),
+                ProvidableFunctionKind::UserCalled,
             )),
         );
 
@@ -270,8 +272,10 @@ where
             + Send
             + Sync,
     {
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::AsyncFactoryVariant;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -287,9 +291,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                AsyncFactoryVariant::Normal,
+            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+                Arc::new(factory_impl),
+                ProvidableFunctionKind::UserCalled,
             )),
         );
 
@@ -354,8 +358,10 @@ where
             + Send
             + Sync,
     {
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::AsyncFactoryVariant;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -371,9 +377,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                AsyncFactoryVariant::Default,
+            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+                Arc::new(factory_impl),
+                ProvidableFunctionKind::Instant,
             )),
         );
 
@@ -445,8 +451,10 @@ where
             + Send
             + Sync,
     {
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::AsyncFactoryVariant;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -462,9 +470,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFactoryProvider::new(
-                crate::ptr::ThreadsafeFactoryPtr::new(factory_impl),
-                AsyncFactoryVariant::AsyncDefault,
+            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+                Arc::new(factory_impl),
+                ProvidableFunctionKind::AsyncInstant,
             )),
         );
 

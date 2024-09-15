@@ -284,10 +284,13 @@ impl DIContainer
                 })?,
             )),
             #[cfg(feature = "factory")]
-            Providable::Factory(factory_binding) => {
+            Providable::Function(
+                func_bound,
+                crate::provider::blocking::ProvidableFunctionKind::UserCalled,
+            ) => {
                 use crate::castable_function::CastableFunction;
 
-                let factory = factory_binding
+                let factory = func_bound
                     .as_any()
                     .downcast_ref::<CastableFunction<Interface, Self>>()
                     .ok_or_else(|| DIContainerError::CastFailed {
@@ -298,16 +301,19 @@ impl DIContainer
                 Ok(SomePtr::Factory(factory.call(self).into()))
             }
             #[cfg(feature = "factory")]
-            Providable::DefaultFactory(factory_binding) => {
+            Providable::Function(
+                func_bound,
+                crate::provider::blocking::ProvidableFunctionKind::Instant,
+            ) => {
                 use crate::castable_function::CastableFunction;
                 use crate::ptr::TransientPtr;
 
-                type DefaultFactoryFn<Interface> =
+                type Func<Interface> =
                     CastableFunction<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
 
-                let default_factory = factory_binding
+                let default_factory = func_bound
                     .as_any()
-                    .downcast_ref::<DefaultFactoryFn<Interface>>()
+                    .downcast_ref::<Func<Interface>>()
                     .ok_or_else(|| DIContainerError::CastFailed {
                         interface: type_name::<Interface>(),
                         binding_kind: "default factory",
@@ -517,7 +523,10 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory()
     {
+        use std::rc::Rc;
+
         use crate::castable_function::CastableFunction;
+        use crate::provider::blocking::ProvidableFunctionKind;
         use crate::ptr::FactoryPtr;
 
         trait IUserManager
@@ -572,9 +581,10 @@ mod tests
         let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
-            Ok(Providable::Factory(FactoryPtr::new(CastableFunction::new(
-                factory_func,
-            ))))
+            Ok(Providable::Function(
+                Rc::new(CastableFunction::new(factory_func)),
+                ProvidableFunctionKind::UserCalled,
+            ))
         });
 
         di_container
@@ -592,8 +602,10 @@ mod tests
     #[cfg(feature = "factory")]
     fn can_get_factory_named()
     {
+        use std::rc::Rc;
+
         use crate::castable_function::CastableFunction;
-        use crate::ptr::FactoryPtr;
+        use crate::provider::blocking::ProvidableFunctionKind;
 
         trait IUserManager
         {
@@ -647,9 +659,10 @@ mod tests
         let mut mock_provider = MockIProvider::new();
 
         mock_provider.expect_provide().returning_st(|_, _| {
-            Ok(Providable::Factory(FactoryPtr::new(CastableFunction::new(
-                factory_func,
-            ))))
+            Ok(Providable::Function(
+                Rc::new(CastableFunction::new(factory_func)),
+                ProvidableFunctionKind::UserCalled,
+            ))
         });
 
         di_container.binding_storage.set::<IUserManagerFactory>(

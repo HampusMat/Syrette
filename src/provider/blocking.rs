@@ -13,11 +13,18 @@ pub enum Providable<DIContainerType>
     Transient(TransientPtr<dyn Injectable<DIContainerType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
     #[cfg(feature = "factory")]
-    Factory(crate::ptr::FactoryPtr<dyn crate::castable_function::AnyCastableFunction>),
-    #[cfg(feature = "factory")]
-    DefaultFactory(
-        crate::ptr::FactoryPtr<dyn crate::castable_function::AnyCastableFunction>,
+    Function(
+        std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
+        ProvidableFunctionKind,
     ),
+}
+
+#[cfg(feature = "factory")]
+#[derive(Debug, Clone, Copy)]
+pub enum ProvidableFunctionKind
+{
+    Instant,
+    UserCalled,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -108,31 +115,29 @@ where
 }
 
 #[cfg(feature = "factory")]
-pub struct FactoryProvider
+pub struct FunctionProvider
 {
-    factory: crate::ptr::FactoryPtr<dyn crate::castable_function::AnyCastableFunction>,
-    is_default_factory: bool,
+    function: std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
+    providable_func_kind: ProvidableFunctionKind,
 }
 
 #[cfg(feature = "factory")]
-impl FactoryProvider
+impl FunctionProvider
 {
     pub fn new(
-        factory: crate::ptr::FactoryPtr<
-            dyn crate::castable_function::AnyCastableFunction,
-        >,
-        is_default_factory: bool,
+        function: std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
+        providable_func_kind: ProvidableFunctionKind,
     ) -> Self
     {
         Self {
-            factory,
-            is_default_factory,
+            function,
+            providable_func_kind,
         }
     }
 }
 
 #[cfg(feature = "factory")]
-impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
+impl<DIContainerType> IProvider<DIContainerType> for FunctionProvider
 {
     fn provide(
         &self,
@@ -140,11 +145,10 @@ impl<DIContainerType> IProvider<DIContainerType> for FactoryProvider
         _dependency_history: DependencyHistory,
     ) -> Result<Providable<DIContainerType>, InjectableError>
     {
-        Ok(if self.is_default_factory {
-            Providable::DefaultFactory(self.factory.clone())
-        } else {
-            Providable::Factory(self.factory.clone())
-        })
+        Ok(Providable::Function(
+            self.function.clone(),
+            self.providable_func_kind,
+        ))
     }
 }
 
@@ -198,12 +202,12 @@ mod tests
 
     #[test]
     #[cfg(feature = "factory")]
-    fn factory_provider_works()
+    fn function_provider_works()
     {
         use std::any::Any;
+        use std::rc::Rc;
 
         use crate::castable_function::AnyCastableFunction;
-        use crate::ptr::FactoryPtr;
 
         #[derive(Debug)]
         struct FooFactory;
@@ -216,27 +220,38 @@ mod tests
             }
         }
 
-        let factory_provider = FactoryProvider::new(FactoryPtr::new(FooFactory), false);
-        let default_factory_provider =
-            FactoryProvider::new(FactoryPtr::new(FooFactory), true);
+        let user_called_func_provider = FunctionProvider::new(
+            Rc::new(FooFactory),
+            ProvidableFunctionKind::UserCalled,
+        );
+
+        let instant_func_provider =
+            FunctionProvider::new(Rc::new(FooFactory), ProvidableFunctionKind::Instant);
 
         let di_container = MockDIContainer::new();
 
         assert!(
             matches!(
-                factory_provider.provide(&di_container, MockDependencyHistory::new()),
-                Ok(Providable::Factory(_))
+                user_called_func_provider
+                    .provide(&di_container, MockDependencyHistory::new()),
+                Ok(Providable::Function(_, ProvidableFunctionKind::UserCalled))
             ),
-            "The provided type is not a factory"
+            concat!(
+                "The provided type is not a Providable::Function of kind ",
+                "ProvidableFunctionKind::UserCalled"
+            )
         );
 
         assert!(
             matches!(
-                default_factory_provider
+                instant_func_provider
                     .provide(&di_container, MockDependencyHistory::new()),
-                Ok(Providable::DefaultFactory(_))
+                Ok(Providable::Function(_, ProvidableFunctionKind::Instant))
             ),
-            "The provided type is not a default factory"
+            concat!(
+                "The provided type is not a Providable::Function of kind ",
+                "ProvidableFunctionKind::Instant"
+            )
         );
     }
 }

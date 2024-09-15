@@ -347,10 +347,13 @@ impl AsyncDIContainer
                 ))
             }
             #[cfg(feature = "factory")]
-            AsyncProvidable::Factory(factory_binding) => {
+            AsyncProvidable::Function(
+                func_bound,
+                crate::provider::r#async::ProvidableFunctionKind::UserCalled,
+            ) => {
                 use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 
-                let factory = factory_binding
+                let factory = func_bound
                     .as_any()
                     .downcast_ref::<ThreadsafeCastableFunction<Interface, Self>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
@@ -361,7 +364,10 @@ impl AsyncDIContainer
                 Ok(SomePtr::ThreadsafeFactory(factory.call(self).into()))
             }
             #[cfg(feature = "factory")]
-            AsyncProvidable::DefaultFactory(binding) => {
+            AsyncProvidable::Function(
+                func_bound,
+                crate::provider::r#async::ProvidableFunctionKind::Instant,
+            ) => {
                 use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
                 use crate::ptr::TransientPtr;
 
@@ -370,7 +376,7 @@ impl AsyncDIContainer
                     AsyncDIContainer,
                 >;
 
-                let default_factory = binding
+                let default_factory = func_bound
                     .as_any()
                     .downcast_ref::<DefaultFactoryFn<Interface>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
@@ -381,7 +387,10 @@ impl AsyncDIContainer
                 Ok(SomePtr::Transient(default_factory.call(self)()))
             }
             #[cfg(feature = "factory")]
-            AsyncProvidable::AsyncDefaultFactory(binding) => {
+            AsyncProvidable::Function(
+                func_bound,
+                crate::provider::r#async::ProvidableFunctionKind::AsyncInstant,
+            ) => {
                 use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
                 use crate::future::BoxFuture;
                 use crate::ptr::TransientPtr;
@@ -393,7 +402,7 @@ impl AsyncDIContainer
                     AsyncDIContainer,
                 >;
 
-                let async_default_factory = binding
+                let async_default_factory = func_bound
                     .as_any()
                     .downcast_ref::<AsyncDefaultFactoryFn<Interface>>()
                     .ok_or_else(|| AsyncDIContainerError::CastFailed {
@@ -652,7 +661,10 @@ mod tests
             }
         }
 
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
@@ -672,10 +684,9 @@ mod tests
             };
 
             inner_mock_provider.expect_provide().returning(|_, _| {
-                Ok(AsyncProvidable::Factory(
-                    crate::ptr::ThreadsafeFactoryPtr::new(
-                        ThreadsafeCastableFunction::new(factory_func),
-                    ),
+                Ok(AsyncProvidable::Function(
+                    Arc::new(ThreadsafeCastableFunction::new(factory_func)),
+                    ProvidableFunctionKind::UserCalled,
                 ))
             });
 
@@ -734,7 +745,10 @@ mod tests
             }
         }
 
+        use std::sync::Arc;
+
         use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
+        use crate::provider::r#async::ProvidableFunctionKind;
 
         type IUserManagerFactory =
             dyn Fn(Vec<i128>) -> TransientPtr<dyn IUserManager> + Send + Sync;
@@ -754,10 +768,9 @@ mod tests
             };
 
             inner_mock_provider.expect_provide().returning(|_, _| {
-                Ok(AsyncProvidable::Factory(
-                    crate::ptr::ThreadsafeFactoryPtr::new(
-                        ThreadsafeCastableFunction::new(factory_func),
-                    ),
+                Ok(AsyncProvidable::Function(
+                    Arc::new(ThreadsafeCastableFunction::new(factory_func)),
+                    ProvidableFunctionKind::UserCalled,
                 ))
             });
 

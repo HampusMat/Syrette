@@ -181,7 +181,10 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn(&DIContainer) -> Box<Interface>,
     {
+        use std::rc::Rc;
+
         use crate::castable_function::CastableFunction;
+        use crate::provider::blocking::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -196,9 +199,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::blocking::FactoryProvider::new(
-                crate::ptr::FactoryPtr::new(factory_impl),
-                false,
+            Box::new(crate::provider::blocking::FunctionProvider::new(
+                Rc::new(factory_impl),
+                ProvidableFunctionKind::UserCalled,
             )),
         );
 
@@ -269,7 +272,10 @@ where
             dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
         >,
     {
+        use std::rc::Rc;
+
         use crate::castable_function::CastableFunction;
+        use crate::provider::blocking::ProvidableFunctionKind;
 
         if self
             .di_container
@@ -284,9 +290,9 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::blocking::FactoryProvider::new(
-                crate::ptr::FactoryPtr::new(factory_impl),
-                true,
+            Box::new(crate::provider::blocking::FunctionProvider::new(
+                Rc::new(factory_impl),
+                ProvidableFunctionKind::Instant,
             )),
         );
 
