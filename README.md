@@ -15,6 +15,10 @@ versions uses rust-lld. See [Linkme issue #94](https://github.com/dtolnay/linkme
 A temporary fix for this is to build with `RUSTFLAGS="-C link-args=-znostart-stop-gc"`
 </div>
 
+## Changelog
+You can find out what changes have been made in various versions
+[here](https://github.com/HampusMat/Syrette/blob/master/CHANGELOG.md).
+
 ## Namesake
 From the [syrette Wikipedia article](https://en.wikipedia.org/wiki/Syrette).
 > A syrette is a device for injecting liquid through a needle.
