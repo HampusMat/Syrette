@@ -51,14 +51,15 @@
 //! ```
 use std::any::type_name;
 
+use crate::castable_function::CastableFunction;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::blocking::binding::builder::BindingBuilder;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::DIContainerError;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::rc::CastRc;
-use crate::provider::blocking::{IProvider, Providable};
-use crate::ptr::SomePtr;
+use crate::provider::blocking::{IProvider, Providable, ProvidableFunctionKind};
+use crate::ptr::{SomePtr, TransientPtr};
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
@@ -284,12 +285,7 @@ impl DIContainer
                 })?,
             )),
             #[cfg(feature = "factory")]
-            Providable::Function(
-                func_bound,
-                crate::provider::blocking::ProvidableFunctionKind::UserCalled,
-            ) => {
-                use crate::castable_function::CastableFunction;
-
+            Providable::Function(func_bound, ProvidableFunctionKind::UserCalled) => {
                 let factory = func_bound
                     .as_any()
                     .downcast_ref::<CastableFunction<Interface, Self>>()
@@ -300,14 +296,7 @@ impl DIContainer
 
                 Ok(SomePtr::Factory(factory.call(self).into()))
             }
-            #[cfg(feature = "factory")]
-            Providable::Function(
-                func_bound,
-                crate::provider::blocking::ProvidableFunctionKind::Instant,
-            ) => {
-                use crate::castable_function::CastableFunction;
-                use crate::ptr::TransientPtr;
-
+            Providable::Function(func_bound, ProvidableFunctionKind::Instant) => {
                 type Func<Interface> =
                     CastableFunction<dyn Fn() -> TransientPtr<Interface>, DIContainer>;
 

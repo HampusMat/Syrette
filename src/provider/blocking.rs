@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
+use std::rc::Rc;
 
+use crate::castable_function::AnyCastableFunction;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::injectable::Injectable;
 use crate::ptr::{SingletonPtr, TransientPtr};
@@ -12,19 +14,15 @@ pub enum Providable<DIContainerType>
 {
     Transient(TransientPtr<dyn Injectable<DIContainerType>>),
     Singleton(SingletonPtr<dyn Injectable<DIContainerType>>),
-    #[cfg(feature = "factory")]
-    Function(
-        std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
-        ProvidableFunctionKind,
-    ),
+    Function(Rc<dyn AnyCastableFunction>, ProvidableFunctionKind),
 }
 
-#[cfg(feature = "factory")]
 #[derive(Debug, Clone, Copy)]
 pub enum ProvidableFunctionKind
 {
-    Instant,
+    #[cfg(feature = "factory")]
     UserCalled,
+    Instant,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -114,18 +112,16 @@ where
     }
 }
 
-#[cfg(feature = "factory")]
 pub struct FunctionProvider
 {
-    function: std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
+    function: Rc<dyn AnyCastableFunction>,
     providable_func_kind: ProvidableFunctionKind,
 }
 
-#[cfg(feature = "factory")]
 impl FunctionProvider
 {
     pub fn new(
-        function: std::rc::Rc<dyn crate::castable_function::AnyCastableFunction>,
+        function: Rc<dyn AnyCastableFunction>,
         providable_func_kind: ProvidableFunctionKind,
     ) -> Self
     {
@@ -136,7 +132,6 @@ impl FunctionProvider
     }
 }
 
-#[cfg(feature = "factory")]
 impl<DIContainerType> IProvider<DIContainerType> for FunctionProvider
 {
     fn provide(
@@ -201,7 +196,6 @@ mod tests
     }
 
     #[test]
-    #[cfg(feature = "factory")]
     fn function_provider_works()
     {
         use std::any::Any;
@@ -220,27 +214,10 @@ mod tests
             }
         }
 
-        let user_called_func_provider = FunctionProvider::new(
-            Rc::new(FooFactory),
-            ProvidableFunctionKind::UserCalled,
-        );
-
         let instant_func_provider =
             FunctionProvider::new(Rc::new(FooFactory), ProvidableFunctionKind::Instant);
 
         let di_container = MockDIContainer::new();
-
-        assert!(
-            matches!(
-                user_called_func_provider
-                    .provide(&di_container, MockDependencyHistory::new()),
-                Ok(Providable::Function(_, ProvidableFunctionKind::UserCalled))
-            ),
-            concat!(
-                "The provided type is not a Providable::Function of kind ",
-                "ProvidableFunctionKind::UserCalled"
-            )
-        );
 
         assert!(
             matches!(

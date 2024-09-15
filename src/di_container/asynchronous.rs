@@ -51,15 +51,17 @@
 //! ```
 use std::any::type_name;
 
+use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 use crate::di_container::asynchronous::binding::builder::AsyncBindingBuilder;
 use crate::di_container::binding_storage::DIContainerBindingStorage;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncDIContainerError;
+use crate::future::BoxFuture;
 use crate::private::cast::arc::CastArc;
 use crate::private::cast::boxed::CastBox;
 use crate::private::cast::error::CastError;
-use crate::provider::r#async::{AsyncProvidable, IAsyncProvider};
-use crate::ptr::SomePtr;
+use crate::provider::r#async::{AsyncProvidable, IAsyncProvider, ProvidableFunctionKind};
+use crate::ptr::{SomePtr, TransientPtr};
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
@@ -347,12 +349,7 @@ impl AsyncDIContainer
                 ))
             }
             #[cfg(feature = "factory")]
-            AsyncProvidable::Function(
-                func_bound,
-                crate::provider::r#async::ProvidableFunctionKind::UserCalled,
-            ) => {
-                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-
+            AsyncProvidable::Function(func_bound, ProvidableFunctionKind::UserCalled) => {
                 let factory = func_bound
                     .as_any()
                     .downcast_ref::<ThreadsafeCastableFunction<Interface, Self>>()
@@ -363,14 +360,7 @@ impl AsyncDIContainer
 
                 Ok(SomePtr::ThreadsafeFactory(factory.call(self).into()))
             }
-            #[cfg(feature = "factory")]
-            AsyncProvidable::Function(
-                func_bound,
-                crate::provider::r#async::ProvidableFunctionKind::Instant,
-            ) => {
-                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-                use crate::ptr::TransientPtr;
-
+            AsyncProvidable::Function(func_bound, ProvidableFunctionKind::Instant) => {
                 type Func<Interface> = ThreadsafeCastableFunction<
                     dyn Fn() -> TransientPtr<Interface> + Send + Sync,
                     AsyncDIContainer,
@@ -386,19 +376,12 @@ impl AsyncDIContainer
 
                 Ok(SomePtr::Transient(dynamic_val_func.call(self)()))
             }
-            #[cfg(feature = "factory")]
             AsyncProvidable::Function(
                 func_bound,
-                crate::provider::r#async::ProvidableFunctionKind::AsyncInstant,
+                ProvidableFunctionKind::AsyncInstant,
             ) => {
-                use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-                use crate::future::BoxFuture;
-                use crate::ptr::TransientPtr;
-
                 type Func<Interface> = ThreadsafeCastableFunction<
-                    dyn Fn<(), Output = BoxFuture<'static, TransientPtr<Interface>>>
-                        + Send
-                        + Sync,
+                    dyn Fn() -> BoxFuture<'static, TransientPtr<Interface>> + Send + Sync,
                     AsyncDIContainer,
                 >;
 

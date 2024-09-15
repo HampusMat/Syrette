@@ -1,13 +1,16 @@
 //! Binding builder for types inside of a [`DIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
+use std::rc::Rc;
 
+use crate::castable_function::CastableFunction;
 use crate::di_container::blocking::binding::scope_configurator::BindingScopeConfigurator;
-#[cfg(feature = "factory")]
 use crate::di_container::blocking::binding::when_configurator::BindingWhenConfigurator;
 use crate::di_container::BindingOptions;
 use crate::errors::di_container::BindingBuilderError;
 use crate::interfaces::injectable::Injectable;
+use crate::provider::blocking::{FunctionProvider, ProvidableFunctionKind};
+use crate::ptr::TransientPtr;
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
@@ -181,11 +184,6 @@ where
         Interface: Fn<Args, Output = crate::ptr::TransientPtr<Return>>,
         Func: Fn(&DIContainer) -> Box<Interface>,
     {
-        use std::rc::Rc;
-
-        use crate::castable_function::CastableFunction;
-        use crate::provider::blocking::ProvidableFunctionKind;
-
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
@@ -199,7 +197,7 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::blocking::FunctionProvider::new(
+            Box::new(FunctionProvider::new(
                 Rc::new(factory_impl),
                 ProvidableFunctionKind::UserCalled,
             )),
@@ -248,35 +246,19 @@ where
     /// # let mut di_container = DIContainer::new();
     /// #
     /// di_container.bind::<dyn IBuffer>().to_dynamic_value(&|_| {
-    ///     Box::new(|| {
-    ///         let buffer = TransientPtr::new(Buffer::<BUFFER_SIZE>::new());
-    ///
-    ///         buffer as TransientPtr<dyn IBuffer>
-    ///     })
+    ///     Box::new(|| TransientPtr::new(Buffer::<BUFFER_SIZE>::new()))
     /// });
     /// #
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_dynamic_value<Return, Func>(
+    pub fn to_dynamic_value<Func>(
         self,
         func: &'static Func,
     ) -> Result<BindingWhenConfigurator<'di_container, Interface>, BindingBuilderError>
     where
-        Return: 'static + ?Sized,
-        Func: Fn(
-            &DIContainer,
-        ) -> crate::ptr::TransientPtr<
-            dyn Fn<(), Output = crate::ptr::TransientPtr<Return>>,
-        >,
+        Func: Fn(&DIContainer) -> TransientPtr<dyn Fn() -> TransientPtr<Interface>>,
     {
-        use std::rc::Rc;
-
-        use crate::castable_function::CastableFunction;
-        use crate::provider::blocking::ProvidableFunctionKind;
-
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
@@ -290,7 +272,7 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::blocking::FunctionProvider::new(
+            Box::new(FunctionProvider::new(
                 Rc::new(castable_func),
                 ProvidableFunctionKind::Instant,
             )),
@@ -376,7 +358,6 @@ mod tests
     }
 
     #[test]
-    #[cfg(feature = "factory")]
     fn can_bind_to_dynamic_value()
     {
         use crate::ptr::TransientPtr;

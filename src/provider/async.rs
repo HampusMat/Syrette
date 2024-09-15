@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::castable_function::threadsafe::AnyThreadsafeCastableFunction;
 use crate::errors::injectable::InjectableError;
 use crate::interfaces::async_injectable::AsyncInjectable;
 use crate::ptr::{ThreadsafeSingletonPtr, TransientPtr};
@@ -14,19 +16,16 @@ pub enum AsyncProvidable<DIContainerT>
 {
     Transient(TransientPtr<dyn AsyncInjectable<DIContainerT>>),
     Singleton(ThreadsafeSingletonPtr<dyn AsyncInjectable<DIContainerT>>),
-    #[cfg(feature = "factory")]
     Function(
-        std::sync::Arc<
-            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
-        >,
+        Arc<dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction>,
         ProvidableFunctionKind,
     ),
 }
 
-#[cfg(feature = "factory")]
 #[derive(Debug, Clone, Copy)]
 pub enum ProvidableFunctionKind
 {
+    #[cfg(feature = "factory")]
     UserCalled,
     Instant,
     AsyncInstant,
@@ -174,22 +173,16 @@ where
     }
 }
 
-#[cfg(feature = "factory")]
 pub struct AsyncFunctionProvider
 {
-    function: std::sync::Arc<
-        dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
-    >,
+    function: Arc<dyn AnyThreadsafeCastableFunction>,
     providable_func_kind: ProvidableFunctionKind,
 }
 
-#[cfg(feature = "factory")]
 impl AsyncFunctionProvider
 {
     pub fn new(
-        function: std::sync::Arc<
-            dyn crate::castable_function::threadsafe::AnyThreadsafeCastableFunction,
-        >,
+        function: Arc<dyn AnyThreadsafeCastableFunction>,
         providable_func_kind: ProvidableFunctionKind,
     ) -> Self
     {
@@ -200,7 +193,6 @@ impl AsyncFunctionProvider
     }
 }
 
-#[cfg(feature = "factory")]
 #[async_trait]
 impl<DIContainerT> IAsyncProvider<DIContainerT> for AsyncFunctionProvider
 where
@@ -224,7 +216,6 @@ where
     }
 }
 
-#[cfg(feature = "factory")]
 impl Clone for AsyncFunctionProvider
 {
     fn clone(&self) -> Self
@@ -291,7 +282,6 @@ mod tests
     }
 
     #[tokio::test]
-    #[cfg(feature = "factory")]
     async fn function_provider_works()
     {
         use std::any::Any;
@@ -313,36 +303,12 @@ mod tests
 
         impl AnyThreadsafeCastableFunction for FooFactory {}
 
-        let user_called_func_provider = AsyncFunctionProvider::new(
-            Arc::new(FooFactory),
-            ProvidableFunctionKind::UserCalled,
-        );
-
         let instant_func_provider = AsyncFunctionProvider::new(
             Arc::new(FooFactory),
             ProvidableFunctionKind::Instant,
         );
 
-        let async_instant_func_provider = AsyncFunctionProvider::new(
-            Arc::new(FooFactory),
-            ProvidableFunctionKind::AsyncInstant,
-        );
-
         let di_container = MockAsyncDIContainer::new();
-
-        assert!(
-            matches!(
-                user_called_func_provider
-                    .provide(&di_container, MockDependencyHistory::new())
-                    .await
-                    .unwrap(),
-                AsyncProvidable::Function(_, ProvidableFunctionKind::UserCalled)
-            ),
-            concat!(
-                "The provided type is not a AsyncProvidable::Function of kind ",
-                "ProvidableFunctionKind::UserCalled"
-            )
-        );
 
         assert!(
             matches!(
@@ -355,20 +321,6 @@ mod tests
             concat!(
                 "The provided type is not a AsyncProvidable::Function of kind ",
                 "ProvidableFunctionKind::Instant"
-            )
-        );
-
-        assert!(
-            matches!(
-                async_instant_func_provider
-                    .provide(&di_container, MockDependencyHistory::new())
-                    .await
-                    .unwrap(),
-                AsyncProvidable::Function(_, ProvidableFunctionKind::AsyncInstant)
-            ),
-            concat!(
-                "The provided type is not a AsyncProvidable::Function of kind ",
-                "ProvidableFunctionKind::AsyncInstant"
             )
         );
     }

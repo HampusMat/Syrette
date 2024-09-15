@@ -1,13 +1,17 @@
 //! Binding builder for types inside of a [`AsyncDIContainer`].
 use std::any::type_name;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
+use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
 use crate::di_container::asynchronous::binding::scope_configurator::AsyncBindingScopeConfigurator;
-#[cfg(feature = "factory")]
 use crate::di_container::asynchronous::binding::when_configurator::AsyncBindingWhenConfigurator;
 use crate::di_container::BindingOptions;
 use crate::errors::async_di_container::AsyncBindingBuilderError;
+use crate::future::BoxFuture;
 use crate::interfaces::async_injectable::AsyncInjectable;
+use crate::provider::r#async::{AsyncFunctionProvider, ProvidableFunctionKind};
+use crate::ptr::TransientPtr;
 use crate::util::use_double;
 
 use_double!(crate::dependency_history::DependencyHistory);
@@ -272,11 +276,6 @@ where
             + Send
             + Sync,
     {
-        use std::sync::Arc;
-
-        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::ProvidableFunctionKind;
-
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
@@ -291,7 +290,7 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+            Box::new(AsyncFunctionProvider::new(
                 Arc::new(factory_impl),
                 ProvidableFunctionKind::UserCalled,
             )),
@@ -343,9 +342,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_dynamic_value<Return, Func>(
+    pub fn to_dynamic_value<Func>(
         self,
         func: &'static Func,
     ) -> Result<
@@ -353,16 +350,12 @@ where
         AsyncBindingBuilderError,
     >
     where
-        Return: 'static + ?Sized,
-        Func: Fn(&AsyncDIContainer) -> BoxFn<(), crate::ptr::TransientPtr<Return>>
+        Func: Fn(
+                &AsyncDIContainer,
+            ) -> Box<dyn Fn() -> TransientPtr<Interface> + Send + Sync>
             + Send
             + Sync,
     {
-        use std::sync::Arc;
-
-        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::ProvidableFunctionKind;
-
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
@@ -377,7 +370,7 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+            Box::new(AsyncFunctionProvider::new(
                 Arc::new(castable_func),
                 ProvidableFunctionKind::Instant,
             )),
@@ -436,9 +429,7 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    #[cfg(feature = "factory")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "factory")))]
-    pub fn to_async_dynamic_value<Return, Func>(
+    pub fn to_async_dynamic_value<Func>(
         self,
         func: &'static Func,
     ) -> Result<
@@ -446,16 +437,13 @@ where
         AsyncBindingBuilderError,
     >
     where
-        Return: 'static + ?Sized,
-        Func: Fn(&AsyncDIContainer) -> BoxFn<(), crate::future::BoxFuture<'static, Return>>
-            + Send
+        Func: Fn(
+                &AsyncDIContainer,
+            ) -> Box<
+                dyn Fn() -> BoxFuture<'static, TransientPtr<Interface>> + Send + Sync,
+            > + Send
             + Sync,
     {
-        use std::sync::Arc;
-
-        use crate::castable_function::threadsafe::ThreadsafeCastableFunction;
-        use crate::provider::r#async::ProvidableFunctionKind;
-
         if self
             .di_container
             .has_binding::<Interface>(BindingOptions::new())
@@ -470,7 +458,7 @@ where
 
         self.di_container.set_binding::<Interface>(
             BindingOptions::new(),
-            Box::new(crate::provider::r#async::AsyncFunctionProvider::new(
+            Box::new(AsyncFunctionProvider::new(
                 Arc::new(castable_func),
                 ProvidableFunctionKind::AsyncInstant,
             )),
@@ -607,7 +595,6 @@ mod tests
     }
 
     #[tokio::test]
-    #[cfg(feature = "factory")]
     async fn can_bind_to_dynamic_value()
     {
         use crate::ptr::TransientPtr;
@@ -645,7 +632,6 @@ mod tests
     }
 
     #[tokio::test]
-    #[cfg(feature = "factory")]
     async fn can_bind_to_async_dynamic_value()
     {
         use crate::ptr::TransientPtr;
